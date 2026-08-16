@@ -1,0 +1,16 @@
+DROP INDEX IF EXISTS idx_posts_user_id;
+DROP INDEX IF EXISTS idx_posts_group_id;
+DROP INDEX IF EXISTS idx_follows_following_id;
+DROP INDEX IF EXISTS idx_chats_group_id;
+DROP INDEX IF EXISTS idx_messages_sender_id;
+DROP INDEX IF EXISTS idx_messages_chat_id;
+DROP INDEX IF EXISTS idx_chat_users_chat_id;
+DROP INDEX IF EXISTS idx_chat_users_user_id;
+DROP INDEX IF EXISTS idx_comments_post_id;
+DROP INDEX IF EXISTS idx_comments_user_id;
+DROP INDEX IF EXISTS idx_events_group_id;
+DROP INDEX IF EXISTS idx_events_creator_id;
+DROP INDEX IF EXISTS idx_event_votes_user_id;
+DROP INDEX IF EXISTS idx_event_votes_vote_id;
+DROP INDEX IF EXISTS idx_post_reactions_post_id;
+DROP INDEX IF EXISTS idx_comments_reactions_user_id;

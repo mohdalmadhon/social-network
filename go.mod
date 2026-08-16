@@ -1,3 +1,3 @@
 module social
 
-go 1.26.5
+go 1.24.2
