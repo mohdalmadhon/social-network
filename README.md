@@ -1,2 +1,7 @@
-# social-network
-A full-stack Facebook-like social network built with Go, Vue.js, JavaScript, and SQLite. It features authentication, profiles, followers, posts, groups, events, private and group chats, real-time messaging with WebSockets, notifications, database migrations, and Docker containerization.
+# SOCIAL NETWORK
+
+REQUARMENTS
+===========
+    * golang should be downloaded in the running server
+    * docker should be avilable and running
+    * golang-magirate package should be installed by this command: "go install -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@latest"     
