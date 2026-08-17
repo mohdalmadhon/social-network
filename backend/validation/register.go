@@ -52,7 +52,7 @@ func validateEmail(email string) error {
 	if err != nil {
 		return errors.New("email format is invalid")
 	}
-
+	
 	return nil
 }
 
