@@ -1,19 +1,17 @@
-package queries
+package database
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
-	"social/backend/models"
 	"time"
+
+	"social/backend/models"
 )
 
-type App struct {
-	DB *sql.DB
-}
-
 // inserting user
-func (app App) InsertUser(userData models.User) error {
-	_, err := app.DB.Exec(`
+func InsertUser(db *sql.DB, userData models.User) error {
+	_, err := db.Exec(`
 		INSERT INTO users (email, username, first_name, last_name, dob, password, created_at)
 		VALUES (?,?,?,?,?,?,?);
 	`, userData.Email, userData.Username, userData.FirstName, userData.LastName, userData.DOB, userData.Password, time.Now())
@@ -22,8 +20,8 @@ func (app App) InsertUser(userData models.User) error {
 }
 
 // removing user
-func (app App) RemoveUser(userID int) error {
-	_, err := app.DB.Exec(`DELETE FROM users WHERE id = ?`, userID)
+func RemoveUser(db *sql.DB, userID int) error {
+	_, err := db.Exec(`DELETE FROM users WHERE id = ?`, userID)
 	return err
 }
 
@@ -31,8 +29,8 @@ func (app App) RemoveUser(userID int) error {
 update function user must recieve all the user data wether it is updated or not
 becuse it will be too much to created a function or switch case for each
 */
-func (app App) UpdateUser(userData models.User) error {
-	result, err := app.DB.Exec(`
+func UpdateUser(db *sql.DB, userData models.User) error {
+	result, err := db.Exec(`
 		UPDATE users
 		SET email = ?, username = ?, first_name = ?, last_name = ?, dob = ?, password = ?
 		WHERE id = ?
@@ -45,7 +43,6 @@ func (app App) UpdateUser(userData models.User) error {
 		userData.Password,
 		userData.Id,
 	)
-
 	if err != nil {
 		return err
 	}
@@ -63,10 +60,10 @@ func (app App) UpdateUser(userData models.User) error {
 }
 
 // database function that recieve email or username as "identifier" and return user data
-func (app App) GetUserDataByIdentifier(identifier string) (models.User, error) {
+func GetUserDataByIdentifier(db *sql.DB, identifier string) (models.User, error) {
 	var userData models.User
 
-	err := app.DB.QueryRow(`
+	err := db.QueryRow(`
 		SELECT id, email, username, first_name, last_name, dob, created_at, updated_at
 		FROM users
 		WHERE username = ? OR email = ?
@@ -80,7 +77,6 @@ func (app App) GetUserDataByIdentifier(identifier string) (models.User, error) {
 		&userData.CreatedAt,
 		&userData.Updated_at,
 	)
-
 	if err != nil {
 		return userData, err
 	}
@@ -88,11 +84,28 @@ func (app App) GetUserDataByIdentifier(identifier string) (models.User, error) {
 	return userData, nil
 }
 
-func (app App) GetPasswordByIdentifier(identifier string) (string, error) {
+func GetPasswordByIdentifier(db *sql.DB, identifier string) (string, error) {
 	var password string
-	err := app.DB.QueryRow(`SELECT password FROM users WHERE username = ? or email = ?`, identifier, identifier).Scan(&password)
+
+	err := db.QueryRow(`SELECT password FROM users WHERE username = ? or email = ?`, identifier, identifier).Scan(&password)
 	if err != nil {
 		return "", err
 	}
+
 	return password, nil
+}
+
+// function used by /api/chechEmail endpoint to check if email exists during registration in real time
+func CheckAvilableEmail(db *sql.DB, email string) (bool, error) {
+	var exists int
+
+	err := db.QueryRow(`select 1 from users where email = ? limit 1`, email).Scan(&exists)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }

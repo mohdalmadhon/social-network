@@ -159,3 +159,4 @@ func validatePassword(pass string) error {
 
 	return nil
 }
+
