@@ -10,11 +10,30 @@ import (
 )
 
 // inserting user
-func InsertUser(db *sql.DB, userData models.User) error {
+func InsertUser(db *sql.DB, userData models.RegisterRequest) error {
 	_, err := db.Exec(`
 		INSERT INTO users (email, username, first_name, last_name, dob, password, created_at)
 		VALUES (?,?,?,?,?,?,?);
 	`, userData.Email, userData.Username, userData.FirstName, userData.LastName, userData.DOB, userData.Password, time.Now())
+
+	if len(userData.Avatar) != 0 || len(userData.About) != 0 {
+		var profile models.Profile
+		profile.About = userData.About
+		profile.Avatar_Path = userData.Avatar
+
+		err = InsertProfileData(db, profile, userData.Username)
+		if err != nil {
+			return err
+		}
+	}
+	return err
+}
+
+func InsertProfileData(db *sql.DB, profile models.Profile, username string) error {
+	_, err := db.Exec(`
+		insert into profile (user_id, about, avatar_path)
+		values ((select id from users where username = ?), ?, ?)
+	`, username, profile.About, profile.Avatar_Path)
 
 	return err
 }
@@ -100,6 +119,21 @@ func CheckAvilableEmail(db *sql.DB, email string) (bool, error) {
 	var exists int
 
 	err := db.QueryRow(`select 1 from users where email = ? limit 1`, email).Scan(&exists)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
+}
+
+// function used by /api/chechEmail endpoint to check if username exists during registration in real time
+func CheckAvilableUsername(db *sql.DB, username string) (bool, error) {
+	var exists int
+
+	err := db.QueryRow(`select 1 from users where username = ? limit 1`, username).Scan(&exists)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return false, nil

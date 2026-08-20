@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"vite\" \"cd ..\\backend && go run ./cmd/main.go\"",
     "build": "vite build",
     "preview": "vite preview"
   },
