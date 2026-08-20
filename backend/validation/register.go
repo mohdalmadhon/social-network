@@ -9,7 +9,7 @@ import (
 )
 
 // it recieve user data in a User struct and return nil if validated
-func ValidateUserData(userData models.User) error {
+func ValidateUserData(userData models.RegisterRequest) error {
 	// validating email
 	if err := validateEmail(userData.Email); err != nil {
 		return err
@@ -29,7 +29,11 @@ func ValidateUserData(userData models.User) error {
 	}
 
 	//validate DOB
-	if err := validateDOB(userData.DOB); err != nil {
+	dob,err := time.Parse("2006-01-02", userData.DOB)
+	if err != nil {
+		return errors.New("invalid dob")
+	}
+	if err := validateDOB(dob); err != nil {
 		return err
 	}
 
@@ -159,3 +163,4 @@ func validatePassword(pass string) error {
 
 	return nil
 }
+

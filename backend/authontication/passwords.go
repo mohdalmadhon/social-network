@@ -1,6 +1,8 @@
 package authontication
 
 import (
+	"social/backend/models"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -12,4 +14,11 @@ func HashPassword(password string) (string, error) {
 	}
 
 	return string(hashedPassword), nil
+}
+
+func AuthonticateUser(userData models.Logger, hashedPassword string) bool {
+	if err := (bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(userData.Pass))); err != nil {
+		return false
+	}
+	return true
 }
