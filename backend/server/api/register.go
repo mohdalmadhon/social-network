@@ -13,6 +13,7 @@ import (
 	"social/backend/models"
 	"social/backend/validation"
 	"social/sql/database"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -257,8 +258,39 @@ func (app App) LoggingUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-type", "application/json")
+	id, err := database.GetUserIDbyIdentifier(app.DB, userData.Identifier)
+	if err != nil {
+		w.Header().Set("Content-type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]any{
+			"status":  false,
+			"message": "could not get user data",
+		})
+		return
+	}
+	token, err := GenerateToken(id, userData.Identifier)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]any{
+			"status":  false,
+			"message": "could not create authentication token",
+		})
+		return
+	}
+
+	cookie := http.Cookie{
+		Name:    "token",
+		Value:   token,
+		Path:    "/",
+		Expires: time.Now().Add(24 * 30 * time.Hour),
+	}
+
+	http.SetCookie(w, &cookie)
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+
 	json.NewEncoder(w).Encode(map[string]any{
 		"status":  true,
 		"message": "logged in",

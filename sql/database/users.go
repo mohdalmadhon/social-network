@@ -143,3 +143,15 @@ func CheckAvilableUsername(db *sql.DB, username string) (bool, error) {
 
 	return true, nil
 }
+
+// function used to get user id by giving it either email or username
+func GetUserIDbyIdentifier(db*sql.DB, identifier string) (int, error) {
+	var id int
+	err := db.QueryRow(`select id from users where username = ? or email = ?`, identifier, identifier).Scan(&id)
+
+	if err != nil {
+		return -1, err
+	}
+
+	return id, nil
+}
