@@ -132,32 +132,32 @@ function validatePassword() {
     }
 
     if (value.length < 8) {
-        errors.value.password = 'Password must be at least 8 characters'
+        errors.value.password = 'Password must be at least 8 characters long'
         return false
     }
 
-    if (value.length > 72) {
-        errors.value.password = 'Password is too long. Max length is 72 characters'
-        return false
-    }
-
-    if (/\s/.test(value)) {
-        errors.value.password = 'Password cannot contain spaces'
-        return false
-    }
-
-    if (!/[A-Z]/.test(value)) {
-        errors.value.password = 'Password must contain at least one uppercase letter'
-        return false
-    }
-
-    if (!/[a-z]/.test(value)) {
-        errors.value.password = 'Password must contain at least one lowercase letter'
+    if (value.length > 75) {
+        errors.value.password = 'Password must be less than 75 characters long'
         return false
     }
 
     if (!/[0-9]/.test(value)) {
-        errors.value.password = 'Password must contain at least one number'
+        errors.value.password = 'Password must contain a number'
+        return false
+    }
+
+    if (!/[!@#$%*&^?]/.test(value)) {
+        errors.value.password = 'Password must contain a special character: ! @ # $ % * & ^ ?'
+        return false
+    }
+
+    if (!/[a-zA-Z]/.test(value)) {
+        errors.value.password = 'Password must contain alphabetic characters'
+        return false
+    }
+
+    if (/[^a-zA-Z0-9!@#$%*&^?]/.test(value)) {
+        errors.value.password = 'Password contains forbidden characters'
         return false
     }
 
@@ -485,6 +485,7 @@ async function submitLogin() {
         const resp = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify(data)
         })
 
@@ -535,15 +536,14 @@ async function submitLogin() {
         </div>
         <div class="form-wrapper">
             <Transition name="form-fade" mode="out-in">
-                <form v-if="activeTab === 'signin'" key="signin"
-                    class="signin-form" @submit.prevent="submitLogin">
+                <form v-if="activeTab === 'signin'" key="signin" class="signin-form" @submit.prevent="submitLogin">
                     <h1 class="form-title">Sign in</h1>
                     <div class="login-row single">
                         <label for="signin-identifier">
                             EMAIL OR NICKNAME *
                         </label>
-                        <input type="text" name="identifier" id="signin-identifier" v-model="logger.identifier"
-                            required @blur="validateSigninIdentifier" @input="clearError('signinIdentifier')">
+                        <input type="text" name="identifier" id="signin-identifier" v-model="logger.identifier" required
+                            @blur="validateSigninIdentifier" @input="clearError('signinIdentifier')">
                         <p class="error-message" :class="errorClass(errors.signinIdentifier)">
                             {{ errors.signinIdentifier }}
                         </p>
@@ -595,7 +595,7 @@ async function submitLogin() {
                         <label for="password">PASSWORD *</label>
                         <div class="password-wrapper">
                             <input :type="showPassword ? 'text' : 'password'" name="password" id="password"
-                                v-model="form.password" maxlength="72" required @blur="validatePassword"
+                                v-model="form.password" maxlength="75" required @blur="validatePassword"
                                 @input="clearError('password')">
                             <button type="button" class="password-toggle"
                                 :aria-label="showPassword ? 'Hide password' : 'Show password'"
