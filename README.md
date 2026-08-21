@@ -13,3 +13,5 @@ RUN
 ============
  - make sure to do "npm install" before lunching to download all the required dependencies into node_modules
  - to run the Application use "go run ./backend/cmd/main.go"
+ - start the frontend from the `frontend` folder with `npm run dev`
+ - open `http://localhost:5173/login`
