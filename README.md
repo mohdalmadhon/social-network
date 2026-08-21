@@ -1,6 +1,6 @@
 # SOCIAL NETWORK
 
-REQUARMENTS
+REQUIRMENTS
 ===========
     * golang should be downloaded in the running server
     * docker should be avilable and running
