@@ -18,7 +18,7 @@ type header struct {
 
 type payLoad struct {
 	UserID     int    `json:"user_id"`
-	Identifier   string `json:"username"`
+	Identifier string `json:"username"`
 	Exp        int64  `json:"exp"`
 	Created_at int64  `json:"iat"`
 }
@@ -40,7 +40,7 @@ func GenerateToken(userID int, username string) (string, error) {
 
 	body := payLoad{
 		UserID:     userID,
-		Identifier:   username,
+		Identifier: username,
 		Created_at: time.Now().Unix(),
 		Exp:        time.Now().Add(30 * 24 * time.Hour).Unix(),
 	}
@@ -50,7 +50,7 @@ func GenerateToken(userID int, username string) (string, error) {
 		return "", err
 	}
 
-	signatureTxt, err := os.ReadFile("../db/tokens-signature.txt")
+	signatureTxt, err := readTokenSecret()
 	if err != nil {
 		return "", err
 	}
@@ -73,7 +73,7 @@ func GenerateToken(userID int, username string) (string, error) {
 }
 
 /*
-	this function verify a jwt token by seperating checking the signature and checking the expiration data
+this function verify a jwt token by seperating checking the signature and checking the expiration data
 */
 func VerifyToken(token string) (*payLoad, error) {
 	parts := strings.Split(token, ".")
@@ -86,7 +86,7 @@ func VerifyToken(token string) (*payLoad, error) {
 	encodedPayload := parts[1]
 	encodedSignature := parts[2]
 
-	secret, err := os.ReadFile("../db/tokens-signature.txt")
+	secret, err := readTokenSecret()
 	if err != nil {
 		return nil, err
 	}
@@ -124,4 +124,12 @@ func VerifyToken(token string) (*payLoad, error) {
 	}
 
 	return &body, nil
+}
+
+func readTokenSecret() ([]byte, error) {
+	if secret := os.Getenv("ORBIT_TOKEN_SECRET"); secret != "" {
+		return []byte(secret), nil
+	}
+
+	return os.ReadFile("../db/tokens-signature.txt")
 }

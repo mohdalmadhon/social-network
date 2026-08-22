@@ -17,5 +17,6 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("/api/register/submit", app.RegisterUser)
 	mux.HandleFunc("/api/login", app.LoggingUser)
 	mux.HandleFunc("/api/logout", app.LogOutUser)
+	mux.HandleFunc("/api/posts", app.Posts)
 	return mux
 }
