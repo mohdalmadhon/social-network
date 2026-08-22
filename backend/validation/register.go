@@ -29,7 +29,7 @@ func ValidateUserData(userData models.RegisterRequest) error {
 	}
 
 	//validate DOB
-	dob,err := time.Parse("2006-01-02", userData.DOB)
+	dob, err := time.Parse("2006-01-02", userData.DOB)
 	if err != nil {
 		return errors.New("invalid dob")
 	}
@@ -56,7 +56,7 @@ func validateEmail(email string) error {
 	if err != nil {
 		return errors.New("email format is invalid")
 	}
-	
+
 	return nil
 }
 
@@ -81,13 +81,13 @@ func validateUsername(username string) error {
 // recieve name and validate the length and that it only contains alphabatic characters
 func validateName(name string) error {
 	if len(name) < 2 {
-		errors.New("invalid name. length cannot be less than 3")
+		return errors.New("invalid name. length cannot be less than 2")
 	}
-	if len(name) < 2 {
-		errors.New("invalid name. length cannot be more than 25")
+	if len(name) > 25 {
+		return errors.New("invalid name. length cannot be more than 25")
 	}
 
-	matched, err := regexp.MatchString(`^[a-z]+$`, name)
+	matched, err := regexp.MatchString(`^[a-zA-Z]+$`, name)
 	if err != nil || !matched {
 		return errors.New("invalid name. forbidden characters")
 	}
@@ -163,4 +163,3 @@ func validatePassword(pass string) error {
 
 	return nil
 }
-
