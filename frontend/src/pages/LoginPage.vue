@@ -4,44 +4,50 @@ import Sider from '@/components/login/Sider.vue'
 </script>
 
 <template>
-  <main class="auth-page">
-    <Sider />
-    <section class="login-side">
-      <LoginForm />
-    </section>
-  </main>
+    <main class="auth-page">
+        <Sider />
+        <section class="login-side">
+            <LoginForm />
+        </section>
+    </main>
 </template>
 
 <style>
+* {
+    box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
+}
+
 .auth-page {
-  width: 100%;
-  min-height: 100vh;
-  background: var(--color-background);
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+    background: #0f1020;
 }
 
 .login-side {
-  display: grid;
-  width: 100%;
-  min-width: 0;
-  padding: var(--space-5) var(--space-3) var(--space-6);
-  place-items: center;
-}
-
-@media (min-width: 48rem) {
-  .login-side {
-    padding: var(--space-6);
-  }
-}
-
-@media (min-width: 64rem) {
-  .auth-page {
-    display: grid;
-    grid-template-columns: minmax(28rem, 36%) minmax(0, 1fr);
-  }
-
-  .login-side {
+    width: 70%;
     min-height: 100vh;
-    padding: clamp(2rem, 4vw, 5rem);
-  }
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
+}
+
+@media (max-width: 900px) {
+    .auth-page {
+        flex-direction: column;
+    }
+
+    .login-side {
+        width: 100%;
+    }
 }
 </style>

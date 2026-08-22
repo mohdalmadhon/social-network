@@ -11,10 +11,7 @@
 
     <header class="header">
       <div class="brand">
-        <span class="logo-placeholder" aria-hidden="true">
-          <span></span>
-          <span></span>
-        </span>
+        
         <span class="brand-name">orbit</span>
       </div>
     </header>
@@ -67,14 +64,14 @@
 
 .landing {
   position: relative;
-  width: 100%;
-  min-height: 19rem;
+  min-height: 100vh;
+  width: 35%;
   overflow: hidden;
   background:
     radial-gradient(circle at 20% 35%, rgba(75, 63, 160, 0.12), transparent 35%),
     #100d2b;
   color: #fff;
-  font-family: var(--font-body);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .orb {
@@ -85,47 +82,49 @@
 }
 
 .orb-1 {
-  width: 16rem;
-  height: 16rem;
-  left: -5rem;
-  top: 2.5rem;
+  width: 360px;
+  height: 360px;
+  left: -80px;
+  top: 55px;
   background: rgba(71, 61, 143, 0.28);
 }
 
 .orb-2 {
-  width: 20rem;
-  height: 20rem;
-  left: 35%;
-  top: 5rem;
+  width: 420px;
+  height: 420px;
+  left: -110px;
+  top: 300px;
   background: rgba(48, 45, 119, 0.28);
 }
 
 .orb-3 {
-  width: 12rem;
-  height: 12rem;
-  right: -4rem;
-  bottom: -5rem;
-  left: auto;
+  width: 270px;
+  height: 270px;
+  left: -42px;
+  bottom: 2px;
   background: rgba(133, 72, 106, 0.32);
 }
 
 .orb-4 {
-  width: 10rem;
-  height: 10rem;
-  left: -5rem;
-  top: 11rem;
+  width: 220px;
+  height: 220px;
+  left: -120px;
+  top: 260px;
   background: rgba(116, 65, 112, 0.26);
 }
 
 .orb-5 {
-  display: none;
+  width: 500px;
+  height: 500px;
+  right: -370px;
+  bottom: -250px;
   background: rgba(83, 52, 157, 0.08);
 }
 
 .header {
   position: relative;
   z-index: 2;
-  padding: var(--space-4) var(--space-5) 0;
+  padding: 12px 0 0 47px;
 }
 
 .brand {
@@ -135,8 +134,7 @@
 }
 
 .brand-name {
-  font-family: var(--font-display);
-  font-size: 1.5rem;
+  font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.5px;
 }
@@ -179,17 +177,17 @@
 .hero {
   position: relative;
   z-index: 2;
-  max-width: 34rem;
-  margin: var(--space-6) var(--space-5) 0;
+  line-height: 1.5;
+  margin-left: 46px;
+  margin-top: 108px;
 }
 
 .hero h1 {
   margin: 0;
-  font-family: var(--font-display);
-  font-size: clamp(2.25rem, 10vw, 3.25rem);
-  line-height: 1.12;
-  letter-spacing: -0.04em;
-  font-weight: 700;
+  font-size: clamp(42px, 10vw, 52px);
+  line-height: 1.5;
+  letter-spacing: -1.7px;
+  font-weight: 750;
 }
 
 .hero h1 span {
@@ -197,16 +195,16 @@
 }
 
 .description {
-  max-width: 34rem;
-  margin: var(--space-3) 0 0;
+  margin: 5px 0 0 5px;
+  margin-top: 5px;
   color: #9c98b3;
-  font-size: 1rem;
-  line-height: 1.45;
+  font-size: 18px;
+  line-height: 20px;
   font-weight: 400;
 }
 
 .features {
-  display: none;
+  display: flex;
   flex-direction: column;
   gap: 13px;
   margin-top: 21px;
@@ -217,8 +215,8 @@
   align-items: center;
   gap: 12px;
   color: #e9e6f1;
-  font-size: 0.875rem;
-  line-height: 1.3;
+  font-size: 11px;
+  line-height: 1;
 }
 
 .feature-icon {
@@ -298,84 +296,48 @@
 .accent-dot {
   position: absolute;
   z-index: 2;
-  width: 1rem;
-  height: 1rem;
-  right: 12%;
-  bottom: 12%;
+  width: 17px;
+  height: 17px;
+  right: 140px;
+  bottom: 215px;
   border-radius: 50%;
   background: #ff6385;
 }
 
-@media (min-width: 48rem) {
-  .landing {
-    min-height: 25rem;
-  }
-
+@media (max-width: 500px) {
   .header {
-    padding: var(--space-5) var(--space-7) 0;
+    padding-left: 47px;
   }
 
   .hero {
-    margin: var(--space-7) var(--space-7) 0;
-  }
-
-  .features {
-    display: flex;
-  }
-}
-
-@media (min-width: 64rem) {
-  .landing {
-    min-height: 100vh;
-  }
-
-  .orb-1 {
-    width: 22.5rem;
-    height: 22.5rem;
-    left: -5rem;
-    top: 3.5rem;
-  }
-
-  .orb-2 {
-    width: 26rem;
-    height: 26rem;
-    left: -7rem;
-    top: 18.75rem;
-  }
-
-  .orb-3 {
-    width: 17rem;
-    height: 17rem;
-    right: auto;
-    bottom: 0;
-    left: -2.5rem;
-  }
-
-  .orb-4 {
-    width: 14rem;
-    height: 14rem;
-    left: -7rem;
-    top: 16rem;
-  }
-
-  .orb-5 {
-    display: block;
-    width: 31rem;
-    height: 31rem;
-    right: -23rem;
-    bottom: -16rem;
-  }
-
-  .header {
-    padding: var(--space-5) clamp(2rem, 4vw, 4rem) 0;
-  }
-
-  .hero {
-    margin: clamp(7rem, 14vh, 12rem) clamp(2rem, 4vw, 4rem) 0;
+    margin-left: 46px;
+    margin-top: 108px;
   }
 
   .hero h1 {
-    font-size: clamp(3rem, 3.2vw, 4.25rem);
+    font-size: 42px;
+  }
+
+  .description {
+    max-width: 330px;
+  }
+}
+
+@media (max-width: 380px) {
+  .hero {
+    margin-left: 32px;
+  }
+
+  .header {
+    padding-left: 32px;
+  }
+
+  .hero h1 {
+    font-size: 38px;
+  }
+
+  .description {
+    font-size: 11px;
   }
 }
 </style>

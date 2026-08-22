@@ -461,6 +461,14 @@ function validateLoginForm() {
     return identifierValid && passwordValid
 }
 
+function resetLoginForm() {
+    logger.value.identifier = ''
+    logger.value.password = ''
+
+    errors.value.signinIdentifier = ''
+    errors.value.signinPassword = ''
+}
+
 async function submitLogin() {
     const valid = validateLoginForm()
     if (!valid) {
@@ -498,7 +506,7 @@ async function submitLogin() {
         }
 
         showNotification('Logged in', 'success')
-        window.location.href = '/home-feed'
+        resetLoginForm()
     } catch (err) {
         showNotification('Something went wrong. Please try again', 'error')
     }
@@ -534,8 +542,7 @@ async function submitLogin() {
                         <label for="signin-identifier">
                             EMAIL OR NICKNAME *
                         </label>
-                        <input type="text" name="identifier" id="signin-identifier" v-model="logger.identifier"
-                            autocomplete="username" required
+                        <input type="text" name="identifier" id="signin-identifier" v-model="logger.identifier" required
                             @blur="validateSigninIdentifier" @input="clearError('signinIdentifier')">
                         <p class="error-message" :class="errorClass(errors.signinIdentifier)">
                             {{ errors.signinIdentifier }}
@@ -547,7 +554,6 @@ async function submitLogin() {
                         </label>
                         <div class="password-wrapper">
                             <input :type="showSignInPassword ? 'text' : 'password'" name="password" id="signin-password"
-                                autocomplete="current-password"
                                 v-model="logger.password" required @blur="validateSigninPassword"
                                 @input="clearError('signinPassword')">
                             <button type="button" class="password-toggle"
@@ -579,8 +585,7 @@ async function submitLogin() {
                     <h1 class="form-title">Create account</h1>
                     <div class="login-row single">
                         <label for="email">EMAIL *</label>
-                        <input type="email" name="email" id="email" v-model="form.email" maxlength="70"
-                            autocomplete="email" required
+                        <input type="email" name="email" id="email" v-model="form.email" maxlength="70" required
                             @blur="validateEmail" @input="clearError('email')">
                         <p class="error-message" :class="errorClass(errors.email)">
                             {{ errors.email }}
@@ -590,7 +595,6 @@ async function submitLogin() {
                         <label for="password">PASSWORD *</label>
                         <div class="password-wrapper">
                             <input :type="showPassword ? 'text' : 'password'" name="password" id="password"
-                                autocomplete="new-password"
                                 v-model="form.password" maxlength="75" required @blur="validatePassword"
                                 @input="clearError('password')">
                             <button type="button" class="password-toggle"
@@ -606,8 +610,7 @@ async function submitLogin() {
                     <div class="login-row two-columns">
                         <div>
                             <label for="fName">FIRST NAME *</label>
-                            <input type="text" name="fName" id="fName" v-model="form.firstName" maxlength="25"
-                                autocomplete="given-name" required
+                            <input type="text" name="fName" id="fName" v-model="form.firstName" maxlength="25" required
                                 @blur="validateFirstName" @input="clearError('firstName')">
                             <p class="error-message" :class="errorClass(errors.firstName)">
                                 {{ errors.firstName }}
@@ -615,8 +618,7 @@ async function submitLogin() {
                         </div>
                         <div>
                             <label for="lName">LAST NAME *</label>
-                            <input type="text" name="lName" id="lName" v-model="form.lastName" maxlength="25"
-                                autocomplete="family-name" required
+                            <input type="text" name="lName" id="lName" v-model="form.lastName" maxlength="25" required
                                 @blur="validateLastName" @input="clearError('lastName')">
                             <p class="error-message" :class="errorClass(errors.lastName)">
                                 {{ errors.lastName }}
@@ -626,8 +628,7 @@ async function submitLogin() {
                     <div class="login-row two-columns">
                         <div>
                             <label for="dob">DATE OF BIRTH *</label>
-                            <input type="date" name="dob" id="dob" v-model="form.dob" autocomplete="bday" required
-                                @change="validateDob">
+                            <input type="date" name="dob" id="dob" v-model="form.dob" required @change="validateDob">
                             <p class="error-message" :class="errorClass(errors.dob)">
                                 {{ errors.dob }}
                             </p>
@@ -637,7 +638,6 @@ async function submitLogin() {
                                 NICKNAME *
                             </label>
                             <input type="text" name="username" id="username" v-model="form.username" maxlength="15"
-                                autocomplete="nickname"
                                 placeholder="@noa.png" required @blur="validateUsername"
                                 @input="clearError('username')">
                             <p class="error-message" :class="errorClass(errors.username)">
@@ -701,17 +701,16 @@ async function submitLogin() {
 
 .login-container {
     position: relative;
-    width: 100%;
-    max-width: 46rem;
-    height: auto;
-    margin: 0 auto;
-    padding: var(--space-5);
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-large);
-    color: var(--color-text);
-    font-family: var(--font-body);
-    box-shadow: var(--shadow-raised);
+    width: min(580px, calc(100% - 40px));
+    height: 650px;
+    margin: 24px auto;
+    padding: 34px 39px 10px;
+    background: #171b2d;
+    border: 1px solid #303754;
+    border-radius: 23px;
+    color: #f5f5ff;
+    font-family: Arial, sans-serif;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
     z-index: 5;
 }
 
@@ -790,9 +789,8 @@ async function submitLogin() {
 
 .auth-tabs {
     display: flex;
-    justify-content: center;
-    gap: clamp(2rem, 10vw, 6rem);
-    margin-bottom: var(--space-5);
+    gap: 84px;
+    margin-bottom: 25px;
 }
 
 .tab-button {
@@ -800,8 +798,7 @@ async function submitLogin() {
     border: 0;
     background: none;
     color: #69749a;
-    min-height: var(--touch-target);
-    font-size: 0.875rem;
+    font-size: 14px;
     font-weight: 600;
     padding: 0 0 10px;
     cursor: pointer;
@@ -831,7 +828,7 @@ async function submitLogin() {
 }
 
 .form-wrapper form.signin-form {
-    min-height: 31rem;
+    min-height: 520px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -855,16 +852,15 @@ async function submitLogin() {
 }
 
 .form-title {
-    margin: 0 0 var(--space-5);
+    margin: 0 0 24px;
     color: #ffffff;
-    font-family: var(--font-display);
-    font-size: clamp(1.75rem, 5vw, 2.25rem);
+    font-size: 24px;
     font-weight: 700;
     text-align: center;
 }
 
 .login-row {
-    margin-bottom: var(--space-3);
+    margin-bottom: 14px;
 }
 
 .login-row.single {
@@ -873,17 +869,18 @@ async function submitLogin() {
 }
 
 .login-row.two-columns {
-    display: block;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
 }
 
 .login-row label {
     display: block;
     margin-bottom: 6px;
-    color: var(--color-text-muted);
-    font-family: var(--font-meta);
-    font-size: 0.75rem;
+    color: #69749a;
+    font-size: 10px;
     font-weight: 500;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.8px;
 }
 
 .login-row input,
@@ -895,18 +892,18 @@ async function submitLogin() {
     background: #222741;
     color: #f4f3ff;
     font-family: inherit;
-    font-size: 0.9375rem;
+    font-size: 12px;
     transition: 0.2s ease;
 }
 
 .login-row input {
-    min-height: var(--touch-target);
-    padding: 0 var(--space-4);
+    height: 38px;
+    padding: 0 13px;
 }
 
 .login-row textarea {
-    min-height: 5rem;
-    padding: var(--space-3) var(--space-4);
+    height: 61px;
+    padding: 12px 13px;
     resize: none;
 }
 
@@ -934,8 +931,8 @@ async function submitLogin() {
     top: 50%;
     right: 10px;
     transform: translateY(-50%);
-    width: var(--touch-target);
-    height: var(--touch-target);
+    width: 28px;
+    height: 28px;
     border: 0;
     background: transparent;
     color: #69749a;
@@ -974,7 +971,7 @@ async function submitLogin() {
 }
 
 .avatar-upload {
-    min-height: 4rem;
+    height: 48px;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -1003,13 +1000,13 @@ async function submitLogin() {
 
 .avatar-upload strong {
     display: block;
-    font-size: 0.875rem;
+    font-size: 11px;
     font-weight: 500;
     color: #e8e7f2;
 }
 
 #about {
-    min-height: 5rem;
+    min-height: 61px;
 }
 
 .remember {
@@ -1017,8 +1014,8 @@ async function submitLogin() {
     align-items: center;
     gap: 7px;
     margin: 4px 0 14px;
-    color: var(--color-text-muted);
-    font-size: 0.8125rem;
+    color: #9da4bd;
+    font-size: 10px;
     cursor: pointer;
 }
 
@@ -1055,13 +1052,13 @@ async function submitLogin() {
 
 .submit-button {
     width: 100%;
-    min-height: var(--touch-target);
+    height: 44px;
     border: 0;
     border-radius: 25px;
     background: linear-gradient(90deg, #805cff, #ff6288);
     color: white;
     font-family: inherit;
-    font-size: 0.9375rem;
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
     transition:
@@ -1085,8 +1082,7 @@ async function submitLogin() {
     background: transparent;
     color: #69749a;
     font-family: inherit;
-    min-height: var(--touch-target);
-    font-size: 0.8125rem;
+    font-size: 10px;
     cursor: pointer;
 }
 
@@ -1094,19 +1090,24 @@ async function submitLogin() {
     color: #9b7cff;
 }
 
-@media (min-width: 48rem) {
+@media (max-width: 560px) {
     .login-container {
-        padding: var(--space-6) clamp(2.25rem, 5vw, 4rem);
+        width: calc(100% - 24px);
+        height: 650px;
+        padding: 28px 22px 10px;
+        border-radius: 18px;
+    }
+
+    .auth-tabs {
+        gap: 45px;
     }
 
     .login-row.two-columns {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        gap: var(--space-3);
+        display: block;
     }
 
     .login-row.two-columns>div {
-        min-width: 0;
+        margin-bottom: 12px;
     }
 }
 </style>

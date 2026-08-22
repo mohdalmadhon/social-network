@@ -27,7 +27,7 @@ func main() {
 
 	s := http.Server{
 		Handler: server.StartServer(db),
-		Addr:    ":4033",
+		Addr:    ":4031",
 	}
 
 	fmt.Println("Server running on: http://localhost" + s.Addr)

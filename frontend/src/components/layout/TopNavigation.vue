@@ -30,6 +30,8 @@
 </template>
 
 <style scoped>
+ @import '../../styles/global.css';
+ @import '../../styles/variables.css';
 .top-navigation {
   position: sticky;
   top: 0;

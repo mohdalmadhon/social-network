@@ -1,4 +1,5 @@
 <script setup>
+ 
 defineProps({
   activePage: {
     type: String,
@@ -65,6 +66,9 @@ async function logOut() {
 </template>
 
 <style scoped>
+ @import '../../styles/global.css';
+ @import '../../styles/variables.css';
+
 .side-navigation {
   display: none;
 }
