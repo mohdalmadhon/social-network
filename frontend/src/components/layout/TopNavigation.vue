@@ -1,5 +1,5 @@
 <script setup>
-import OrbitLogo from './OrbitLogo.vue'
+  import OrbitLogo from './OrbitLogo.vue'
 </script>
 
 <template>

@@ -13,6 +13,7 @@ import (
 	"social/backend/models"
 	"social/backend/validation"
 	"social/sql/database"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -102,6 +103,32 @@ func (app App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		DOB:       r.FormValue("dob"),
 		Username:  r.FormValue("username"),
 		About:     r.FormValue("about"),
+	}
+
+	userData.Email = strings.ToLower(strings.TrimSpace(userData.Email))
+	userData.Username = strings.ToLower(strings.TrimSpace(userData.Username))
+
+	firstName := []rune(strings.TrimSpace(userData.FirstName))
+	lastName := []rune(strings.TrimSpace(userData.LastName))
+
+	if len(firstName) > 0 {
+		firstName[0] = []rune(strings.ToUpper(string(firstName[0])))[0]
+
+		for i := 1; i < len(firstName); i++ {
+			firstName[i] = []rune(strings.ToLower(string(firstName[i])))[0]
+		}
+
+		userData.FirstName = string(firstName)
+	}
+
+	if len(lastName) > 0 {
+		lastName[0] = []rune(strings.ToUpper(string(lastName[0])))[0]
+
+		for i := 1; i < len(lastName); i++ {
+			lastName[i] = []rune(strings.ToLower(string(lastName[i])))[0]
+		}
+
+		userData.LastName = string(lastName)
 	}
 
 	err = validation.ValidateUserData(userData)
