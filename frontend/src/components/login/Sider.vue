@@ -11,7 +11,10 @@
 
     <header class="header">
       <div class="brand">
-        
+        <span class="logo-placeholder" aria-hidden="true">
+          <span></span>
+          <span></span>
+        </span>
         <span class="brand-name">orbit</span>
       </div>
     </header>
@@ -64,14 +67,14 @@
 
 .landing {
   position: relative;
-  min-height: 100vh;
-  width: 35%;
+  width: 100%;
+  min-height: 19rem;
   overflow: hidden;
   background:
     radial-gradient(circle at 20% 35%, rgba(75, 63, 160, 0.12), transparent 35%),
     #100d2b;
   color: #fff;
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-body);
 }
 
 .orb {
@@ -82,49 +85,47 @@
 }
 
 .orb-1 {
-  width: 360px;
-  height: 360px;
-  left: -80px;
-  top: 55px;
+  width: 16rem;
+  height: 16rem;
+  left: -5rem;
+  top: 2.5rem;
   background: rgba(71, 61, 143, 0.28);
 }
 
 .orb-2 {
-  width: 420px;
-  height: 420px;
-  left: -110px;
-  top: 300px;
+  width: 20rem;
+  height: 20rem;
+  left: 35%;
+  top: 5rem;
   background: rgba(48, 45, 119, 0.28);
 }
 
 .orb-3 {
-  width: 270px;
-  height: 270px;
-  left: -42px;
-  bottom: 2px;
+  width: 12rem;
+  height: 12rem;
+  right: -4rem;
+  bottom: -5rem;
+  left: auto;
   background: rgba(133, 72, 106, 0.32);
 }
 
 .orb-4 {
-  width: 220px;
-  height: 220px;
-  left: -120px;
-  top: 260px;
+  width: 10rem;
+  height: 10rem;
+  left: -5rem;
+  top: 11rem;
   background: rgba(116, 65, 112, 0.26);
 }
 
 .orb-5 {
-  width: 500px;
-  height: 500px;
-  right: -370px;
-  bottom: -250px;
+  display: none;
   background: rgba(83, 52, 157, 0.08);
 }
 
 .header {
   position: relative;
   z-index: 2;
-  padding: 12px 0 0 47px;
+  padding: var(--space-4) var(--space-5) 0;
 }
 
 .brand {
@@ -134,7 +135,8 @@
 }
 
 .brand-name {
-  font-size: 24px;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: -0.5px;
 }
@@ -177,17 +179,17 @@
 .hero {
   position: relative;
   z-index: 2;
-  line-height: 1.5;
-  margin-left: 46px;
-  margin-top: 108px;
+  max-width: 34rem;
+  margin: var(--space-6) var(--space-5) 0;
 }
 
 .hero h1 {
   margin: 0;
-  font-size: clamp(42px, 10vw, 52px);
-  line-height: 1.5;
-  letter-spacing: -1.7px;
-  font-weight: 750;
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 10vw, 3.25rem);
+  line-height: 1.12;
+  letter-spacing: -0.04em;
+  font-weight: 700;
 }
 
 .hero h1 span {
@@ -195,16 +197,16 @@
 }
 
 .description {
-  margin: 5px 0 0 5px;
-  margin-top: 5px;
+  max-width: 34rem;
+  margin: var(--space-3) 0 0;
   color: #9c98b3;
-  font-size: 18px;
-  line-height: 20px;
+  font-size: 1rem;
+  line-height: 1.45;
   font-weight: 400;
 }
 
 .features {
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 13px;
   margin-top: 21px;
@@ -215,8 +217,8 @@
   align-items: center;
   gap: 12px;
   color: #e9e6f1;
-  font-size: 11px;
-  line-height: 1;
+  font-size: 0.875rem;
+  line-height: 1.3;
 }
 
 .feature-icon {
@@ -296,48 +298,84 @@
 .accent-dot {
   position: absolute;
   z-index: 2;
-  width: 17px;
-  height: 17px;
-  right: 140px;
-  bottom: 215px;
+  width: 1rem;
+  height: 1rem;
+  right: 12%;
+  bottom: 12%;
   border-radius: 50%;
   background: #ff6385;
 }
 
-@media (max-width: 500px) {
+@media (min-width: 48rem) {
+  .landing {
+    min-height: 25rem;
+  }
+
   .header {
-    padding-left: 47px;
+    padding: var(--space-5) var(--space-7) 0;
   }
 
   .hero {
-    margin-left: 46px;
-    margin-top: 108px;
+    margin: var(--space-7) var(--space-7) 0;
   }
 
-  .hero h1 {
-    font-size: 42px;
-  }
-
-  .description {
-    max-width: 330px;
+  .features {
+    display: flex;
   }
 }
 
-@media (max-width: 380px) {
-  .hero {
-    margin-left: 32px;
+@media (min-width: 64rem) {
+  .landing {
+    min-height: 100vh;
+  }
+
+  .orb-1 {
+    width: 22.5rem;
+    height: 22.5rem;
+    left: -5rem;
+    top: 3.5rem;
+  }
+
+  .orb-2 {
+    width: 26rem;
+    height: 26rem;
+    left: -7rem;
+    top: 18.75rem;
+  }
+
+  .orb-3 {
+    width: 17rem;
+    height: 17rem;
+    right: auto;
+    bottom: 0;
+    left: -2.5rem;
+  }
+
+  .orb-4 {
+    width: 14rem;
+    height: 14rem;
+    left: -7rem;
+    top: 16rem;
+  }
+
+  .orb-5 {
+    display: block;
+    width: 31rem;
+    height: 31rem;
+    right: -23rem;
+    bottom: -16rem;
   }
 
   .header {
-    padding-left: 32px;
+    padding: var(--space-5) clamp(2rem, 4vw, 4rem) 0;
+  }
+
+  .hero {
+    margin: clamp(7rem, 14vh, 12rem) clamp(2rem, 4vw, 4rem) 0;
   }
 
   .hero h1 {
-    font-size: 38px;
-  }
-
-  .description {
-    font-size: 11px;
+    font-size: clamp(3rem, 3.2vw, 4.25rem);
   }
 }
 </style>

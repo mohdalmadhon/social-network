@@ -6,12 +6,11 @@ import (
 	"social/backend/server/api"
 )
 
-
 func StartServer(db *sql.DB) *http.ServeMux {
 	app := api.App{
 		DB: db,
 	}
-
+	
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/register/checkEmail", app.CheckEmailExists)
 	mux.HandleFunc("/api/register/checkUsername", app.CheckUsernameExists)
@@ -19,5 +18,6 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("/api/login", app.LoggingUser)
 	mux.HandleFunc("/api/session", app.SessionAuthorizer)
 	
+	mux.HandleFunc("/api/logout", app.LogOutUser)
 	return mux
 }

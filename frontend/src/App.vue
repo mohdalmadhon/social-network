@@ -1,5 +1,4 @@
 <script setup>
-    import Login from './pages/Login.vue';
 
     async function checkToken() {
         try {
