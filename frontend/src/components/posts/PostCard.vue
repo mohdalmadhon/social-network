@@ -1,5 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
+import CommentInput from '@/components/comments/CommentInput.vue'
+import CommentPreview from '@/components/comments/CommentPreview.vue'
 
 const props = defineProps({
   post: {
@@ -9,11 +11,23 @@ const props = defineProps({
 })
 
 const liked = ref(false)
+const newComment = ref(null)
+const addedComments = ref(0)
 
 const likeCount = computed(() => props.post.likes + (liked.value ? 1 : 0))
+const commentCount = computed(() => props.post.comments + addedComments.value)
 
 function toggleLike() {
   liked.value = !liked.value
+}
+
+function addComment(content) {
+  newComment.value = {
+    author: 'Noa Ferreira',
+    avatarColor: 'var(--gradient-action)',
+    content,
+  }
+  addedComments.value += 1
 }
 </script>
 
@@ -42,6 +56,9 @@ function toggleLike() {
       <span class="post-card__mountain post-card__mountain--front" aria-hidden="true"></span>
     </div>
 
+    <CommentPreview v-if="post.previewComment" :comment="post.previewComment" />
+    <CommentPreview v-if="newComment" :comment="newComment" />
+
     <footer class="post-card__actions">
       <button
         class="post-action"
@@ -56,13 +73,15 @@ function toggleLike() {
         <span>{{ likeCount }}</span>
       </button>
 
-      <button class="post-action" type="button" :aria-label="`${post.comments} comments`">
+      <button class="post-action" type="button" :aria-label="`${commentCount} comments`">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M21 11.5a8.4 8.4 0 0 1-9 8.5 9.8 9.8 0 0 1-3.8-.8L3 21l1.8-4.6A8.4 8.4 0 1 1 21 11.5Z" />
         </svg>
-        <span>{{ post.comments }} comments</span>
+        <span>{{ commentCount }} comments</span>
       </button>
     </footer>
+
+    <CommentInput :input-id="`comment-${post.id}`" @submit="addComment" />
   </article>
 </template>
 

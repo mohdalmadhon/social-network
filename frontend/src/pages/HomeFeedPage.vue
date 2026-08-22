@@ -1,5 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout.vue'
+import FeedSidebar from '@/components/posts/FeedSidebar.vue'
 import PostCard from '@/components/posts/PostCard.vue'
 import PostComposer from '@/components/posts/PostComposer.vue'
 
@@ -27,21 +28,35 @@ const samplePosts = [
     comments: 3,
     hasMedia: false,
     mediaDescription: '',
+    previewComment: {
+      author: 'Leo Marchetti',
+      avatarColor: '#28668d',
+      content: 'Use named migrations — future you says thanks 😄',
+    },
   },
 ]
 </script>
 
 <template>
   <AuthenticatedLayout active-page="home">
-    <div class="home-feed">
-      <h1 class="visually-hidden">Home feed</h1>
-      <PostComposer />
-      <PostCard v-for="post in samplePosts" :key="post.id" :post="post" />
+    <div class="feed-layout">
+      <div class="home-feed">
+        <h1 class="visually-hidden">Home feed</h1>
+        <PostComposer />
+        <PostCard v-for="post in samplePosts" :key="post.id" :post="post" />
+      </div>
+      <FeedSidebar />
     </div>
   </AuthenticatedLayout>
 </template>
 
 <style scoped>
+.feed-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-5);
+}
+
 .home-feed {
   display: grid;
   width: 100%;
@@ -52,6 +67,12 @@ const samplePosts = [
 @media (min-width: 48rem) {
   .home-feed {
     gap: var(--space-5);
+  }
+}
+
+@media (min-width: 90rem) {
+  .feed-layout {
+    justify-content: center;
   }
 }
 </style>
