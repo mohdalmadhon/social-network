@@ -1,6 +1,9 @@
-import { createApp, h } from 'vue'
+import { createApp } from 'vue'
+import ChatsPage from './pages/ChatsPage.vue'
+import GroupsPage from './pages/GroupsPage.vue'
 import HomeFeedPage from './pages/HomeFeedPage.vue'
-import PlaceholderPage from './pages/PlaceholderPage.vue'
+import NotificationsPage from './pages/NotificationsPage.vue'
+import ProfilePage from './pages/ProfilePage.vue'
 import './styles/variables.css'
 import './styles/global.css'
 
@@ -8,10 +11,10 @@ const pageName = document.body.dataset.page
 
 const pages = {
   home: HomeFeedPage,
-  profile: () => h(PlaceholderPage, { activePage: 'profile', title: 'Profile' }),
-  groups: () => h(PlaceholderPage, { activePage: 'groups', title: 'Groups' }),
-  chats: () => h(PlaceholderPage, { activePage: 'chats', title: 'Chats' }),
-  notifications: () => h(PlaceholderPage, { activePage: 'notifications', title: 'Notifications' }),
+  profile: ProfilePage,
+  groups: GroupsPage,
+  chats: ChatsPage,
+  notifications: NotificationsPage,
 }
 
 const page = pages[pageName]

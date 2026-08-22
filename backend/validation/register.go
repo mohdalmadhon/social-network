@@ -81,6 +81,7 @@ func validateUsername(username string) error {
 // recieve name and validate the length and that it only contains alphabatic characters
 func validateName(name string) error {
 	if len(name) < 2 {
+<<<<<<< HEAD
 		return errors.New("invalid name. length cannot be less than 3")
 	}
 	if len(name) < 2 {
@@ -88,6 +89,15 @@ func validateName(name string) error {
 	}
 
 	matched, err := regexp.MatchString(`^[\p{L}]+$`, name)
+=======
+		return errors.New("invalid name. length cannot be less than 2")
+	}
+	if len(name) > 25 {
+		return errors.New("invalid name. length cannot be more than 25")
+	}
+
+	matched, err := regexp.MatchString(`^[a-zA-Z]+$`, name)
+>>>>>>> c8501cc261c9b51e37998c4a899a90e9bde759a6
 	if err != nil || !matched {
 		return errors.New("invalid name. forbidden characters")
 	}

@@ -19,5 +19,6 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("/api/session", app.SessionAuthorizer)
 	
 	mux.HandleFunc("/api/logout", app.LogOutUser)
+	mux.HandleFunc("/api/posts", app.Posts)
 	return mux
 }
