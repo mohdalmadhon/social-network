@@ -103,6 +103,24 @@ func GetUserDataByIdentifier(db *sql.DB, identifier string) (models.User, error)
 	return userData, nil
 }
 
+func GetProfileData(db *sql.DB, identifier string) (models.Profile, error) {
+	var profile models.Profile
+	err := db.QueryRow(`select num_of_followers, num_of_following, num_of_posts, about, avatar_path from profile 
+						where user_id = (select id from users where email = ? or username = ?)`, identifier, identifier).Scan(
+							&profile.Followers,
+							&profile.Following,
+							&profile.Posts,
+							&profile.About,
+							&profile.Avatar_Path,
+						)
+
+	if err != nil {
+		return profile, err
+	}
+
+	return profile, nil
+}
+
 func GetPasswordByIdentifier(db *sql.DB, identifier string) (string, error) {
 	var password string
 

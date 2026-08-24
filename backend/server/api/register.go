@@ -149,12 +149,6 @@ func (app App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userData.Password = HashedPassword
-	err = database.InsertUser(app.DB, userData)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Could not create user", http.StatusInternalServerError)
-		return
-	}
 
 	file, header, err := r.FormFile("avatar")
 
@@ -181,25 +175,15 @@ func (app App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Println(err)
 			http.Error(w, "Could not create avatar directory", http.StatusInternalServerError)
-
-			w.Header().Set("Content-type", "application/json")
-			json.NewEncoder(w).Encode(map[string]any{
-				"status":  false,
-				"message": "error happened getting data",
-			})
 			return
 		}
 
 		filePath := filepath.Join(avatarDir, filename)
+
 		dst, err := os.Create(filePath)
 		if err != nil {
 			log.Println(err)
 			http.Error(w, "Could not save avatar", http.StatusInternalServerError)
-			w.Header().Set("Content-type", "application/json")
-			json.NewEncoder(w).Encode(map[string]any{
-				"status":  false,
-				"message": "error happened getting data",
-			})
 			return
 		}
 
@@ -209,18 +193,20 @@ func (app App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Println(err)
 			http.Error(w, "Could not save avatar", http.StatusInternalServerError)
-			w.Header().Set("Content-type", "application/json")
-			json.NewEncoder(w).Encode(map[string]any{
-				"status":  false,
-				"message": "error happened getting data",
-			})
 			return
 		}
 
-		userData.Avatar = filename
+		userData.Avatar = filepath.ToSlash(filepath.Join("avatars", filename))
 
 		log.Println("Avatar saved:", filePath)
+		log.Println("Avatar URL path:", userData.Avatar)
+	}
 
+	err = database.InsertUser(app.DB, userData)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Could not create user", http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-type", "application/json")

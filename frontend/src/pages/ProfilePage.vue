@@ -1,35 +1,73 @@
-<script>
-import SideNavigation from '@/components/layout/SideNavigation.vue';
-import TopNavigation from '@/components/layout/TopNavigation.vue';
-import ProfileHeader from '@/components/profile/ProfileHeader.vue';
-import ProfileTabs from '@/components/profile/ProfileTabs.vue';
-import ProfileAbout from '@/components/profile/ProfileAbout.vue';
-import ProfileFollowers from '@/components/profile/ProfileFollowers.vue';
+<script setup>
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 
-export default {
-    components: {
-        SideNavigation,
-        TopNavigation,
-        ProfileHeader,
-        ProfileTabs,
-        ProfileAbout,
-        ProfileFollowers,
-    },
-};
+import SideNavigation from '@/components/layout/SideNavigation.vue'
+import TopNavigation from '@/components/layout/TopNavigation.vue'
+import ProfileHeader from '@/components/profile/ProfileHeader.vue'
+import ProfileTabs from '@/components/profile/ProfileTabs.vue'
+import ProfileAbout from '@/components/profile/ProfileAbout.vue'
+import ProfileFollowers from '@/components/profile/ProfileFollowers.vue'
+
+import { userData } from '@/stores/userData'
+
+const router = useRouter()
+
+async function getData() {
+    try {
+        const resp = await fetch('/api/users/getData', {
+            method: 'POST',
+            credentials: 'include'
+        })
+
+        const result = await resp.json()
+
+
+        if (!resp.ok || !result.status) {
+            router.replace('/login')
+            return
+        }
+
+        userData.value = {
+            ...userData.value,
+            ...result.data.user,
+        }
+
+        userData.value.numOfFollowers = result.data.profile.Followers;
+        userData.value.numOfFollowing = result.data.profile.Following;
+        userData.value.numOfPosts = result.data.profile.Posts;
+        userData.value.about = result.data.profile.About;
+        userData.value.avatar_path = 'http://localhost:4031' +
+            result.data.profile.Avatar_Path
+                .replaceAll('\\', '/')
+                .replace('..', '')
+        console.log(userData.value.avatar_path)
+    } catch (err) {
+        console.error(err)
+        router.replace('/login')
+    }
+}
+
+onMounted(() => {
+    getData()
+})
 </script>
 
 <template>
     <header>
-        <TopNavigation/>
+        <TopNavigation />
     </header>
+
     <div class="app-body">
-        <SideNavigation/>
+        <SideNavigation />
+
         <main>
-            <ProfileHeader/>
-            <ProfileTabs/>
+            <ProfileHeader />
+            <ProfileTabs />
+
             <div class="profile-content">
-                <ProfileAbout/>
-                <ProfileFollowers/>
+                <ProfileAbout />
+                <ProfileFollowers />
             </div>
         </main>
     </div>
