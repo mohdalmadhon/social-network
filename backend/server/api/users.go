@@ -8,38 +8,14 @@ import (
 )
 
 func (app *App) GetUserData(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]any{
-			"status":  false,
-			"message": "bad request method",
-		})
-		return
-	}
-
-	cookie, err := r.Cookie("token")
-	if err != nil {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]any{
-			"status":  false,
-			"message": "could not get cookie",
-		})
 		return
 	}
 
-	payload, err := VerifyToken(cookie.Value)
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]any{
-			"status":  false,
-			"message": "unauthorized",
-		})
-		return
-	}
-
-	data, err := database.GetUserDataByIdentifier(app.DB, payload.Identifier)
+	data, err := database.GetUserData(app.DB, userID)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -50,7 +26,7 @@ func (app *App) GetUserData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	profileData, err := database.GetProfileData(app.DB, payload.Identifier)
+	profileData, err := database.GetProfileData(app.DB, userID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]any{

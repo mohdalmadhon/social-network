@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"social/backend/server/api"
+	middleware "social/backend/server/api/middleWare"
 )
 
 func StartServer(db *sql.DB) *http.ServeMux {
@@ -14,12 +15,18 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	}
 
 	mux := http.NewServeMux()
+	// sessions
+	mux.HandleFunc("POST /api/session", app.LoggingUser)
+
+	//users
+	mux.HandleFunc("POST /api/user/", app.RegisterUser)
+	mux.HandleFunc("PUT /api/user", middleware.AuthMiddleware(app.UpdateUserInfo))
+	
+	//profile
+	mux.HandleFunc("GET /api/me", middleware.AuthMiddleware(app.GetUserData))
+
 	mux.HandleFunc("/api/register/checkEmail", app.CheckEmailExists)
 	mux.HandleFunc("/api/register/checkUsername", app.CheckUsernameExists)
-	mux.HandleFunc("/api/register/submit", app.RegisterUser)
-	mux.HandleFunc("/api/login", app.LoggingUser)
-	mux.HandleFunc("/api/session", app.SessionAuthorizer)
-	mux.HandleFunc("/api/users/getData", app.GetUserData)
 	mux.HandleFunc("/api/posts", app.Posts)
 
 	uploadDir, err := filepath.Abs("../uploads")

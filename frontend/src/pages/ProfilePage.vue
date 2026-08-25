@@ -14,8 +14,8 @@ const router = useRouter()
 
 async function getData() {
     try {
-        const resp = await fetch('/api/users/getData', {
-            method: 'POST',
+        const resp = await fetch('/api/me', {
+            method: 'GET',
             credentials: 'include'
         })
 

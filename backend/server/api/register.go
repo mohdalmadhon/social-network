@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"social/backend/authontication"
 	"social/backend/models"
+	"social/backend/server/api/helpers"
 	"social/backend/validation"
 	"social/sql/database"
 	"strings"
@@ -23,13 +24,9 @@ type App struct {
 	DB *sql.DB
 }
 
-func (app App) CheckEmailExists(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		log.Println("method not right")
-		return
-	}
-
+func (app *App) CheckEmailExists(w http.ResponseWriter, r *http.Request) {
 	email := r.URL.Query().Get("email")
+
 	if email == "" {
 		log.Println("no email provided")
 		return
@@ -41,21 +38,16 @@ func (app App) CheckEmailExists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
+	helpers.WriteJSON(w, http.StatusOK, map[string]any{
 		"available": !taken,
 	})
 }
 
-func (app App) CheckUsernameExists(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		log.Println("wrong method")
-		return
-	}
-
+func (app *App) CheckUsernameExists(w http.ResponseWriter, r *http.Request) {
 	username := r.URL.Query().Get("username")
+
 	if username == "" {
-		log.Println("username not avilable")
+		log.Println("username not available")
 		return
 	}
 
@@ -65,30 +57,15 @@ func (app App) CheckUsernameExists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
-		"usernameAvilable": taken,
+	helpers.WriteJSON(w, http.StatusOK, map[string]any{
+		"usernameAvailable": !taken,
 	})
 }
 
-func (app App) RegisterUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-
-		w.Header().Set("Content-type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
-			"status":  false,
-			"message": "method not allowed",
-		})
-
-		return
-	}
-
+func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(10 << 20)
 	if err != nil {
-		http.Error(w, "Invalid form", http.StatusBadRequest)
-		w.Header().Set("Content-type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		helpers.WriteJSON(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "failed to parse information",
 		})
@@ -134,30 +111,29 @@ func (app App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	err = validation.ValidateUserData(userData)
 	if err != nil {
 		log.Println(err)
-		http.Error(w, "Invalid user data", http.StatusBadRequest)
+
+		helpers.WriteJSON(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid user data",
+		})
 		return
 	}
 
-	HashedPassword, err := authontication.HashPassword(userData.Password)
+	hashedPassword, err := authontication.HashPassword(userData.Password)
 	if err != nil {
-		http.Error(w, "Could not save hash password", http.StatusInternalServerError)
-		w.Header().Set("Content-type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		helpers.WriteJSON(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
 			"message": "error happened getting data",
 		})
+		return
 	}
 
-	userData.Password = HashedPassword
+	userData.Password = hashedPassword
 
 	file, header, err := r.FormFile("avatar")
-
 	if err != nil {
 		if err != http.ErrMissingFile {
-			http.Error(w, "Invalid avatar", http.StatusBadRequest)
-
-			w.Header().Set("Content-type", "application/json")
-			json.NewEncoder(w).Encode(map[string]any{
+			helpers.WriteJSON(w, http.StatusBadRequest, map[string]any{
 				"status":  false,
 				"message": "invalid image",
 			})
@@ -168,13 +144,16 @@ func (app App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 
 		ext := filepath.Ext(header.Filename)
 		filename := uuid.New().String() + ext
-
 		avatarDir := "../uploads/avatars"
 
 		err := os.MkdirAll(avatarDir, 0755)
 		if err != nil {
 			log.Println(err)
-			http.Error(w, "Could not create avatar directory", http.StatusInternalServerError)
+
+			helpers.WriteJSON(w, http.StatusInternalServerError, map[string]any{
+				"status":  false,
+				"message": "could not create avatar directory",
+			})
 			return
 		}
 
@@ -183,7 +162,11 @@ func (app App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		dst, err := os.Create(filePath)
 		if err != nil {
 			log.Println(err)
-			http.Error(w, "Could not save avatar", http.StatusInternalServerError)
+
+			helpers.WriteJSON(w, http.StatusInternalServerError, map[string]any{
+				"status":  false,
+				"message": "could not save avatar",
+			})
 			return
 		}
 
@@ -192,7 +175,11 @@ func (app App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		_, err = io.Copy(dst, file)
 		if err != nil {
 			log.Println(err)
-			http.Error(w, "Could not save avatar", http.StatusInternalServerError)
+
+			helpers.WriteJSON(w, http.StatusInternalServerError, map[string]any{
+				"status":  false,
+				"message": "could not save avatar",
+			})
 			return
 		}
 
@@ -205,66 +192,51 @@ func (app App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	err = database.InsertUser(app.DB, userData)
 	if err != nil {
 		log.Println(err)
-		http.Error(w, "Could not create user", http.StatusInternalServerError)
+
+		helpers.WriteJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not create user",
+		})
 		return
 	}
 
-	w.Header().Set("Content-type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
+	helpers.WriteJSON(w, http.StatusCreated, map[string]any{
 		"status":  true,
 		"message": "user registered",
 	})
 }
 
-func (app App) LoggingUser(w http.ResponseWriter, r *http.Request) {
+func (app *App) LoggingUser(w http.ResponseWriter, r *http.Request) {
 	var userData models.Logger
-
-	if r.Method != http.MethodPost {
-		w.Header().Set("Content-type", "application/json")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(map[string]any{
-			"status":  false,
-			"message": "method not allowed",
-		})
-		return
-	}
 
 	err := json.NewDecoder(r.Body).Decode(&userData)
 	if err != nil {
-		w.Header().Set("Content-type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]any{
+		helpers.WriteJSON(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "error happened while fetching data",
 		})
 		return
 	}
 
-	HashedPassword, err := database.GetPasswordByIdentifier(app.DB, userData.Identifier)
+	hashedPassword, err := database.GetPasswordByIdentifier(app.DB, userData.Identifier)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			w.Header().Set("Content-type", "application/json")
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode(map[string]any{
+			helpers.WriteJSON(w, http.StatusUnauthorized, map[string]any{
 				"status":  false,
 				"message": "identifier or password is wrong",
 			})
 			return
 		}
 
-		w.Header().Set("Content-type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]any{
+		helpers.WriteJSON(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
 			"message": "error happened while authenticating",
 		})
 		return
 	}
 
-	if !authontication.AuthonticateUser(userData, HashedPassword) {
-		w.Header().Set("Content-type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]any{
+	if !authontication.AuthonticateUser(userData, hashedPassword) {
+		helpers.WriteJSON(w, http.StatusUnauthorized, map[string]any{
 			"status":  false,
 			"message": "identifier or password is wrong",
 		})
@@ -273,19 +245,16 @@ func (app App) LoggingUser(w http.ResponseWriter, r *http.Request) {
 
 	id, err := database.GetUserIDbyIdentifier(app.DB, userData.Identifier)
 	if err != nil {
-		w.Header().Set("Content-type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]any{
+		helpers.WriteJSON(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
 			"message": "could not get user data",
 		})
 		return
 	}
+
 	token, err := GenerateToken(id, userData.Identifier)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]any{
+		helpers.WriteJSON(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
 			"message": "could not create authentication token",
 		})
@@ -303,11 +272,65 @@ func (app App) LoggingUser(w http.ResponseWriter, r *http.Request) {
 
 	http.SetCookie(w, &cookie)
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	json.NewEncoder(w).Encode(map[string]any{
+	helpers.WriteJSON(w, http.StatusOK, map[string]any{
 		"status":  true,
 		"message": "logged in",
+	})
+}
+
+func (app App) UpdateUserInfo(w http.ResponseWriter, r *http.Request) {
+	userId, ok := r.Context().Value("userID").(int)
+	if !ok {
+		helpers.WriteJSON(w, http.StatusUnauthorized, map[string]any{
+			"status":  false,
+			"message": "could not get user data",
+		})
+		return
+	}
+
+	var userData models.User
+	if err := json.NewDecoder(r.Body).Decode(&userData); err != nil {
+		helpers.WriteJSON(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid request body",
+		})
+		return
+	}
+
+	userData.Id = userId
+
+	if userData.Password != "" {
+		hashedPass, err := authontication.HashPassword(userData.Password)
+		if err != nil {
+			log.Println("UpdateProfileAbout error:", err)
+			helpers.WriteJSON(w, http.StatusInternalServerError, map[string]any{
+				"status":  false,
+				"message": "could not process password",
+			})
+			return
+		}
+		userData.Password = hashedPass
+	}
+
+	if err := database.UpdateUser(app.DB, userData); err != nil {
+		log.Println("UpdateProfileAbout error:", err)
+		helpers.WriteJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not update user data",
+		})
+		return
+	}
+
+	if err := database.UpdateProfileAbout(app.DB, userId, userData.About); err != nil {
+		helpers.WriteJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not update profile",
+		})
+		return
+	}
+
+	helpers.WriteJSON(w, http.StatusOK, map[string]any{
+		"status":  true,
+		"message": "data updated",
 	})
 }

@@ -383,7 +383,7 @@ async function submitRegister(e) {
     }
 
     try {
-        const resp = await fetch('/api/register/submit', {
+        const resp = await fetch('/api/user/', {
             method: 'POST',
             body: data
         })
@@ -486,7 +486,7 @@ async function submitLogin() {
     }
 
     try {
-        const resp = await fetch('/api/login', {
+        const resp = await fetch('/api/session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',

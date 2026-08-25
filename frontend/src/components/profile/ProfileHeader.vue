@@ -35,11 +35,7 @@ function formatJoinedDate(date) {
         <div class="profile-info">
             <div class="avatar-wrap">
                 <div class="avatar">
-                    <img
-                        v-if="userData.avatar_path"
-                        :src="userData.avatar_path"
-                        alt="Avatar"
-                    >
+                    <img v-if="userData.avatar_path" :src="userData.avatar_path" alt="Avatar">
 
                     <span v-else>{{ initial }}</span>
                 </div>
@@ -67,7 +63,9 @@ function formatJoinedDate(date) {
 
         <div class="actions-row">
             <div class="actions-left">
-                <button class="edit-btn">Edit profile</button>
+                <RouterLink to="/profile/edit">
+                    <button class="edit-btn">Edit profile</button>
+                </RouterLink>
             </div>
 
             <div class="stats">

@@ -68,19 +68,26 @@ update function user must recieve all the user data wether it is updated or not
 becuse it will be too much to created a function or switch case for each
 */
 func UpdateUser(db *sql.DB, userData models.User) error {
-	result, err := db.Exec(`
+	query := `
 		UPDATE users
-		SET email = ?, username = ?, first_name = ?, last_name = ?, dob = ?, password = ?
-		WHERE id = ?
-	`,
+		SET email = ?, username = ?, first_name = ?, last_name = ?
+	`
+	args := []any{
 		userData.Email,
 		userData.Username,
 		userData.FirstName,
 		userData.LastName,
-		userData.DOB,
-		userData.Password,
-		userData.Id,
-	)
+	}
+
+	if userData.Password != "" {
+		query += `, password = ?`
+		args = append(args, userData.Password)
+	}
+
+	query += ` WHERE id = ?`
+	args = append(args, userData.Id)
+
+	result, err := db.Exec(query, args...)
 	if err != nil {
 		return err
 	}
@@ -97,17 +104,25 @@ func UpdateUser(db *sql.DB, userData models.User) error {
 	return nil
 }
 
+func UpdateProfileAbout(db *sql.DB, userId int, about string) error {
+	_, err := db.Exec(`
+		UPDATE profile
+		SET about = ?
+		WHERE user_id = ?
+	`, about, userId)
+	return err
+}
+
 // database function that recieve email or username as "identifier" and return user data
-func GetUserDataByIdentifier(db *sql.DB, identifier string) (models.User, error) {
+func GetUserData(db *sql.DB, userID int) (models.User, error) {
 	var userData models.User
 	var username sql.NullString
 
 	err := db.QueryRow(`
-		SELECT id, email, username, first_name, last_name, dob, created_at, updated_at
+		SELECT email, username, first_name, last_name, dob, created_at, updated_at
 		FROM users
-		WHERE username = ? OR email = ?
-	`, identifier, identifier).Scan(
-		&userData.Id,
+		WHERE id = ?
+	`, userID).Scan(
 		&userData.Email,
 		&username,
 		&userData.FirstName,
@@ -121,6 +136,8 @@ func GetUserDataByIdentifier(db *sql.DB, identifier string) (models.User, error)
 		return userData, err
 	}
 
+	userData.Id = userID
+
 	if username.Valid {
 		userData.Username = username.String
 	} else {
@@ -130,10 +147,10 @@ func GetUserDataByIdentifier(db *sql.DB, identifier string) (models.User, error)
 	return userData, nil
 }
 
-func GetProfileData(db *sql.DB, identifier string) (models.Profile, error) {
+func GetProfileData(db *sql.DB, userID int) (models.Profile, error) {
 	var profile models.Profile
 	err := db.QueryRow(`select num_of_followers, num_of_following, num_of_posts, about, avatar_path from profile 
-						where user_id = (select id from users where email = ? or username = ?)`, identifier, identifier).Scan(
+						where user_id = ?`, userID).Scan(
 		&profile.Followers,
 		&profile.Following,
 		&profile.Posts,
