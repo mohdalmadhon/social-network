@@ -17,6 +17,10 @@ coverage
 *.local
 
 # Editor directories and files
+uploads/
+./db/
+db/
+*.db
 .vscode/*
 !.vscode/extensions.json
 .idea

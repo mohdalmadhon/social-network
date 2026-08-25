@@ -63,6 +63,9 @@ func validateEmail(email string) error {
 // recieve username as a string and return a boolean if username is not too short or long
 // and if it does not contain forbidden charcters
 func validateUsername(username string) error {
+	if len(username) == 0 {
+		return nil
+	}
 	if len(username) < 3 {
 		return errors.New("invalid username. username length must be at least three characters long")
 	}

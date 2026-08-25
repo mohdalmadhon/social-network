@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"social/sql/database"
 )
@@ -40,6 +41,7 @@ func (app *App) GetUserData(w http.ResponseWriter, r *http.Request) {
 
 	data, err := database.GetUserDataByIdentifier(app.DB, payload.Identifier)
 	if err != nil {
+		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]any{
 			"status":  false,
@@ -57,7 +59,7 @@ func (app *App) GetUserData(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]any{
 		"status": true,

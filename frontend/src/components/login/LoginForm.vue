@@ -246,24 +246,28 @@ function validateDob() {
 }
 
 async function validateUsername() {
-    const value = form.value.username.trim()
+    form.value.username = form.value.username.trim()
 
-    if (!value) {
+    if(form.value.username.length == 0) {
+        return true
+    }
+
+    if (!form.value.username) {
         errors.value.username = 'Nickname is required'
         return false
     }
 
-    if (value.length < 3) {
+    if (form.value.username.length < 3) {
         errors.value.username = 'Nickname must be at least 3 characters'
         return false
     }
 
-    if (value.length > 15) {
+    if (form.value.username.length > 15) {
         errors.value.username = 'Nickname is too long. Max length is 15 characters'
         return false
     }
 
-    if (!/^[A-Za-z0-9_]+$/.test(value)) {
+    if (!/^[A-Za-z0-9_]+$/.test(form.value.username)) {
         errors.value.username = 'Nickname can only contain letters, numbers and underscores'
         return false
     }
@@ -577,9 +581,7 @@ async function submitLogin() {
                     <button type="submit" class="submit-button">
                         Sign in →
                     </button>
-                    <button type="button" class="bottom-signin">
-                        Forgot your password?
-                    </button>
+                    
                 </form>
                 <form v-else key="create" @submit.prevent="submitRegister">
                     <h1 class="form-title">Create account</h1>
@@ -635,10 +637,10 @@ async function submitLogin() {
                         </div>
                         <div>
                             <label for="username">
-                                NICKNAME *
+                                NICKNAME
                             </label>
                             <input type="text" name="username" id="username" v-model="form.username" maxlength="15"
-                                placeholder="@noa.png" required @blur="validateUsername"
+                                placeholder="@noa.png" @blur="validateUsername"
                                 @input="clearError('username')">
                             <p class="error-message" :class="errorClass(errors.username)">
                                 {{ errors.username }}

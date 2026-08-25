@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"social/backend/models"
@@ -12,28 +13,46 @@ import (
 // inserting user
 func InsertUser(db *sql.DB, userData models.RegisterRequest) error {
 	_, err := db.Exec(`
-		INSERT INTO users (email, username, first_name, last_name, dob, password, created_at)
-		VALUES (?,?,?,?,?,?,?);
-	`, userData.Email, userData.Username, userData.FirstName, userData.LastName, userData.DOB, userData.Password, time.Now())
+		INSERT INTO users (email, first_name, last_name, dob, password, created_at)
+		VALUES (?,?,?,?,?,?);
+	`, userData.Email, userData.FirstName, userData.LastName, userData.DOB, userData.Password, time.Now())
 
-	if len(userData.Avatar) != 0 || len(userData.About) != 0 {
-		var profile models.Profile
-		profile.About = userData.About
-		profile.Avatar_Path = userData.Avatar
+	if len(userData.Username) != 0 {
+		_, err := db.Exec(`insert into users (username) values (?) where id = (select id from users where email = ?)`,
+			userData.Username, userData.Email)
 
-		err = InsertProfileData(db, profile, userData.Username)
 		if err != nil {
 			return err
 		}
 	}
+
+	var profile models.Profile
+	if len(profile.About) != 0 {
+		profile.About = userData.About
+	} else {
+		profile.About = ""
+	}
+
+	if len(profile.Avatar_Path) != 0 {
+		profile.Avatar_Path = userData.Avatar
+	} else {
+		profile.Avatar_Path = ""
+	}
+
+	err = InsertProfileData(db, profile, userData.Email)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+
 	return err
 }
 
-func InsertProfileData(db *sql.DB, profile models.Profile, username string) error {
+func InsertProfileData(db *sql.DB, profile models.Profile, email string) error {
 	_, err := db.Exec(`
-		insert into profile (user_id, about, avatar_path)
-		values ((select id from users where username = ?), ?, ?)
-	`, username, profile.About, profile.Avatar_Path)
+		insert into profile (user_id, about, avatar_path, num_of_following, num_of_followers, num_of_posts)
+		values ((select id from users where email = ?), ?, ?,0,0,0)
+	`, email, profile.About, profile.Avatar_Path)
 
 	return err
 }
@@ -81,6 +100,7 @@ func UpdateUser(db *sql.DB, userData models.User) error {
 // database function that recieve email or username as "identifier" and return user data
 func GetUserDataByIdentifier(db *sql.DB, identifier string) (models.User, error) {
 	var userData models.User
+	var username sql.NullString
 
 	err := db.QueryRow(`
 		SELECT id, email, username, first_name, last_name, dob, created_at, updated_at
@@ -89,15 +109,22 @@ func GetUserDataByIdentifier(db *sql.DB, identifier string) (models.User, error)
 	`, identifier, identifier).Scan(
 		&userData.Id,
 		&userData.Email,
-		&userData.Username,
+		&username,
 		&userData.FirstName,
 		&userData.LastName,
 		&userData.DOB,
 		&userData.CreatedAt,
 		&userData.Updated_at,
 	)
+
 	if err != nil {
 		return userData, err
+	}
+
+	if username.Valid {
+		userData.Username = username.String
+	} else {
+		userData.Username = ""
 	}
 
 	return userData, nil
@@ -107,12 +134,12 @@ func GetProfileData(db *sql.DB, identifier string) (models.Profile, error) {
 	var profile models.Profile
 	err := db.QueryRow(`select num_of_followers, num_of_following, num_of_posts, about, avatar_path from profile 
 						where user_id = (select id from users where email = ? or username = ?)`, identifier, identifier).Scan(
-							&profile.Followers,
-							&profile.Following,
-							&profile.Posts,
-							&profile.About,
-							&profile.Avatar_Path,
-						)
+		&profile.Followers,
+		&profile.Following,
+		&profile.Posts,
+		&profile.About,
+		&profile.Avatar_Path,
+	)
 
 	if err != nil {
 		return profile, err
@@ -163,7 +190,7 @@ func CheckAvilableUsername(db *sql.DB, username string) (bool, error) {
 }
 
 // function used to get user id by giving it either email or username
-func GetUserIDbyIdentifier(db*sql.DB, identifier string) (int, error) {
+func GetUserIDbyIdentifier(db *sql.DB, identifier string) (int, error) {
 	var id int
 	err := db.QueryRow(`select id from users where username = ? or email = ?`, identifier, identifier).Scan(&id)
 

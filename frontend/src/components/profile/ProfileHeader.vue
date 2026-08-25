@@ -3,14 +3,21 @@ import { computed } from 'vue'
 import { userData } from '@/stores/userData'
 
 const initial = computed(() => {
-    return (userData.value.firstName || userData.value.username || '?')
-        .charAt(0)
-        .toUpperCase()
+    if (userData.value.firstName) {
+        return userData.value.firstName.charAt(0).toUpperCase()
+    }
+
+    if (userData.value.username) {
+        return userData.value.username.charAt(0).toUpperCase()
+    }
+
+    return '?'
 })
 
 const fullName = computed(() => {
     const name = `${userData.value.firstName || ''} ${userData.value.lastName || ''}`.trim()
-    return name || userData.value.username
+
+    return name || userData.value.username || ''
 })
 
 function formatJoinedDate(date) {
@@ -21,7 +28,6 @@ function formatJoinedDate(date) {
         year: 'numeric'
     })
 }
-
 </script>
 
 <template>
@@ -29,7 +35,12 @@ function formatJoinedDate(date) {
         <div class="profile-info">
             <div class="avatar-wrap">
                 <div class="avatar">
-                    <img v-if="userData.avatar_path" :src="userData.avatar_path" alt="Avatar">
+                    <img
+                        v-if="userData.avatar_path"
+                        :src="userData.avatar_path"
+                        alt="Avatar"
+                    >
+
                     <span v-else>{{ initial }}</span>
                 </div>
 
@@ -40,25 +51,36 @@ function formatJoinedDate(date) {
                     </svg>
                 </div>
             </div>
+
             <div class="identity">
                 <h1>{{ fullName }}</h1>
-                <p class="handle">@{{ userData.username }} · joined {{ formatJoinedDate(userData.createdAt) }}</p>
-                <p class="bio">{{ userData.about || 'No bio added yet.' }}</p>
+
+                <p class="handle">
+                    @{{ userData.username || '' }} · joined {{ formatJoinedDate(userData.createdAt) }}
+                </p>
+
+                <p class="bio">
+                    {{ userData.about || 'No bio added yet.' }}
+                </p>
             </div>
         </div>
+
         <div class="actions-row">
             <div class="actions-left">
                 <button class="edit-btn">Edit profile</button>
             </div>
+
             <div class="stats">
                 <div class="stat">
                     <span class="stat-num">{{ userData.numOfPosts }}</span>
                     <span class="stat-label">posts</span>
                 </div>
+
                 <div class="stat">
                     <span class="stat-num">{{ userData.numOfFollowers }}</span>
                     <span class="stat-label">followers</span>
                 </div>
+
                 <div class="stat">
                     <span class="stat-num">{{ userData.numOfFollowing }}</span>
                     <span class="stat-label">following</span>

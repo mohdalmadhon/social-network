@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 import LoginPage from '@/pages/LoginPage.vue'
 import ProfilePage from '@/pages/ProfilePage.vue'
+import EditProfile from '@/pages/EditProfile.vue'
 
 const routes = [
     {
@@ -11,6 +12,13 @@ const routes = [
     {
         path: '/profile',
         component: ProfilePage,
+        meta: {
+            requiresAuth: true
+        }
+    },
+    {
+        path: '/profile/edit',
+        component: EditProfile,
         meta: {
             requiresAuth: true
         }

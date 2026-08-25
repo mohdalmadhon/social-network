@@ -8,7 +8,6 @@ import ProfileHeader from '@/components/profile/ProfileHeader.vue'
 import ProfileTabs from '@/components/profile/ProfileTabs.vue'
 import ProfileAbout from '@/components/profile/ProfileAbout.vue'
 import ProfileFollowers from '@/components/profile/ProfileFollowers.vue'
-
 import { userData } from '@/stores/userData'
 
 const router = useRouter()
@@ -37,11 +36,13 @@ async function getData() {
         userData.value.numOfFollowing = result.data.profile.Following;
         userData.value.numOfPosts = result.data.profile.Posts;
         userData.value.about = result.data.profile.About;
-        userData.value.avatar_path = 'http://localhost:4031' +
-            result.data.profile.Avatar_Path
-                .replaceAll('\\', '/')
-                .replace('..', '')
-        console.log(userData.value.avatar_path)
+        if (result.data.profile.Avatar_Path) {
+            userData.value.avatar_path = 'http://localhost:4031' +
+                result.data.profile.Avatar_Path
+                    .replaceAll('\\', '/')
+                    .replace('..', '')
+        }
+
     } catch (err) {
         console.error(err)
         router.replace('/login')
