@@ -183,7 +183,7 @@ func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		userData.Avatar = filepath.ToSlash(filepath.Join("avatars", filename))
+		userData.Avatar = filePath
 
 		log.Println("Avatar saved:", filePath)
 		log.Println("Avatar URL path:", userData.Avatar)
@@ -275,6 +275,40 @@ func (app *App) LoggingUser(w http.ResponseWriter, r *http.Request) {
 	helpers.WriteJSON(w, http.StatusOK, map[string]any{
 		"status":  true,
 		"message": "logged in",
+	})
+}
+
+func (app *App) LogOutUser(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		if errors.Is(err, http.ErrNoCookie) {
+			helpers.WriteJSON(w, http.StatusOK, map[string]any{
+				"status":  true,
+				"message": "already logged out",
+			})
+			return
+		}
+
+		helpers.WriteJSON(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid session",
+		})
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     cookie.Name,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   false, 
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	helpers.WriteJSON(w, http.StatusOK, map[string]any{
+		"status":  true,
+		"message": "logged out",
 	})
 }
 

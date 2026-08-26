@@ -1,6 +1,15 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+
 import { userData } from '@/stores/userData'
+
+import {
+    notification,
+    showNotification,
+    hideNotification
+} from '@/helpers/errors'
+
+const avatarVersion = ref(Date.now())
 
 const initial = computed(() => {
     if (userData.value.firstName) {
@@ -17,70 +26,243 @@ const initial = computed(() => {
 const fullName = computed(() => {
     return `${userData.value.firstName || ''} ${userData.value.lastName || ''}`.trim()
 })
+
+async function uploadImage(e) {
+    try {
+        const file = e.target.files[0]
+
+        if (!file) {
+            showNotification('error', 'No image uploaded')
+            return
+        }
+
+        const formData = new FormData()
+        formData.append('avatar', file)
+
+        const resp = await fetch('/api/user/avatar', {
+            method: 'PUT',
+            credentials: 'include',
+            body: formData
+        })
+
+        if (!resp.ok) {
+            showNotification('error', 'Error uploading image')
+            return
+        }
+
+        const result = await resp.json()
+
+        if (!result.status) {
+            showNotification(
+                'error',
+                result.message || 'Error uploading image'
+            )
+            return
+        }
+
+        userData.value.avatar_path = result.avatar_path
+        window.location.reload();
+        showNotification('success', 'Avatar Updated!')
+    } catch (err) {
+        console.error(err)
+        showNotification('error', 'Error uploading image')
+    } finally {
+        e.target.value = ''
+    }
+}
+
+async function deleteAvatar() {
+    try {
+        const resp = await fetch("/api/user/avatar", {
+            method: "DELETE",
+            credentials: 'include'
+        });
+
+        if (!resp.ok) {
+            showNotification('error', 'could not delete avatar');
+            return
+        }
+
+        const result = await resp.json();
+        if (!result.status) {
+            showNotification('error', 'could not delete avatar');
+            return
+        }
+
+        showNotification('success', 'Avatar Deleted!');
+        window.location.reload();
+        return
+    } catch (err) {
+
+    }
+}
 </script>
 
 <template>
+    <Transition name="notification">
+        <div v-if="notification.show" class="notification" :class="`notification--${notification.type}`" role="alert">
+            <span class="notification__icon">
+                {{ notification.type === 'success' ? '✓' : '!' }}
+            </span>
+
+            <span class="notification__message">
+                {{ notification.message }}
+            </span>
+
+            <button class="notification__close" type="button" aria-label="Close notification" @click="hideNotification">
+                ×
+            </button>
+        </div>
+    </Transition>
+
     <aside class="summary-card">
+
         <div class="summary-card__cover" aria-hidden="true"></div>
 
         <div class="avatar-wrapper">
             <div class="avatar">
-                <img
-                    v-if="userData.avatar_path"
-                    :src="userData.avatar_path"
-                    alt="Avatar"
-                >
+
+                <img v-if="userData.avatar_path" :src="`${userData.avatar_path}?v=${avatarVersion}`" alt="Avatar">
 
                 <span v-else class="avatar__initial">
                     {{ initial }}
                 </span>
-            </div>
 
-            <button class="avatar-camera" type="button" aria-label="Change profile photo">
-                <svg
-                    viewBox="0 0 24 24"
-                    width="15"
-                    height="15"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                >
-                    <path d="M3 7h4l2-2h6l2 2h4v13H3z" />
-                    <circle cx="12" cy="13" r="4" />
-                </svg>
-            </button>
+            </div>
         </div>
 
         <div class="summary-card__identity">
             <p class="summary-card__name">
                 {{ fullName || userData.username || 'User' }}
             </p>
-
-            <p class="summary-card__handle">
-                @{{ userData.username || 'username' }}
-            </p>
         </div>
 
         <div class="summary-card__actions">
-            <button class="btn btn--ghost btn--block" type="button">
-                Upload new photo
-            </button>
 
-            <button
-                v-if="userData.avatar_path"
-                class="btn btn--text btn--block"
-                type="button"
-            >
+            <form>
+                <label for="avatar-upload" class="btn btn--ghost btn--block">
+                    Upload new photo
+                </label>
+
+                <input id="avatar-upload" type="file" name="avatar" accept="image/*" hidden @change="uploadImage">
+            </form>
+
+            <button @click="deleteAvatar" v-if="userData.avatar_path" class="btn btn--text btn--block" type="button">
                 Remove photo
             </button>
+
         </div>
+
     </aside>
 </template>
 
 <style scoped>
 @import '../../styles/variables.css';
+
+
+.summary-card__actions form {
+    width: 100%;
+}
+
+
+.notification {
+    position: fixed;
+    top: var(--space-5);
+    right: var(--space-5);
+    z-index: 1000;
+
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+
+    min-width: 18rem;
+    max-width: 28rem;
+
+    padding: var(--space-3) var(--space-4);
+
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-small);
+
+    color: var(--color-text);
+    box-shadow: var(--shadow-raised);
+}
+
+.notification--success {
+    border-color: rgb(34 197 94 / 40%);
+}
+
+.notification--error {
+    border-color: rgb(239 68 68 / 40%);
+}
+
+.notification__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    flex: 0 0 auto;
+
+    width: 1.5rem;
+    height: 1.5rem;
+
+    border-radius: 50%;
+
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.notification--success .notification__icon {
+    background: rgb(34 197 94 / 12%);
+    color: #22c55e;
+}
+
+.notification--error .notification__icon {
+    background: rgb(239 68 68 / 12%);
+    color: #ef4444;
+}
+
+.notification__message {
+    flex: 1;
+    font-size: 0.82rem;
+    line-height: 1.4;
+}
+
+.notification__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 1.5rem;
+    height: 1.5rem;
+
+    padding: 0;
+
+    border: 0;
+    background: transparent;
+
+    color: var(--color-text-muted);
+
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.notification__close:hover {
+    color: var(--color-text);
+}
+
+.notification-enter-active,
+.notification-leave-active {
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease;
+}
+
+.notification-enter-from,
+.notification-leave-to {
+    opacity: 0;
+    transform: translateY(-10px);
+}
 
 .summary-card {
     display: flex;

@@ -17,16 +17,18 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux := http.NewServeMux()
 	// sessions
 	mux.HandleFunc("POST /api/session", app.LoggingUser)
-
+	mux.HandleFunc("DELETE /api/session", app.LogOutUser)
 	//users
 	mux.HandleFunc("POST /api/user/", app.RegisterUser)
 	mux.HandleFunc("PUT /api/user", middleware.AuthMiddleware(app.UpdateUserInfo))
-	
+	mux.HandleFunc("PUT /api/user/avatar", middleware.AuthMiddleware(app.UpdateUserAvatar))
+	mux.HandleFunc("DELETE /api/user/avatar", middleware.AuthMiddleware(app.DeleteuserAvatar))
+	mux.HandleFunc("GET /api/user/check-email", app.CheckEmailExists)
+	mux.HandleFunc("GET /api/user/check-username", app.CheckUsernameExists)
+
 	//profile
 	mux.HandleFunc("GET /api/me", middleware.AuthMiddleware(app.GetUserData))
 
-	mux.HandleFunc("/api/register/checkEmail", app.CheckEmailExists)
-	mux.HandleFunc("/api/register/checkUsername", app.CheckUsernameExists)
 	mux.HandleFunc("/api/posts", app.Posts)
 
 	uploadDir, err := filepath.Abs("../uploads")
@@ -37,6 +39,11 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.Handle(
 		"/uploads/",
 		http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadDir))),
+	)
+
+	mux.Handle(
+		"/images/",
+		http.StripPrefix("/images/", http.FileServer(http.Dir("../images"))),
 	)
 	return mux
 }

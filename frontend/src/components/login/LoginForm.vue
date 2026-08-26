@@ -98,7 +98,7 @@ async function validateEmail() {
 
     try {
         const resp = await fetch(
-            `/api/register/checkEmail?email=${encodeURIComponent(value)}`
+            `/api/user/check-email?email=${encodeURIComponent(value)}`
         )
 
         const text = await resp.text()
@@ -273,9 +273,9 @@ async function validateUsername() {
     }
 
     try {
-        const resp = await fetch(
-            `/api/register/checkUsername?username=${encodeURIComponent(value)}`
-        )
+        const resp = await fetch(`/api/user/check-username?username=${form.value.username}`, {
+            method: "GET"
+        });
 
         if (!resp.ok) {
             errors.value.username = 'Unable to check nickname'

@@ -42,7 +42,7 @@ async function getData() {
                     .replaceAll('\\', '/')
                     .replace('..', '')
         }
-
+        console.log(userData)
     } catch (err) {
         console.error(err)
         router.replace('/login')

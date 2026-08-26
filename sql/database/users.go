@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
+	"strings"
 	"time"
 
 	"social/backend/models"
@@ -18,7 +20,7 @@ func InsertUser(db *sql.DB, userData models.RegisterRequest) error {
 	`, userData.Email, userData.FirstName, userData.LastName, userData.DOB, userData.Password, time.Now())
 
 	if len(userData.Username) != 0 {
-		_, err := db.Exec(`insert into users (username) values (?) where id = (select id from users where email = ?)`,
+		_, err := db.Exec(`update users set username = ? where email = ?`,
 			userData.Username, userData.Email)
 
 		if err != nil {
@@ -27,13 +29,13 @@ func InsertUser(db *sql.DB, userData models.RegisterRequest) error {
 	}
 
 	var profile models.Profile
-	if len(profile.About) != 0 {
+	if len(userData.About) != 0 {
 		profile.About = userData.About
 	} else {
 		profile.About = ""
 	}
 
-	if len(profile.Avatar_Path) != 0 {
+	if len(userData.Avatar) != 0 {
 		profile.Avatar_Path = userData.Avatar
 	} else {
 		profile.Avatar_Path = ""
@@ -49,6 +51,9 @@ func InsertUser(db *sql.DB, userData models.RegisterRequest) error {
 }
 
 func InsertProfileData(db *sql.DB, profile models.Profile, email string) error {
+	if profile.Avatar_Path == "" {
+		profile.Avatar_Path = "/images/avatar/default.png"
+	}
 	_, err := db.Exec(`
 		insert into profile (user_id, about, avatar_path, num_of_following, num_of_followers, num_of_posts)
 		values ((select id from users where email = ?), ?, ?,0,0,0)
@@ -216,4 +221,54 @@ func GetUserIDbyIdentifier(db *sql.DB, identifier string) (int, error) {
 	}
 
 	return id, nil
+}
+
+func UpdateUserAvatar(db *sql.DB, avatarPath string, id int) error {
+	var currentAvatar string
+	log.Println(avatarPath)
+	err := db.QueryRow(`select avatar_path from profile where user_id = ?`, id).Scan(&currentAvatar)
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(`update profile set avatar_path = ? where user_id = ?`, avatarPath, id)
+	if err != nil {
+		return err
+	}
+
+	if skip := strings.Index("images", currentAvatar); skip != -1 {
+		return nil
+	}
+
+	err = os.Remove(currentAvatar)
+	if err != nil {
+		log.Println(err)
+	}
+	return nil
+}
+
+func DeleteUserAvatar(db *sql.DB, id int) error {
+	var currentAvatar string
+	err := db.QueryRow(`select avatar_path from profile where user_id = ?`, id).Scan(&currentAvatar)
+	if err != nil {
+		return err
+	}
+
+	if currentAvatar == "/images/avatar/default.png" {
+		return errors.New("no avatar found")
+	}
+
+	_, err = db.Exec(
+		`UPDATE profile SET avatar_path = ? WHERE user_id = ?`,
+		"/images/avatar/default.png",
+		id,
+	)
+	if err != nil {
+		return err
+	}
+
+	err = os.Remove("../" + currentAvatar)
+	if err != nil {
+		log.Println(err)
+	}
+	return nil
 }

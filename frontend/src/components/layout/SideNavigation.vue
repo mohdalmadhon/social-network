@@ -1,5 +1,7 @@
 <script setup>
- 
+import { showNotification } from '@/helpers/errors'
+
+
 defineProps({
   activePage: {
     type: String,
@@ -25,19 +27,37 @@ async function logOut() {
     window.location.href = '/login'
   }
 }
+
+async function logout() {
+  try {
+    const resp = await fetch('/api/session', {
+      method: 'DELETE',
+      credentials: 'include'
+    })
+
+    const result = await resp.json()
+
+    if (!resp.ok || !result.status) {
+      showNotification('error', result.message || 'Could not log out')
+      return
+    }
+
+    showNotification('success', 'Logged out successfully')
+
+    router.push('/login')
+  } catch (err) {
+    console.error(err)
+    showNotification('error', 'Could not log out')
+  }
+}
 </script>
 
 <template>
   <aside class="side-navigation">
     <nav aria-label="Main navigation">
-      <a
-        v-for="link in links"
-        :key="link.name"
-        class="navigation-link"
-        :class="{ 'navigation-link--active': activePage === link.name }"
-        :href="link.href"
-        :aria-current="activePage === link.name ? 'page' : undefined"
-      >
+      <a v-for="link in links" :key="link.name" class="navigation-link"
+        :class="{ 'navigation-link--active': activePage === link.name }" :href="link.href"
+        :aria-current="activePage === link.name ? 'page' : undefined">
         <span class="navigation-link__icon" aria-hidden="true">{{ link.icon }}</span>
         <span class="navigation-link__label">{{ link.label }}</span>
         <span v-if="link.badge" class="navigation-link__badge" :class="`navigation-link__badge--${link.badgeType}`">
@@ -50,15 +70,9 @@ async function logOut() {
   </aside>
 
   <nav class="mobile-navigation" aria-label="Mobile navigation">
-    <a
-      v-for="link in links"
-      :key="link.name"
-      class="mobile-link"
-      :class="{ 'mobile-link--active': activePage === link.name }"
-      :href="link.href"
-      :aria-label="link.label"
-      :aria-current="activePage === link.name ? 'page' : undefined"
-    >
+    <a v-for="link in links" :key="link.name" class="mobile-link"
+      :class="{ 'mobile-link--active': activePage === link.name }" :href="link.href" :aria-label="link.label"
+      :aria-current="activePage === link.name ? 'page' : undefined">
       <span aria-hidden="true">{{ link.icon }}</span>
       <span>{{ link.label }}</span>
     </a>
@@ -66,8 +80,8 @@ async function logOut() {
 </template>
 
 <style scoped>
- @import '../../styles/global.css';
- @import '../../styles/variables.css';
+@import '../../styles/global.css';
+@import '../../styles/variables.css';
 
 .side-navigation {
   display: none;
@@ -99,7 +113,7 @@ async function logOut() {
   text-decoration: none;
 }
 
-.mobile-link > span:first-child {
+.mobile-link>span:first-child {
   font-size: 1.3rem;
 }
 

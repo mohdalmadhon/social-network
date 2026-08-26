@@ -14,6 +14,7 @@ type User struct {
 	CreatedAt  time.Time `json:"createdAt"`
 	About      string    `json:"about"`
 	DOB        time.Time `json:"dob"`
+	Avatar     string
 	Updated_at time.Time `json:"updatedAt"`
 }
 

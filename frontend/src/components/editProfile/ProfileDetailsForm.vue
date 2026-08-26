@@ -4,7 +4,7 @@ import { userData } from '@/stores/userData'
 import { onMounted, ref } from 'vue'
 import FormField from './FormField.vue'
 import FormTextarea from './FormTextarea.vue'
-
+import { hideNotification, showNotification } from '@/helpers/errors.js'
 const formData = ref({
   firstName: '',
   lastName: '',
@@ -55,7 +55,6 @@ function validateName(field) {
     errors.value[field] = ''
   }
 }
-
 
 function validateUsername() {
   let value = formData.value.username.toLowerCase()
@@ -114,26 +113,8 @@ const notification = ref({
   message: ''
 })
 
-let notificationTimer = null
 
-function showNotification(type, message) {
-  notification.value = {
-    show: true,
-    type,
-    message
-  }
 
-  clearTimeout(notificationTimer)
-
-  notificationTimer = setTimeout(() => {
-    notification.value.show = false
-  }, 4000)
-}
-
-function hideNotification() {
-  notification.value.show = false
-  clearTimeout(notificationTimer)
-}
 
 async function submitForm() {
   Object.keys(errors.value).forEach(field => {
