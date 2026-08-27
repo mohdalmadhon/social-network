@@ -1,0 +1,24 @@
+CREATE TABLE IF NOT EXISTS user (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email VARCHAR(75) NOT NULL UNIQUE,
+    first_name VARCHAR(15) NOT NULL,
+    last_name VARCHAR(15) NOT NULL,
+    password TEXT NOT NULL,
+    username VARCHAR(12) UNIQUE,
+    dob DATE NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS profile (
+    user_id INTEGER PRIMARY KEY,
+    num_of_followers INTEGER NOT NULL DEFAULT 0,
+    num_of_following INTEGER NOT NULL DEFAULT 0,
+    num_of_posts INTEGER NOT NULL DEFAULT 0,
+    avatar_path TEXT,
+    about VARCHAR(1000),
+    is_private INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (user_id)
+        REFERENCES user(id)
+        ON DELETE CASCADE
+);

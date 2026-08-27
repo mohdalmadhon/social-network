@@ -1,0 +1,101 @@
+package api
+
+import (
+	"database/sql"
+	"log"
+	"net/http"
+	database "social/database/users"
+	"social/internal/helpers"
+	"social/internal/models"
+	"social/internal/validation"
+	"time"
+)
+
+type App struct {
+	DB *sql.DB
+}
+
+func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseMultipartForm(10 << 20)
+	if err != nil {
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "Bad request, form data is too big",
+		})
+		return
+	}
+
+	dobValue := r.FormValue("dob")
+
+	dob, err := time.Parse("2006-01-02", dobValue)
+	if err != nil {
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "Invalid date of birth",
+		})
+		return
+	}
+
+	userData := models.UserRegistration{
+		FirstName: r.FormValue("FirstName"),
+		LastName:  r.FormValue("LastName"),
+		UserName:  r.FormValue("UserName"),
+		Email:     r.FormValue("Email"),
+		Password:  r.FormValue("Password"),
+		About:     r.FormValue("About"),
+		DOB:       dob,
+		Avatar:    "",
+	}
+
+	err = validation.ValidateRegisterData(&userData)
+	if err != nil {
+		log.Println(err)
+
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	file, header, err := r.FormFile("Avatar")
+	if err != nil {
+		if err != http.ErrMissingFile {
+			helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "invalid avatar upload",
+			})
+			return
+		}
+	} else {
+		defer file.Close()
+
+		avatarPath, err := helpers.SaveUploads(file, header)
+		if err != nil {
+			log.Println(err)
+
+			helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+				"status":  false,
+				"message": "could not save avatar",
+			})
+			return
+		}
+
+		userData.Avatar = avatarPath
+	}
+
+	if err := database.RegisterUser(app.DB, &userData); err != nil {
+		log.Println(err)
+
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not register user",
+		})
+		return
+	}
+
+	helpers.WriteJson(w, http.StatusCreated, map[string]any{
+		"status":  true,
+		"message": "Registration successful",
+	})
+}
