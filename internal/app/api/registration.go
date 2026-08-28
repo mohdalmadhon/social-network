@@ -84,6 +84,17 @@ func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		userData.Avatar = avatarPath
 	}
 
+	hashedPassword, err := helpers.HashPassword(userData.Password)
+	if err != nil {
+		log.Println(err)
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not hash password",
+		})
+		return
+	}
+
+	userData.Password = hashedPassword
 	if err := database.RegisterUser(app.DB, &userData); err != nil {
 		log.Println(err)
 
@@ -99,3 +110,4 @@ func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		"message": "Registration successful",
 	})
 }
+

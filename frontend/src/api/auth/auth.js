@@ -13,3 +13,19 @@ export async function registerUser(userData) {
 
     return result
 }
+
+export async function loggingSession(userLogger) {
+    const resp = await fetch("/api/session", {
+        method: "POST",
+        credentials: 'include',
+        body: JSON.stringify(userLogger)
+    });
+
+    const result = await resp.json()
+
+    if (!resp.ok) {
+        throw new Error(result.message || `Logging failed: ${resp.status}`)
+    }
+
+    return result
+}

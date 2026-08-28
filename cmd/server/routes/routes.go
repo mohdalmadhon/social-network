@@ -18,6 +18,7 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	app := api.App{DB: db}
 
 	mux.HandleFunc("POST /api/user", app.RegisterUser)
+	mux.HandleFunc("POST /api/session", app.LoggingUser)
 	mux.Handle("/uploads/",http.StripPrefix("/uploads/",http.FileServer(http.Dir(uploadsDir)),),)
 	return mux
 }

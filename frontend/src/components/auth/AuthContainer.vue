@@ -1,7 +1,7 @@
 <script setup>
 import { reactive } from 'vue'
 
-import { registerUser } from '@/api/auth/auth.js'
+import { loggingSession, registerUser } from '@/api/auth/auth.js'
 
 import {
     validateName,
@@ -17,6 +17,12 @@ import {
 } from '@/helpers/validators/registration.js'
 
 import InputHolder from './InputHolder.vue'
+
+const loginErrors = reactive({
+    identifier: '',
+    password: '',
+    form: ''
+})
 
 const errors = reactive({
     firstName: '',
@@ -143,6 +149,43 @@ async function sendData(e) {
         console.error(error)
     }
 }
+
+async function loggUser(e) {
+    e.preventDefault()
+
+    loginErrors.identifier = ''
+    loginErrors.password = ''
+    loginErrors.form = ''
+
+    const form = e.target
+    const formData = new FormData(form)
+
+    const identifier = formData.get('Identifier')
+    const password = formData.get('Pass')
+
+    if (!identifier) {
+        loginErrors.identifier = 'Identifier is required'
+    }
+
+    if (!password) {
+        loginErrors.password = 'Password is required'
+    }
+
+    if (loginErrors.identifier || loginErrors.password) {
+        return
+    }
+
+    try {
+        const result = await loggingSession({
+            Identifier: identifier,
+            Pass: password
+        })
+
+        console.log(result)
+    } catch (error) {
+        loginErrors.form = error.message || 'Invalid identifier or password'
+    }
+}
 </script>
 
 <template>
@@ -166,14 +209,19 @@ async function sendData(e) {
                                 Welcome back.
                             </p>
 
-                            <form class="flip-card__form">
+                            <form @submit.prevent="loggUser" class="flip-card__form">
+
                                 <div class="input-group">
                                     <label for="login-email">
-                                        Email
+                                        Identifier
                                     </label>
 
-                                    <InputHolder id="login-email" type="email" name="Email" :minLength="5"
+                                    <InputHolder id="login-email" type="text" name="Identifier" :minLength="5"
                                         :maxLength="75" placeHolder="email@example.com" required />
+
+                                    <span v-if="loginErrors.identifier" class="input-error-message">
+                                        {{ loginErrors.identifier }}
+                                    </span>
                                 </div>
 
                                 <div class="input-group">
@@ -181,13 +229,22 @@ async function sendData(e) {
                                         Password
                                     </label>
 
-                                    <InputHolder id="login-password" type="password" name="Password" :minLength="8"
+                                    <InputHolder id="login-password" type="password" name="Pass" :minLength="8"
                                         :maxLength="100" placeHolder="Password" required />
+
+                                    <span v-if="loginErrors.password" class="input-error-message">
+                                        {{ loginErrors.password }}
+                                    </span>
                                 </div>
+
+                                <span v-if="loginErrors.form" class="input-error-message login-error">
+                                    {{ loginErrors.form }}
+                                </span>
 
                                 <button class="flip-card__btn" type="submit">
                                     Let's go!
                                 </button>
+
                             </form>
 
                             <p class="form-footer">
@@ -338,6 +395,11 @@ async function sendData(e) {
 </template>
 
 <style scoped>
+.login-error {
+    text-align: center;
+    margin-top: -5px;
+}
+
 .auth-section {
     min-height: 100vh;
     display: flex;

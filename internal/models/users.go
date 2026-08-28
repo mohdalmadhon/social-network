@@ -12,3 +12,8 @@ type UserRegistration struct {
 	Password  string
 	Avatar    string
 }
+
+type UserLogger struct {
+	Identifier string
+	Pass       string
+}
