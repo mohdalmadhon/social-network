@@ -1,0 +1,47 @@
+# Database
+
+/db/
+/database/*.db
+/database/*.sqlite
+/database/*.sqlite3
+
+# User uploads
+
+/uploads/
+/frontend/public/uploads/
+
+# Environment variables
+
+.env
+.env.*
+!.env.example
+
+# Secrets
+
+tokens-signature.txt
+*.pem
+*.key
+
+# Go
+
+/bin/
+/vendor/
+
+# Node
+
+/frontend/node_modules/
+/frontend/dist/
+
+# Logs
+
+*.log
+
+# OS
+
+.DS_Store
+Thumbs.db
+
+# IDE
+
+.vscode/
+.idea/
