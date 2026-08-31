@@ -1,6 +1,6 @@
 <script setup>
-import { showNotification } from '@/helpers/errors'
-
+import { logout } from '@/api/auth/auth'
+import { addNotification } from '@/data/notifications'
 
 defineProps({
   activePage: {
@@ -17,39 +17,15 @@ const links = [
   { name: 'notifications', label: 'Notifications', href: '/notifications', icon: '♢', badge: 3, badgeType: 'notification' },
 ]
 
-async function logOut() {
-  try {
-    await fetch('/api/logout', {
-      method: 'POST',
-      credentials: 'include',
-    })
-  } finally {
-    window.location.href = '/login'
-  }
-}
-
-async function logout() {
-  try {
-    const resp = await fetch('/api/session', {
-      method: 'DELETE',
-      credentials: 'include'
-    })
-
-    const result = await resp.json()
-
-    if (!resp.ok || !result.status) {
-      showNotification('error', result.message || 'Could not log out')
-      return
+async function logoutHandler() {
+    try {
+        await logout();
+    } catch (err) {
+        addNotification(err, 'error');
     }
-
-    showNotification('success', 'Logged out successfully')
-
-    router.push('/login')
-  } catch (err) {
-    console.error(err)
-    showNotification('error', 'Could not log out')
-  }
 }
+
+
 </script>
 
 <template>
@@ -66,7 +42,7 @@ async function logout() {
       </a>
     </nav>
 
-    <button class="logout-link" type="button" @click="logOut">↪ <span>Log out</span></button>
+    <button class="logout-link" type="button" @click="logoutHandler">↪ <span>Log out</span></button>
   </aside>
 
   <nav class="mobile-navigation" aria-label="Mobile navigation">
