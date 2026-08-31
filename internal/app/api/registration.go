@@ -17,6 +17,7 @@ type App struct {
 
 func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(10 << 20)
+
 	if err != nil {
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
@@ -29,6 +30,8 @@ func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 
 	dob, err := time.Parse("2006-01-02", dobValue)
 	if err != nil {
+		log.Println(err)
+
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "Invalid date of birth",
@@ -87,6 +90,7 @@ func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	hashedPassword, err := helpers.HashPassword(userData.Password)
 	if err != nil {
 		log.Println(err)
+
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
 			"message": "could not hash password",
@@ -95,12 +99,15 @@ func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userData.Password = hashedPassword
+
 	if err := database.RegisterUser(app.DB, &userData); err != nil {
 		log.Println(err)
 
-		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+		status, message := helpers.NormalizeSQLError(err)
+
+		helpers.WriteJson(w, status, map[string]any{
 			"status":  false,
-			"message": "could not register user",
+			"message": message,
 		})
 		return
 	}
@@ -110,4 +117,3 @@ func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		"message": "Registration successful",
 	})
 }
-

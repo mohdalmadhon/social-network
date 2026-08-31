@@ -5,7 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -75,4 +77,58 @@ func readTokenSecret() ([]byte, error) {
 	}
 
 	return os.ReadFile("./db/tokens-signature.txt")
+}
+
+/*
+this function verify a jwt token by seperating checking the signature and checking the expiration data
+*/
+func VerifyToken(token string) (*payLoad, error) {
+	parts := strings.Split(token, ".")
+
+	if len(parts) != 3 {
+		return nil, errors.New("invalid token")
+	}
+
+	encodedHeader := parts[0]
+	encodedPayload := parts[1]
+	encodedSignature := parts[2]
+
+	secret, err := readTokenSecret()
+	if err != nil {
+		return nil, err
+	}
+
+	message := encodedHeader + "." + encodedPayload
+
+	mac := hmac.New(sha256.New, secret)
+	mac.Write([]byte(message))
+
+	expectedSignature := mac.Sum(nil)
+
+	providedSignature, err := base64.RawURLEncoding.DecodeString(encodedSignature)
+	if err != nil {
+		return nil, errors.New("invalid signature")
+	}
+
+	if !hmac.Equal(providedSignature, expectedSignature) {
+		return nil, errors.New("invalid token signature")
+	}
+
+	payloadJSON, err := base64.RawURLEncoding.DecodeString(encodedPayload)
+	if err != nil {
+		return nil, errors.New("invalid payload")
+	}
+
+	var body payLoad
+
+	err = json.Unmarshal(payloadJSON, &body)
+	if err != nil {
+		return nil, errors.New("invalid payload")
+	}
+
+	if time.Now().Unix() >= body.Exp {
+		return nil, errors.New("token expired")
+	}
+
+	return &body, nil
 }

@@ -17,6 +17,8 @@ import {
 } from '@/helpers/validators/registration.js'
 
 import InputHolder from './InputHolder.vue'
+import { router } from '@/router/router.js'
+import { addNotification } from '@/data/notifications.js'
 
 const loginErrors = reactive({
     identifier: '',
@@ -144,8 +146,13 @@ async function sendData(e) {
     try {
         const result = await registerUser(registerData)
 
-        console.log(result)
+        if (result.status) {
+            addNotification('REGISTERED SUCCESSFULLY', 'success')
+        } else {
+            addNotification('Failed to register: ' + result.message, 'error')
+        }
     } catch (error) {
+        addNotification('Failed to register: ' + error.message, 'error')
         console.error(error)
     }
 }
@@ -180,8 +187,8 @@ async function loggUser(e) {
             Identifier: identifier,
             Pass: password
         })
-
-        console.log(result)
+        if(!result.status) return;
+        router.replace("/home");
     } catch (error) {
         loginErrors.form = error.message || 'Invalid identifier or password'
     }
