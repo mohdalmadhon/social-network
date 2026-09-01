@@ -21,12 +21,16 @@ func RegisterUser(db *sql.DB, userData *models.UserRegistration) error {
 			return err
 		}
 	}
-	if userData.About != "" {
-		_, err = db.Exec(`
-		INSERT INTO profile (user_id, avatar_path, about)
-		VALUES ((select id from user where email = ?),?,?)
-	`, userData.Email, userData.Avatar, userData.About)
+	
+	if userData.Avatar == "" {
+		userData.Avatar = "avatar/default.png"
 	}
+
+	_, err = db.Exec(`
+		UPDATE profile
+		SET about = ?, avatar_path = ?
+		WHERE user_id = (select id from user where email = ?);
+	`, userData.About, userData.Avatar, userData.Email)
 
 	return err
 }

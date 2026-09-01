@@ -157,7 +157,7 @@ func (app *App) UpdateUserAvatar(w http.ResponseWriter, r *http.Request) {
 
 	contentType := header.Header.Get("Content-Type")
 
-	if contentType != "image/jpeg" && contentType != "image/png" {
+	if contentType != "image/jpeg" && contentType != "image/png" &&contentType != "image/gif" {
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "avatar must be JPG or PNG",
@@ -165,7 +165,7 @@ func (app *App) UpdateUserAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	avatarPath, err := helpers.SaveUploads(file, header)
+	avatarPath, err := helpers.SaveUploads(file, header, "avatar")
 	if err != nil {
 		log.Println(err)
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{

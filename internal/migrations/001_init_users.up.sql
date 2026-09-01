@@ -49,3 +49,11 @@ BEGIN
     INSERT INTO user_about (user_id,work,hobbies,education,intrests,travel, website, linkedin, instgram, twitter)
     VALUES (NEW.id, '','','','','','','','','');
 END;
+
+CREATE TRIGGER IF NOT EXISTS trg_create_profile 
+AFTER INSERT ON user 
+FOR EACH ROW 
+BEGIN
+    INSERT INTO profile (user_id)
+    VALUES (NEW.id);
+END;

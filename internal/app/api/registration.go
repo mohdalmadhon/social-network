@@ -27,7 +27,6 @@ func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	dobValue := r.FormValue("dob")
-
 	dob, err := time.Parse("2006-01-02", dobValue)
 	if err != nil {
 		log.Println(err)
@@ -60,7 +59,7 @@ func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
+	
 	file, header, err := r.FormFile("Avatar")
 	if err != nil {
 		if err != http.ErrMissingFile {
@@ -73,7 +72,7 @@ func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	} else {
 		defer file.Close()
 
-		avatarPath, err := helpers.SaveUploads(file, header)
+		avatarPath, err := helpers.SaveUploads(file, header, "avatar")
 		if err != nil {
 			log.Println(err)
 

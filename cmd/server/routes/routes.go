@@ -22,7 +22,7 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("GET /api/user", middleware.AuthMiddleware(app.GetUserData))
 	mux.HandleFunc("POST /api/user", app.RegisterUser)
 	mux.HandleFunc("PATCH /api/user", middleware.AuthMiddleware(app.UpdateUserInfo))
-
+	
 	//session
 	mux.HandleFunc("POST /api/session", app.LoggingUser)
 	mux.HandleFunc("GET /api/session", app.AuthorizeSession)
