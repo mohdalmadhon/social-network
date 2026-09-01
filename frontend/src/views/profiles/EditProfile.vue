@@ -24,6 +24,10 @@ async function getData() {
     }
 }
 
+function onAvatarChange(avatar) {
+    profileData.userInfo.avatar = avatar;
+}
+
 onMounted(getData);
 
 </script>
@@ -51,15 +55,11 @@ onMounted(getData);
                 <EditProfileTabs v-model:activeTab="activeTab" />
 
                 <section class="profile-content">
-                    <EditPersonalInfo
-                        v-if="!loading && activeTab === 'personal'"
-                        :first-name="profileData.userInfo.firstName"
-                        :last-name="profileData.userInfo.lastName"
-                        :username="profileData.userInfo.userName"
-                        :email="profileData.userInfo.email"
-                        :bio="profileData.userInfo.about"
-                        :avatar_path="`/uploads/${profileData.userInfo.avatar}`"
-                    />
+                    <EditPersonalInfo v-if="!loading && activeTab === 'personal'"
+                        :first-name="profileData.userInfo.firstName" :last-name="profileData.userInfo.lastName"
+                        :username="profileData.userInfo.userName" :email="profileData.userInfo.email"
+                        :bio="profileData.userInfo.about" :avatar_path="`/uploads/${profileData.userInfo.avatar}`"
+                        @avatar-change="onAvatarChange" />
 
                     <EditAdditionalInfo v-else-if="!loading && activeTab === 'additional'" />
                 </section>

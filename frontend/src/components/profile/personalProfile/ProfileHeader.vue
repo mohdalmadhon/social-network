@@ -77,6 +77,7 @@ async function handleRemoveFollow() {
         <div class="profile-information">
             <div class="avatar">
                 <img
+                    
                     v-if="props.avatarPath"
                     :src="props.avatarPath"
                     alt="Profile avatar"
