@@ -68,16 +68,38 @@ const Groupsdata = [
 
 <template>
   <main class="groups-page">
-    <GroupsHeader @create-group="createGroupModal" />
+    <div class="groups-content">
+      <GroupsHeader @create-group="createGroupModal" />
 
-    <GroupsTabs @change-tab="tabChanged" :active-tab="activeTab" />
+      <GroupsTabs @change-tab="tabChanged" :active-tab="activeTab" />
 
-    <GroupSearch @update:model-value="userSearchInput" :model-value="searchInputValue" />
+      <GroupSearch @update:model-value="userSearchInput" :model-value="searchInputValue" />
 
-    <GroupsList @join-group="joinGroup" @view-group="viewGroup" :groups="Groupsdata" />
+      <GroupsList @join-group="joinGroup" @view-group="viewGroup" :groups="Groupsdata" />
+    </div>
 
     <CreateGroupModal @close="closeModal" @create="createGroup" :show="modalStatus" />
   </main>
 </template>
 
-<style scoped></style>
+<style scoped>
+.groups-page {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 24px 32px;
+  box-sizing: border-box;
+}
+
+.groups-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+@media (max-width: 48rem) {
+  .groups-page {
+    padding: 20px 16px;
+  }
+}
+</style>

@@ -24,18 +24,48 @@ const emit = defineEmits(['change-tab'])
 <style scoped>
 .groups-tabs {
     display: flex;
-    gap: 10px;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-small);
+    background: var(--color-surface);
+    width: fit-content;
 }
 
-button {
-    padding: 8px 14px;
-    border: none;
+.groups-tabs button {
+    min-height: 38px;
+    padding: 0 var(--space-4);
+    border: 0;
+    border-radius: 6px;
     background: transparent;
+    color: var(--color-text-muted);
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 500;
     cursor: pointer;
+    transition:
+        color 0.15s ease,
+        background 0.15s ease;
 }
 
-button.active {
-    font-weight: bold;
-    border-bottom: 2px solid black;
+.groups-tabs button:hover {
+    color: var(--color-text);
+}
+
+.groups-tabs button.active {
+    background: var(--color-surface-raised);
+    color: var(--color-violet);
+    font-weight: 600;
+}
+
+@media (max-width: 30rem) {
+    .groups-tabs {
+        width: 100%;
+    }
+
+    .groups-tabs button {
+        flex: 1;
+    }
 }
 </style>
