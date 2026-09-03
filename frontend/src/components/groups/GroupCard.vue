@@ -6,7 +6,7 @@ defineProps({
     }
 })
 
-const emit = defineEmits(['join-group', 'view-group'])
+const emit = defineEmits(['toggle-join-request', 'view-group'])
 </script>
 
 <template>
@@ -31,12 +31,13 @@ const emit = defineEmits(['join-group', 'view-group'])
                     View
                 </button>
 
-                <button v-if="!group.isMember && !group.requested" class="join-button"
-                    @click="emit('join-group', group.id)">
+                <button v-if="!group.isMember && !group.isRequested" class="join-button"
+                    @click="emit('toggle-join-request', group.id)">
                     Join
                 </button>
 
-                <button v-else-if="group.requested" class="requested-button" disabled>
+                <button v-else-if="group.isRequested && !group.isMember" class="requested-button"
+                    @click="emit('toggle-join-request', group.id)">
                     Requested
                 </button>
             </div>
@@ -150,7 +151,12 @@ const emit = defineEmits(['join-group', 'view-group'])
     border: 1px solid var(--color-border);
     background: var(--color-input);
     color: var(--color-text-faint);
-    cursor: default;
+    cursor: pointer;
+}
+
+.requested-button:hover {
+    border-color: var(--color-text-faint);
+    color: var(--color-text);
 }
 
 @media (max-width: 28rem) {

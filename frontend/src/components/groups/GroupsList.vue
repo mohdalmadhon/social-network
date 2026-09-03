@@ -8,13 +8,13 @@ defineProps({
     }
 })
 
-const emit = defineEmits(['join-group', 'view-group'])
+const emit = defineEmits(['toggle-join-request', 'view-group'])
 </script>
 
 <template>
     <div class="groups-list-wrapper">
         <div v-if="groups.length" class="groups-grid">
-            <GroupCard v-for="group in groups" :key="group.id" :group="group" @join-group="emit('join-group', $event)"
+            <GroupCard v-for="group in groups" :key="group.id" :group="group" @toggle-join-request="emit('toggle-join-request', $event)"
                 @view-group="emit('view-group', $event)" />
         </div>
 
