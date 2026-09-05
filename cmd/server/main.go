@@ -5,12 +5,19 @@ import (
 	"net/http"
 	server "social/cmd"
 	"social/cmd/server/routes"
+	"social/internal/database"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
 func main() {
 	db, err := server.ConnectToDB("sqlite3", "./db/social_network.db")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	err = database.RunMigrations()
 	if err != nil {
 		log.Println(err)
 		return
