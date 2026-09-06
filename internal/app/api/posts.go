@@ -53,6 +53,16 @@ func (app App) createPost(w http.ResponseWriter, r *http.Request) {
 		Content: r.FormValue("content"),
 		Privacy: r.FormValue("privacy"),
 	}
+	selectedIDs := r.FormValue("selectedFollowerIds")
+	if selectedIDs != "" {
+		if err := json.Unmarshal([]byte(selectedIDs), &request.SelectedFollowerIDs); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "invalid selected followers",
+			})
+			return
+		}
+	}
 
 	imageFile, imageHeader, fileErr := r.FormFile("image")
 

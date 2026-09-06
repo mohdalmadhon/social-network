@@ -1,6 +1,8 @@
 <script setup>
+import { onMounted, ref } from 'vue'
 import { logout } from '@/api/auth/auth'
 import { addNotification } from '@/data/notifications'
+import { getNotifications } from '@/api/notifications.js'
 
 defineProps({
   activePage: {
@@ -14,8 +16,19 @@ const links = [
   { name: 'profile', label: 'Profile', href: '/profile', icon: '◎' },
   { name: 'groups', label: 'Groups', href: '/groups', icon: '▱' },
   { name: 'chats', label: 'Chats', href: '/chats', icon: '◌', badge: 5, badgeType: 'message' },
-  { name: 'notifications', label: 'Notifications', href: '/notifications', icon: '♢', badge: 3, badgeType: 'notification' },
+  { name: 'notifications', label: 'Notifications', href: '/notifications', icon: '♢', badgeType: 'notification' },
 ]
+
+const notificationUnreadCount = ref(0)
+
+onMounted(async () => {
+  try {
+    const result = await getNotifications('all')
+    notificationUnreadCount.value = result?.unreadCount || 0
+  } catch {
+    notificationUnreadCount.value = 0
+  }
+})
 
 async function logoutHandler() {
     try {
@@ -36,8 +49,12 @@ async function logoutHandler() {
         :aria-current="activePage === link.name ? 'page' : undefined">
         <span class="navigation-link__icon" aria-hidden="true">{{ link.icon }}</span>
         <span class="navigation-link__label">{{ link.label }}</span>
-        <span v-if="link.badge" class="navigation-link__badge" :class="`navigation-link__badge--${link.badgeType}`">
-          {{ link.badge }}
+        <span
+          v-if="link.name === 'notifications' ? notificationUnreadCount : link.badge"
+          class="navigation-link__badge"
+          :class="`navigation-link__badge--${link.badgeType}`"
+        >
+          {{ link.name === 'notifications' ? notificationUnreadCount : link.badge }}
         </span>
       </a>
     </nav>

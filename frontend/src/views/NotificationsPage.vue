@@ -1,6 +1,11 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout.vue'
+import {
+  getNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from '@/api/notifications.js'
 
 const filters = [
   { id: 'all', label: 'All' },
@@ -9,52 +14,9 @@ const filters = [
   { id: 'events', label: 'Events' },
 ]
 
-const notificationItems = ref([
-  {
-    id: 1,
-    type: 'requests',
-    icon: 'S',
-    color: '#9b7cff',
-    title: 'Sana Iqbal wants to follow you',
-    detail: 'Your profile is private.',
-    time: '12 min ago',
-    unread: true,
-    action: 'follow',
-  },
-  {
-    id: 2,
-    type: 'groups',
-    icon: 'W',
-    color: '#45d9d0',
-    title: 'You were invited to Weekend Hikers',
-    detail: 'Mara Voss invited you to join this group.',
-    time: '1h ago',
-    unread: true,
-    action: 'join',
-  },
-  {
-    id: 3,
-    type: 'events',
-    icon: 'E',
-    color: '#ffb84d',
-    title: 'Design meetup starts tomorrow',
-    detail: 'You RSVP’d as going.',
-    time: '3h ago',
-    unread: false,
-    action: 'rsvp',
-  },
-  {
-    id: 4,
-    type: 'groups',
-    icon: 'K',
-    color: '#ff8b5c',
-    title: 'Kiko Tanaka commented on your post',
-    detail: '“This view is incredible.”',
-    time: 'Yesterday',
-    unread: false,
-    action: '',
-  },
-])
+const notificationItems = ref([])
+const isLoading = ref(true)
+const loadError = ref('')
 
 const activeFilter = ref('all')
 
@@ -65,20 +27,77 @@ const visibleNotifications = computed(() => {
 
 const unreadCount = computed(() => notificationItems.value.filter((item) => item.unread).length)
 
-function markAsRead(item) {
-  item.unread = false
+function formatNotificationTime(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Recently'
+
+  return date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
 }
 
-function markAllAsRead() {
-  notificationItems.value.forEach((item) => {
+function notificationForDisplay(notification) {
+  const categoryStyles = {
+    requests: { icon: 'R', color: '#9b7cff' },
+    groups: { icon: 'G', color: '#45d9d0' },
+    events: { icon: 'E', color: '#ffb84d' },
+  }
+  const style = categoryStyles[notification.category] || categoryStyles.groups
+
+  return {
+    ...notification,
+    type: notification.category,
+    icon: style.icon,
+    color: style.color,
+    title: notification.message,
+    detail: notification.type.replaceAll('_', ' '),
+    time: formatNotificationTime(notification.createdAt),
+    unread: !notification.isRead,
+    action: notification.category === 'requests' ? 'follow' : '',
+  }
+}
+
+async function loadNotifications() {
+  isLoading.value = true
+  loadError.value = ''
+
+  try {
+    const result = await getNotifications(activeFilter.value)
+    notificationItems.value = (result?.notifications || []).map(notificationForDisplay)
+  } catch (error) {
+    loadError.value = error.message || 'Could not load notifications.'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+async function markAsRead(item) {
+  if (!item.unread) return
+
+  try {
+    await markNotificationRead(item.id)
     item.unread = false
-  })
+  } catch (error) {
+    loadError.value = error.message || 'Could not mark notification as read.'
+  }
 }
 
-function chooseAction(item, action) {
-  item.action = action
-  item.unread = false
+async function markAllAsRead() {
+  try {
+    await markAllNotificationsRead()
+    notificationItems.value.forEach((item) => {
+      item.unread = false
+    })
+  } catch (error) {
+    loadError.value = error.message || 'Could not mark notifications as read.'
+  }
 }
+
+async function chooseAction(item, action) {
+  item.action = action
+  await markAsRead(item)
+}
+
+watch(activeFilter, loadNotifications)
+onMounted(loadNotifications)
 </script>
 
 <template>
@@ -114,7 +133,14 @@ function chooseAction(item, action) {
         </button>
       </nav>
 
-      <div v-if="visibleNotifications.length" class="notification-list">
+      <p v-if="isLoading" class="notifications-state">Loading notifications...</p>
+
+      <div v-else-if="loadError" class="notifications-state notifications-state--error">
+        <span>{{ loadError }}</span>
+        <button type="button" @click="loadNotifications">Try again</button>
+      </div>
+
+      <div v-else-if="visibleNotifications.length" class="notification-list">
         <article
           v-for="item in visibleNotifications"
           :key="item.id"
@@ -322,6 +348,29 @@ function chooseAction(item, action) {
   margin: var(--space-6) 0 0;
   color: var(--color-text-muted);
   text-align: center;
+}
+
+.notifications-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  color: var(--color-text-muted);
+}
+
+.notifications-state--error {
+  color: var(--color-coral);
+}
+
+.notifications-state button {
+  min-height: var(--touch-target);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
 }
 
 @media (min-width: 48rem) {

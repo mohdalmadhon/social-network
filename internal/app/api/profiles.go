@@ -270,7 +270,7 @@ func (app *App) GetFollowers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) GetFollowing(w http.ResponseWriter, r *http.Request) {
-	_, ok := r.Context().Value("userID").(int)
+	currentUserID, ok := r.Context().Value("userID").(int)
 	if !ok {
 		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
 			"status":  false,
@@ -282,13 +282,17 @@ func (app *App) GetFollowing(w http.ResponseWriter, r *http.Request) {
 	queryID := r.URL.Query().Get("targetid")
 	queryCount := r.URL.Query().Get("count")
 
-	targetID, err := strconv.Atoi(queryID)
-	if err != nil {
-		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
-			"status":  false,
-			"message": "invalid target id",
-		})
-		return
+	targetID := currentUserID
+	if queryID != "" {
+		var err error
+		targetID, err = strconv.Atoi(queryID)
+		if err != nil {
+			helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "invalid target id",
+			})
+			return
+		}
 	}
 	count, err := strconv.Atoi(queryCount)
 	if err != nil {

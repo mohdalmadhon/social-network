@@ -30,6 +30,7 @@ func (app *App) GetUserData(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	userData.UserID = userID
 
 	userAbout, err := profiles.GetUserAbout(app.DB, userID)
 	if err != nil {
@@ -54,7 +55,7 @@ func (app *App) GetUserData(w http.ResponseWriter, r *http.Request) {
 
 	userData.Followers = followers
 
-	following, err := profiles.GetFollowers(app.DB, userID, 10)
+	following, err := profiles.GetFollowing(app.DB, userID, 10)
 	if err != nil {
 		log.Println(err)
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
@@ -157,7 +158,7 @@ func (app *App) UpdateUserAvatar(w http.ResponseWriter, r *http.Request) {
 
 	contentType := header.Header.Get("Content-Type")
 
-	if contentType != "image/jpeg" && contentType != "image/png" &&contentType != "image/gif" {
+	if contentType != "image/jpeg" && contentType != "image/png" && contentType != "image/gif" {
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "avatar must be JPG or PNG",

@@ -38,6 +38,41 @@ func TestPostPrivacyMigrationUpDownUp(t *testing.T) {
 	assertLegacyPostData(t, db)
 }
 
+func TestNotificationsMigrationUpDownUp(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.SetMaxOpenConns(1)
+	defer db.Close()
+
+	runMigrationFile(t, db, "001_init_users.up.sql")
+	runMigrationFile(t, db, "006_notifications.up.sql")
+
+	_, err = db.Exec(`
+		INSERT INTO user (id, email, username, first_name, last_name, dob, password)
+		VALUES (1, 'notification@orbit.test', 'notification', 'Notification', 'User', '2000-01-01', 'password');
+		INSERT INTO notifications (user_id, category, type, message, related_id)
+		VALUES (1, 'requests', 'follow_request', 'Someone wants to follow you', 42);
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var message string
+	if err := db.QueryRow("SELECT message FROM notifications WHERE user_id = 1").Scan(&message); err != nil {
+		t.Fatal(err)
+	}
+	if message != "Someone wants to follow you" {
+		t.Fatalf("notification message changed: %q", message)
+	}
+
+	runMigrationFile(t, db, "006_notifications.down.sql")
+	assertTable(t, db, "notifications", false)
+	runMigrationFile(t, db, "006_notifications.up.sql")
+	assertTable(t, db, "notifications", true)
+}
+
 func insertLegacyPostData(t *testing.T, db *sql.DB) {
 	t.Helper()
 

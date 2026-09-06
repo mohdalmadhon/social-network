@@ -22,6 +22,7 @@ type UserLogger struct {
 }
 
 type UserData struct {
+	UserID         int
 	UserInfo       UserRegistration
 	NumOfFollowers int
 	NumOfFollowing int

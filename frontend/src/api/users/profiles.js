@@ -121,7 +121,10 @@ export async function getFollowers(id, count) {
 }
 
 export async function getFollowing(id, count) {
-    const resp = await fetch(`/api/profile/following?targetid=${id}&count=${count}`, {
+    const params = new URLSearchParams({ count: String(count) })
+    if (id) params.set('targetid', id)
+
+    const resp = await fetch(`/api/profile/following?${params.toString()}`, {
         method: "GET",
         credentials: 'include'
     });
@@ -137,4 +140,8 @@ export async function getFollowing(id, count) {
 
     const result = await resp.json();
     return result;
+}
+
+export function getMyFollowing(count = 100) {
+    return getFollowing('', count)
 }

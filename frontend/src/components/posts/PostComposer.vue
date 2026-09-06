@@ -1,6 +1,7 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { createPost } from '@/api/posts/posts.js'
+import { getMyFollowing } from '@/api/users/profiles.js'
 
 const emit = defineEmits(['post-created'])
 
@@ -9,6 +10,10 @@ const content = ref('')
 const privacy = ref('public')
 const feeling = ref('')
 const selectedFile = ref(null)
+const selectedFollowerIds = ref([])
+const following = ref([])
+const followingError = ref('')
+const isLoadingFollowing = ref(false)
 const previewUrl = ref('')
 const fileInput = ref(null)
 const showFeelings = ref(false)
@@ -18,7 +23,28 @@ const isPosting = ref(false)
 
 const feelings = ['Happy', 'Excited', 'Grateful', 'Thoughtful']
 
-const canPost = computed(() => content.value.trim() !== '' || selectedFile.value !== null)
+const canPost = computed(() => {
+  const hasContent = content.value.trim() !== '' || selectedFile.value !== null
+  const hasSelectedFollowers = privacy.value !== 'selected' || selectedFollowerIds.value.length > 0
+  return hasContent && hasSelectedFollowers && !isLoadingFollowing.value
+})
+
+async function loadFollowing() {
+  isLoadingFollowing.value = true
+  followingError.value = ''
+
+  try {
+    const result = await getMyFollowing(100)
+    following.value = Object.entries(result?.data || {}).map(([id, user]) => ({
+      id: Number(id),
+      name: `${user.FirstName} ${user.LastName}`.trim(),
+    }))
+  } catch (error) {
+    followingError.value = error.message || 'Could not load your followers.'
+  } finally {
+    isLoadingFollowing.value = false
+  }
+}
 
 function selectFile(event) {
   const file = event.target.files[0] || null
@@ -69,6 +95,7 @@ async function preparePost() {
   const formData = new FormData()
   formData.append('content', content.value)
   formData.append('privacy', privacy.value)
+  formData.append('selectedFollowerIds', JSON.stringify(selectedFollowerIds.value))
 
   if (selectedFile.value) {
     formData.append('image', selectedFile.value)
@@ -86,6 +113,8 @@ async function preparePost() {
 
     content.value = ''
     feeling.value = ''
+    privacy.value = 'public'
+    selectedFollowerIds.value = []
     removeFile()
     emit('post-created', result.post)
     message.value = 'Post published successfully.'
@@ -97,6 +126,12 @@ async function preparePost() {
     isPosting.value = false
   }
 }
+
+watch(privacy, (value) => {
+  if (value === 'selected' && following.value.length === 0 && !followingError.value) {
+    loadFollowing()
+  }
+})
 </script>
 
 <template>
@@ -169,9 +204,22 @@ async function preparePost() {
           <select v-model="privacy">
             <option value="public">Public</option>
             <option value="followers">Followers only</option>
-            <option value="selected" disabled>Selected followers (coming soon)</option>
+            <option value="selected">Selected followers</option>
           </select>
         </label>
+
+        <div v-if="privacy === 'selected'" class="selected-followers">
+          <p class="selected-followers__label">Choose followers</p>
+          <p v-if="isLoadingFollowing" class="selected-followers__state">Loading your followers...</p>
+          <p v-else-if="followingError" class="selected-followers__state selected-followers__state--error">
+            {{ followingError }}
+          </p>
+          <p v-else-if="following.length === 0" class="selected-followers__state">You have no approved followers yet.</p>
+          <label v-for="person in following" v-else :key="person.id" class="selected-follower">
+            <input v-model="selectedFollowerIds" type="checkbox" :value="person.id" />
+            <span>{{ person.name || 'Orbit member' }}</span>
+          </label>
+        </div>
 
         <button class="post-button" type="submit" :disabled="!canPost || isPosting">
           {{ isPosting ? 'Posting…' : 'Post' }}
@@ -411,6 +459,42 @@ textarea::placeholder {
   color: var(--color-text);
 }
 
+.selected-followers {
+  flex: 1 1 100%;
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-input);
+}
+
+.selected-followers__label,
+.selected-followers__state {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.selected-followers__state--error {
+  color: var(--color-coral);
+}
+
+.selected-follower {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target);
+  color: var(--color-text-soft);
+  cursor: pointer;
+}
+
+.selected-follower input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--color-violet);
+}
+
 .post-button {
   min-width: 5rem;
   padding-inline: var(--space-4);
@@ -449,7 +533,12 @@ textarea::placeholder {
   }
 
   .post-composer__actions {
+    flex-wrap: wrap;
     justify-content: flex-end;
+  }
+
+  .selected-followers {
+    order: -1;
   }
 }
 </style>
