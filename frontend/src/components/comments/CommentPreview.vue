@@ -5,6 +5,11 @@ defineProps({
     required: true,
   },
 })
+
+function imageUrl(imagePath) {
+  if (!imagePath) return ''
+  return imagePath.startsWith('/') ? imagePath : `/uploads/${imagePath}`
+}
 </script>
 
 <template>
@@ -15,6 +20,7 @@ defineProps({
     <div class="comment-preview__body">
       <strong>{{ comment.author }}</strong>
       <p>{{ comment.content }}</p>
+      <img v-if="comment.imagePath" :src="imageUrl(comment.imagePath)" alt="Image attached to this comment" />
     </div>
   </div>
 </template>
@@ -62,5 +68,14 @@ defineProps({
   font-size: 0.875rem;
   line-height: 1.45;
   overflow-wrap: anywhere;
+}
+
+.comment-preview img {
+  display: block;
+  width: min(100%, 20rem);
+  max-height: 16rem;
+  margin-top: var(--space-2);
+  border-radius: var(--radius-small);
+  object-fit: contain;
 }
 </style>

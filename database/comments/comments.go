@@ -10,6 +10,10 @@ import (
 var ErrPostNotVisible = errors.New("post is not available")
 
 func CreateComment(db *sql.DB, userID int, postID int64, content string) (models.Comment, error) {
+	return CreateCommentWithImage(db, userID, postID, content, "")
+}
+
+func CreateCommentWithImage(db *sql.DB, userID int, postID int64, content, imagePath string) (models.Comment, error) {
 	content = strings.TrimSpace(content)
 	if content == "" || len([]rune(content)) > 200 {
 		return models.Comment{}, errors.New("comment must contain 1 to 200 characters")
@@ -24,9 +28,9 @@ func CreateComment(db *sql.DB, userID int, postID int64, content string) (models
 	}
 
 	result, err := db.Exec(`
-		INSERT INTO comments (user_id, post_id, content)
-		VALUES (?, ?, ?)
-	`, userID, postID, content)
+		INSERT INTO comments (user_id, post_id, content, image_path)
+		VALUES (?, ?, ?, ?)
+	`, userID, postID, content, imagePath)
 	if err != nil {
 		return models.Comment{}, err
 	}
@@ -49,6 +53,7 @@ func GetCommentByID(db *sql.DB, commentID int64) (models.Comment, error) {
 		&comment.Author,
 		&comment.AvatarPath,
 		&comment.Content,
+		&comment.ImagePath,
 		&comment.CreatedAt,
 	)
 
@@ -80,6 +85,7 @@ func ListComments(db *sql.DB, userID int, postID int64) ([]models.Comment, error
 			&comment.Author,
 			&comment.AvatarPath,
 			&comment.Content,
+			&comment.ImagePath,
 			&comment.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -139,6 +145,7 @@ const commentQuery = `
 		COALESCE(users.username, users.first_name || ' ' || users.last_name),
 		COALESCE(profile.avatar_path, ''),
 		comments.content,
+		comments.image_path,
 		comments.created_at
 	FROM comments
 	JOIN user AS users ON users.id = comments.user_id

@@ -3,12 +3,18 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"social/database/comments"
+	"social/internal/helpers"
 	"social/internal/models"
 	"strconv"
 	"strings"
 )
+
+const maxCommentBodySize = 6 << 20
+const maxCommentImageSize = 5 * 1024 * 1024
 
 func (app App) Comments(w http.ResponseWriter, r *http.Request) {
 	userID, err := authenticatedUserID(r)
@@ -68,26 +74,109 @@ func (app App) listComments(w http.ResponseWriter, userID int, postID int64) {
 
 func (app App) createComment(w http.ResponseWriter, r *http.Request, userID int, postID int64) {
 	var request models.CreateCommentRequest
-	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<10))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&request); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]any{
-			"status":  false,
-			"message": "invalid comment body",
-		})
-		return
+	var imageFile multipart.File
+	var imageHeader *multipart.FileHeader
+
+	if strings.HasPrefix(strings.ToLower(r.Header.Get("Content-Type")), "multipart/form-data") {
+		r.Body = http.MaxBytesReader(w, r.Body, maxCommentBodySize)
+		if err := r.ParseMultipartForm(maxCommentBodySize); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "comment body is too large or invalid",
+			})
+			return
+		}
+
+		request.Content = r.FormValue("content")
+		var fileErr error
+		imageFile, imageHeader, fileErr = r.FormFile("image")
+		if fileErr != nil && fileErr != http.ErrMissingFile {
+			writeJSON(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "invalid comment image upload",
+			})
+			return
+		}
+
+		if imageFile != nil {
+			if imageHeader.Size > maxCommentImageSize {
+				imageFile.Close()
+				writeJSON(w, http.StatusBadRequest, map[string]any{
+					"status":  false,
+					"message": "comment image must be smaller than 5 MB",
+				})
+				return
+			}
+
+			fileBytes := make([]byte, 512)
+			bytesRead, readErr := imageFile.Read(fileBytes)
+			if readErr != nil && readErr != io.EOF {
+				imageFile.Close()
+				writeJSON(w, http.StatusBadRequest, map[string]any{
+					"status":  false,
+					"message": "could not read comment image",
+				})
+				return
+			}
+
+			contentType := http.DetectContentType(fileBytes[:bytesRead])
+			if contentType != "image/jpeg" && contentType != "image/png" && contentType != "image/gif" {
+				imageFile.Close()
+				writeJSON(w, http.StatusBadRequest, map[string]any{
+					"status":  false,
+					"message": "only JPEG, PNG, and GIF comment images are allowed",
+				})
+				return
+			}
+
+			if _, seekErr := imageFile.Seek(0, io.SeekStart); seekErr != nil {
+				imageFile.Close()
+				writeJSON(w, http.StatusBadRequest, map[string]any{
+					"status":  false,
+					"message": "could not reset comment image",
+				})
+				return
+			}
+		}
+	} else {
+		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<10))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&request); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "invalid comment body",
+			})
+			return
+		}
 	}
 
 	request.Content = strings.TrimSpace(request.Content)
-	if request.Content == "" || len([]rune(request.Content)) > 200 {
+	if (request.Content == "" && imageFile == nil) || len([]rune(request.Content)) > 200 {
+		if imageFile != nil {
+			imageFile.Close()
+		}
 		writeJSON(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
-			"message": "comment must contain 1 to 200 characters",
+			"message": "comment needs text or an image, with text limited to 200 characters",
 		})
 		return
 	}
 
-	comment, err := comments.CreateComment(app.DB, userID, postID, request.Content)
+	imagePath := ""
+	var err error
+	if imageFile != nil {
+		defer imageFile.Close()
+		imagePath, err = helpers.SaveUploads(imageFile, imageHeader, "comment")
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]any{
+				"status":  false,
+				"message": "could not save comment image",
+			})
+			return
+		}
+	}
+
+	comment, err := comments.CreateCommentWithImage(app.DB, userID, postID, request.Content, imagePath)
 	if errors.Is(err, comments.ErrPostNotVisible) {
 		writeJSON(w, http.StatusNotFound, map[string]any{
 			"status":  false,

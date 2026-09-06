@@ -4,8 +4,10 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"social/database/notifications"
 	profiles "social/database/profile"
 	"social/internal/helpers"
+	"social/internal/models"
 	"strconv"
 )
 
@@ -178,6 +180,19 @@ func (app *App) RequestFollow(w http.ResponseWriter, r *http.Request) {
 			"message": "request to follow failed",
 		})
 		return
+	}
+
+	if requestCode == 0 {
+		actorID := followerID
+		_, notificationErr := notifications.Create(app.DB, targetID, models.CreateNotificationRequest{
+			ActorID:  &actorID,
+			Category: "requests",
+			Type:     "follow_request",
+			Message:  "Someone requested to follow you",
+		})
+		if notificationErr != nil {
+			log.Printf("follow request created but notification failed: %v", notificationErr)
+		}
 	}
 
 	helpers.WriteJson(w, http.StatusOK, map[string]any{

@@ -31,3 +31,13 @@ export function markNotificationRead(notificationId) {
 export function markAllNotificationsRead() {
   return request('/api/notifications/read-all', { method: 'PATCH' })
 }
+
+export function applyNotificationAction(notificationId, action) {
+  return request(`/api/notifications/${notificationId}/action`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ action }),
+  })
+}

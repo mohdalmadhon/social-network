@@ -47,6 +47,7 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	//notifications
 	mux.HandleFunc("GET /api/notifications", app.Notifications)
 	mux.HandleFunc("PATCH /api/notifications/read-all", app.MarkAllNotificationsRead)
+	mux.HandleFunc("PATCH /api/notifications/{notificationID}/action", app.ApplyNotificationAction)
 	mux.HandleFunc("PATCH /api/notifications/{notificationID}/read", app.MarkNotificationRead)
 
 	//folder handlers

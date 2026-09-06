@@ -46,12 +46,12 @@ async function loadComments() {
   }
 }
 
-async function addComment(content) {
+async function addComment(comment) {
   isSubmittingComment.value = true
   commentsError.value = ''
 
   try {
-    const result = await createComment(props.post.id, content)
+    const result = await createComment(props.post.id, comment)
     if (!result?.comment) {
       throw new Error('Could not create comment')
     }

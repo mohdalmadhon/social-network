@@ -11,6 +11,7 @@ import (
 
 const AVATAR_PATH = "uploads/avatars"
 const POSTS_PATH = "uploads/posts"
+const COMMENTS_PATH = "uploads/comments"
 
 func SaveUploads(file multipart.File, header *multipart.FileHeader, Type string) (string, error) {
 	var path string
@@ -19,6 +20,8 @@ func SaveUploads(file multipart.File, header *multipart.FileHeader, Type string)
 		path = AVATAR_PATH
 	} else if Type == "post" {
 		path = POSTS_PATH
+	} else if Type == "comment" {
+		path = COMMENTS_PATH
 	} else {
 		return "", os.ErrInvalid
 	}
@@ -44,6 +47,9 @@ func SaveUploads(file multipart.File, header *multipart.FileHeader, Type string)
 
 	if Type == "avatar" {
 		return "avatars/" + filename, nil
+	}
+	if Type == "comment" {
+		return "comments/" + filename, nil
 	}
 
 	return "posts/" + filename, nil

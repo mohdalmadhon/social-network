@@ -9,6 +9,7 @@ type Comment struct {
 	Author     string    `json:"author"`
 	AvatarPath string    `json:"avatarPath"`
 	Content    string    `json:"content"`
+	ImagePath  string    `json:"imagePath"`
 	CreatedAt  time.Time `json:"createdAt"`
 }
 

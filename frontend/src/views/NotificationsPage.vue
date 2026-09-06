@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout.vue'
 import {
+  applyNotificationAction,
   getNotifications,
   markAllNotificationsRead,
   markNotificationRead,
@@ -34,6 +35,15 @@ function formatNotificationTime(value) {
   return date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
 }
 
+function actionLabel(action) {
+  return {
+    accept: 'Accepted',
+    decline: 'Declined',
+    join: 'Joined',
+    rsvp: 'Going',
+  }[action] || action
+}
+
 function notificationForDisplay(notification) {
   const categoryStyles = {
     requests: { icon: 'R', color: '#9b7cff' },
@@ -51,7 +61,13 @@ function notificationForDisplay(notification) {
     detail: notification.type.replaceAll('_', ' '),
     time: formatNotificationTime(notification.createdAt),
     unread: !notification.isRead,
-    action: notification.category === 'requests' ? 'follow' : '',
+    action: notification.category === 'requests' && notification.type === 'follow_request'
+      ? 'follow'
+      : notification.category === 'groups'
+        ? 'join'
+        : notification.category === 'events'
+          ? 'rsvp'
+          : '',
   }
 }
 
@@ -92,8 +108,16 @@ async function markAllAsRead() {
 }
 
 async function chooseAction(item, action) {
-  item.action = action
-  await markAsRead(item)
+  const previousAction = item.action
+
+  try {
+    await applyNotificationAction(item.id, action)
+    item.action = action
+    item.unread = false
+  } catch (error) {
+    item.action = previousAction
+    loadError.value = error.message || 'Could not complete notification action.'
+  }
 }
 
 watch(activeFilter, loadNotifications)
@@ -159,19 +183,27 @@ onMounted(loadNotifications)
           </div>
 
           <div v-if="item.action === 'follow'" class="notification-item__actions">
-            <button type="button" class="action-button action-button--primary" @click.stop="chooseAction(item, 'accepted')">
+            <button type="button" class="action-button action-button--primary" @click.stop="chooseAction(item, 'accept')">
               Accept
             </button>
-            <button type="button" class="action-button" @click.stop="chooseAction(item, 'declined')">
+            <button type="button" class="action-button" @click.stop="chooseAction(item, 'decline')">
               Decline
             </button>
           </div>
           <div v-else-if="item.action === 'join'" class="notification-item__actions">
-            <button type="button" class="action-button action-button--primary" @click.stop="chooseAction(item, 'joined')">
+            <button type="button" class="action-button action-button--primary" @click.stop="chooseAction(item, 'join')">
               Join
             </button>
           </div>
-          <span v-else-if="item.action" class="notification-item__result">{{ item.action }}</span>
+          <div v-else-if="item.action === 'rsvp'" class="notification-item__actions">
+            <button type="button" class="action-button action-button--primary" @click.stop="chooseAction(item, 'rsvp')">
+              RSVP
+            </button>
+            <button type="button" class="action-button" @click.stop="chooseAction(item, 'decline')">
+              Decline
+            </button>
+          </div>
+          <span v-else-if="item.action" class="notification-item__result">{{ actionLabel(item.action) }}</span>
         </article>
       </div>
 
