@@ -1,7 +1,8 @@
 import LoginPage from "@/views/LoginPage.vue";
 import EditProfile from "@/views/profiles/EditProfile.vue";
 import PersonalProfile from "@/views/profiles/PersonalProfile.vue";
-import GroupsPage from "@/views/GroupsPage.vue";
+import GroupsPage from "@/views/group/GroupsPage.vue";
+import GroupPage from "@/views/group/GroupPage.vue";
 import HomeFeedPage from "@/views/HomeFeedPage.vue";
 import ChatsPage from "@/views/ChatsPage.vue";
 import NotificationsPage from "@/views/NotificationsPage.vue";
@@ -25,9 +26,10 @@ const routes = [
   {
     path: "/groups",
     component: GroupsPage,
-    meta: {
-      requiresAuth: true,
-    },
+  },
+  {
+    path: "/groups/:groupId",
+    component: GroupPage,
   },
 
   {

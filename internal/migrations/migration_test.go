@@ -116,6 +116,39 @@ func TestEventRsvpMigrationUpDownUp(t *testing.T) {
 	assertTable(t, db, "event_rsvps", true)
 }
 
+func TestGroupMigrationsUpDownUp(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.SetMaxOpenConns(1)
+	defer db.Close()
+
+	runMigrationFile(t, db, "001_init_users.up.sql")
+	runMigrationFile(t, db, "002_init_posts.up.sql")
+	runMigrationFile(t, db, "003_init_chats.up.sql")
+	runMigrationFile(t, db, "004_create_triggers.up.sql")
+	runMigrationFile(t, db, "005_post_privacy.up.sql")
+	runMigrationFile(t, db, "006_notifications.up.sql")
+	runMigrationFile(t, db, "007_comment_media.up.sql")
+	runMigrationFile(t, db, "008_event_rsvps.up.sql")
+	runMigrationFile(t, db, "009_add_creator_id_to_groups.up.sql")
+	runMigrationFile(t, db, "010_create_group_members.up.sql")
+
+	assertColumn(t, db, "groups", "creator_id", true)
+	assertTable(t, db, "group_members", true)
+
+	runMigrationFile(t, db, "010_create_group_members.down.sql")
+	assertTable(t, db, "group_members", false)
+	runMigrationFile(t, db, "010_create_group_members.up.sql")
+	assertTable(t, db, "group_members", true)
+
+	runMigrationFile(t, db, "009_add_creator_id_to_groups.down.sql")
+	assertColumn(t, db, "groups", "creator_id", false)
+	runMigrationFile(t, db, "009_add_creator_id_to_groups.up.sql")
+	assertColumn(t, db, "groups", "creator_id", true)
+}
+
 func insertLegacyPostData(t *testing.T, db *sql.DB) {
 	t.Helper()
 

@@ -7,9 +7,8 @@ import (
 
 var ErrGroupNotFound = errors.New("group not found")
 
-// JoinGroup adds a user to the chat that represents a group.
-// The existing schema stores group membership in chat_users, so keeping this
-// operation here makes the notification action easy to understand and reuse.
+// JoinGroup adds a user to the group's membership table. If the group already
+// has a chat, the same user is added there too.
 func JoinGroup(db *sql.DB, userID int, groupID int64) error {
 	if userID <= 0 || groupID <= 0 {
 		return ErrGroupNotFound
@@ -28,6 +27,13 @@ func JoinGroup(db *sql.DB, userID int, groupID int64) error {
 		return err
 	}
 
+	if _, err = tx.Exec(`
+		INSERT OR IGNORE INTO group_members (group_id, user_id)
+		VALUES (?, ?)
+	`, groupID, userID); err != nil {
+		return err
+	}
+
 	var chatID int64
 	err = tx.QueryRow(`
 		SELECT id
@@ -37,14 +43,7 @@ func JoinGroup(db *sql.DB, userID int, groupID int64) error {
 		LIMIT 1
 	`, groupID).Scan(&chatID)
 	if err == sql.ErrNoRows {
-		result, createErr := tx.Exec(`
-			INSERT INTO chats (type, group_id)
-			VALUES ('group', ?)
-		`, groupID)
-		if createErr != nil {
-			return createErr
-		}
-		chatID, err = result.LastInsertId()
+		return tx.Commit()
 	} else if err != nil {
 		return err
 	}
