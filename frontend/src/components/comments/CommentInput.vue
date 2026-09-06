@@ -6,6 +6,10 @@ defineProps({
     type: String,
     required: true,
   },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(['submit'])
@@ -27,11 +31,12 @@ function submitComment() {
     <input
       :id="inputId"
       v-model="content"
+      :disabled="disabled"
       maxlength="200"
       placeholder="Write a comment..."
       type="text"
     />
-    <button type="submit" :disabled="!content.trim()" aria-label="Send comment">
+    <button type="submit" :disabled="disabled || !content.trim()" aria-label="Send comment">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="m4 12 16-8-6 16-2-6-8-2Zm8 2 3-3" />
       </svg>
@@ -63,6 +68,11 @@ function submitComment() {
 
 .comment-input input::placeholder {
   color: var(--color-text-faint);
+}
+
+.comment-input input:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
 .comment-input button {
