@@ -29,6 +29,12 @@ function addComment(content) {
   }
   addedComments.value += 1
 }
+
+function imageUrl(imagePath) {
+  if (!imagePath) return ''
+
+  return imagePath.startsWith('/') ? imagePath : `/uploads/${imagePath}`
+}
 </script>
 
 <template>
@@ -50,7 +56,11 @@ function addComment(content) {
 
     <p class="post-card__content">{{ post.content }}</p>
 
-    <div v-if="post.hasMedia" class="post-card__media" role="img" :aria-label="post.mediaDescription">
+    <div v-if="post.imagePath" class="post-card__media post-card__media--uploaded">
+      <img :src="imageUrl(post.imagePath)" alt="Image attached to this post" />
+    </div>
+
+    <div v-else-if="post.hasMedia" class="post-card__media" role="img" :aria-label="post.mediaDescription">
       <span class="post-card__sun" aria-hidden="true"></span>
       <span class="post-card__mountain post-card__mountain--back" aria-hidden="true"></span>
       <span class="post-card__mountain post-card__mountain--front" aria-hidden="true"></span>
@@ -168,6 +178,18 @@ function addComment(content) {
   overflow: hidden;
   border-radius: var(--radius-medium);
   background: linear-gradient(110deg, #44538e 0%, #aa5e9d 54%, #ff8e8b 100%);
+}
+
+.post-card__media--uploaded {
+  min-height: 0;
+  background: var(--color-input);
+}
+
+.post-card__media--uploaded img {
+  display: block;
+  width: 100%;
+  max-height: 30rem;
+  object-fit: contain;
 }
 
 .post-card__sun {

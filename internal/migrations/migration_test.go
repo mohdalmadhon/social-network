@@ -2,7 +2,6 @@ package migrations
 
 import (
 	"database/sql"
-	"fmt"
 	"os"
 	"testing"
 
@@ -17,22 +16,23 @@ func TestPostPrivacyMigrationUpDownUp(t *testing.T) {
 	db.SetMaxOpenConns(1)
 	defer db.Close()
 
-	for version := 1; version <= 4; version++ {
-		runMigrationFile(t, db, fmt.Sprintf("%06d_%s.up.sql", version, migrationName(version)))
-	}
+	runMigrationFile(t, db, "001_init_users.up.sql")
+	runMigrationFile(t, db, "002_init_posts.up.sql")
+	runMigrationFile(t, db, "003_init_chats.up.sql")
+	runMigrationFile(t, db, "004_create_triggers.up.sql")
 	insertLegacyPostData(t, db)
-	runMigrationFile(t, db, "000005_post_privacy.up.sql")
+	runMigrationFile(t, db, "005_post_privacy.up.sql")
 
 	assertColumn(t, db, "posts", "privacy", true)
 	assertColumnNotNull(t, db, "posts", "group_id", false)
 	assertTable(t, db, "post_viewers", true)
 	assertLegacyPostData(t, db)
 
-	runMigrationFile(t, db, "000005_post_privacy.down.sql")
+	runMigrationFile(t, db, "005_post_privacy.down.sql")
 	assertColumn(t, db, "posts", "privacy", false)
 	assertTable(t, db, "post_viewers", false)
 
-	runMigrationFile(t, db, "000005_post_privacy.up.sql")
+	runMigrationFile(t, db, "005_post_privacy.up.sql")
 	assertColumn(t, db, "posts", "privacy", true)
 	assertTable(t, db, "post_viewers", true)
 	assertLegacyPostData(t, db)
@@ -42,11 +42,8 @@ func insertLegacyPostData(t *testing.T, db *sql.DB) {
 	t.Helper()
 
 	_, err := db.Exec(`
-		INSERT INTO users (id, email, username, first_name, last_name, dob, password)
+		INSERT INTO user (id, email, username, first_name, last_name, dob, password)
 		VALUES (1, 'legacy@orbit.test', 'legacy', 'Legacy', 'User', '2000-01-01', 'password');
-
-		INSERT INTO profile (user_id, about)
-		VALUES (1, 'legacy profile');
 
 		INSERT INTO groups (id, title, description)
 		VALUES (1, 'Legacy Group', 'Migration test group');
@@ -94,17 +91,6 @@ func runMigrationFile(t *testing.T, db *sql.DB, filename string) {
 	if _, err = db.Exec(string(query)); err != nil {
 		t.Fatalf("%s failed: %v", filename, err)
 	}
-}
-
-func migrationName(version int) string {
-	names := map[int]string{
-		1: "init",
-		2: "triggers",
-		3: "indexes",
-		4: "update_users",
-		5: "post_privacy",
-	}
-	return names[version]
 }
 
 func assertColumn(t *testing.T, db *sql.DB, table string, column string, expected bool) {

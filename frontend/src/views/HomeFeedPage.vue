@@ -1,40 +1,76 @@
 <script setup>
+import { onMounted, ref } from 'vue'
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout.vue'
 import FeedSidebar from '@/components/posts/FeedSidebar.vue'
 import PostCard from '@/components/posts/PostCard.vue'
 import PostComposer from '@/components/posts/PostComposer.vue'
+import { getPosts } from '@/api/posts/posts.js'
 
-const samplePosts = [
-  {
-    id: 1,
-    author: 'Kiko Tanaka',
-    avatarColor: '#45d9d0',
-    time: '2h ago',
-    privacy: 'Followers only',
-    content: 'Summit at 6:12 am — worth every step of the climb. ⛰️',
-    likes: 48,
-    comments: 12,
-    hasMedia: true,
-    mediaDescription: 'A colorful sunrise over a layered mountain range',
-  },
-  {
-    id: 2,
-    author: 'Mara Voss',
-    avatarColor: '#ff8b5c',
-    time: '5h ago',
-    privacy: 'Public',
-    content: 'Migrating the social-network database tonight: SQLite + golang-migrate, wish me luck. ☕',
-    likes: 17,
-    comments: 3,
+const posts = ref([])
+const isLoading = ref(true)
+const feedError = ref('')
+
+const avatarColors = ['#45d9d0', '#ff8b5c', '#9b7cff', '#f2b84b', '#28668d']
+
+function formatPostTime(value) {
+  if (!value) return 'Just now'
+
+  const date = new Date(value.replace(' ', 'T'))
+  if (Number.isNaN(date.getTime())) return 'Recently'
+
+  return date.toLocaleString([], {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+}
+
+function privacyLabel(value) {
+  const labels = {
+    public: 'Public',
+    followers: 'Followers only',
+    selected: 'Selected followers',
+  }
+
+  return labels[value] || value
+}
+
+function toCardPost(post, index = 0) {
+  return {
+    id: post.id,
+    author: post.author || 'Orbit member',
+    avatarColor: avatarColors[index % avatarColors.length],
+    time: formatPostTime(post.createdAt),
+    privacy: privacyLabel(post.privacy),
+    content: post.content,
+    likes: post.likeCount || 0,
+    comments: post.commentCount || 0,
+    imagePath: post.imagePath || '',
     hasMedia: false,
     mediaDescription: '',
-    previewComment: {
-      author: 'Leo Marchetti',
-      avatarColor: '#28668d',
-      content: 'Use named migrations — future you says thanks 😄',
-    },
-  },
-]
+  }
+}
+
+async function loadPosts() {
+  isLoading.value = true
+  feedError.value = ''
+
+  try {
+    const result = await getPosts()
+    posts.value = (result?.posts || []).map(toCardPost)
+  } catch (error) {
+    feedError.value = error.message || 'Could not load your feed.'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+function addPost(post) {
+  if (post) {
+    posts.value.unshift(toCardPost(post))
+  }
+}
+
+onMounted(loadPosts)
 </script>
 
 <template>
@@ -42,8 +78,20 @@ const samplePosts = [
     <div class="feed-layout">
       <div class="home-feed">
         <h1 class="visually-hidden">Home feed</h1>
-        <PostComposer />
-        <PostCard v-for="post in samplePosts" :key="post.id" :post="post" />
+        <PostComposer @post-created="addPost" />
+
+        <p v-if="isLoading" class="feed-state orbit-surface">Loading your feed...</p>
+
+        <div v-else-if="feedError" class="feed-state orbit-surface">
+          <p>{{ feedError }}</p>
+          <button type="button" @click="loadPosts">Try again</button>
+        </div>
+
+        <p v-else-if="posts.length === 0" class="feed-state orbit-surface">
+          No posts yet. Share something with your orbit.
+        </p>
+
+        <PostCard v-for="post in posts" v-else :key="post.id" :post="post" />
       </div>
       <FeedSidebar />
     </div>
@@ -62,6 +110,28 @@ const samplePosts = [
   width: 100%;
   max-width: 48rem;
   gap: var(--space-4);
+}
+
+.feed-state {
+  margin: 0;
+  padding: var(--space-5);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.feed-state p {
+  margin: 0;
+}
+
+.feed-state button {
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  border-radius: 999px;
+  background: var(--gradient-action);
+  color: white;
+  cursor: pointer;
+  font-weight: 700;
 }
 
 @media (min-width: 48rem) {

@@ -2,6 +2,7 @@ import LoginPage from "@/views/LoginPage.vue";
 import EditProfile from "@/views/profiles/EditProfile.vue";
 import PersonalProfile from "@/views/profiles/PersonalProfile.vue";
 import GroupsPage from "@/views/GroupsPage.vue";
+import HomeFeedPage from "@/views/HomeFeedPage.vue";
 
 import { createRouter, createWebHistory } from "vue-router";
 
@@ -21,6 +22,14 @@ const routes = [
   {
     path: "/groups",
     component: GroupsPage,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+
+  {
+    path: "/home",
+    component: HomeFeedPage,
     meta: {
       requiresAuth: true,
     },

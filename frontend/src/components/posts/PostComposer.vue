@@ -1,21 +1,45 @@
 <script setup>
 import { computed, ref } from 'vue'
+import { createPost } from '@/api/posts/posts.js'
 
+const emit = defineEmits(['post-created'])
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024
 const content = ref('')
 const privacy = ref('public')
 const feeling = ref('')
 const selectedFile = ref(null)
+const previewUrl = ref('')
 const fileInput = ref(null)
 const showFeelings = ref(false)
 const message = ref('')
+const messageType = ref('success')
+const isPosting = ref(false)
 
 const feelings = ['Happy', 'Excited', 'Grateful', 'Thoughtful']
 
 const canPost = computed(() => content.value.trim() !== '' || selectedFile.value !== null)
 
 function selectFile(event) {
-  selectedFile.value = event.target.files[0] || null
+  const file = event.target.files[0] || null
+
+  if (previewUrl.value) {
+    URL.revokeObjectURL(previewUrl.value)
+    previewUrl.value = ''
+  }
+
+  if (file && file.size > MAX_FILE_SIZE) {
+    selectedFile.value = null
+    message.value = 'File must be smaller than 5 MB.'
+    messageType.value = 'error'
+    event.target.value = ''
+    return
+  }
+
+  selectedFile.value = file
   message.value = ''
+  messageType.value = 'success'
+  previewUrl.value = file ? URL.createObjectURL(file) : ''
 }
 
 function openFilePicker() {
@@ -24,7 +48,14 @@ function openFilePicker() {
 
 function removeFile() {
   selectedFile.value = null
-  if (fileInput.value) fileInput.value.value = ''
+  if (previewUrl.value) {
+    URL.revokeObjectURL(previewUrl.value)
+    previewUrl.value = ''
+  }
+
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
 }
 
 function selectFeeling(value) {
@@ -32,10 +63,39 @@ function selectFeeling(value) {
   showFeelings.value = false
 }
 
-function preparePost() {
+async function preparePost() {
   if (!canPost.value) return
 
-  message.value = 'Your draft is ready. Saving it comes with the posts API task.'
+  const formData = new FormData()
+  formData.append('content', content.value)
+  formData.append('privacy', privacy.value)
+
+  if (selectedFile.value) {
+    formData.append('image', selectedFile.value)
+  }
+
+  isPosting.value = true
+  message.value = ''
+
+  try {
+    const result = await createPost(formData)
+
+    if (!result?.status) {
+      throw new Error(result?.message || 'Could not create post')
+    }
+
+    content.value = ''
+    feeling.value = ''
+    removeFile()
+    emit('post-created', result.post)
+    message.value = 'Post published successfully.'
+    messageType.value = 'success'
+  } catch (error) {
+    message.value = error.message || 'Could not create post'
+    messageType.value = 'error'
+  } finally {
+    isPosting.value = false
+  }
 }
 </script>
 
@@ -48,7 +108,7 @@ function preparePost() {
       <textarea
         id="post-content"
         v-model="content"
-        maxlength="1000"
+        maxlength="500"
         placeholder="What's happening in your orbit, Noa?"
         rows="2"
         @input="message = ''"
@@ -58,6 +118,13 @@ function preparePost() {
     <div v-if="selectedFile" class="selected-file">
       <span>{{ selectedFile.name }}</span>
       <button type="button" aria-label="Remove selected file" @click="removeFile">×</button>
+    </div>
+
+    <div v-if="previewUrl" class="selected-preview">
+      <img
+        :src="previewUrl"
+        alt="Preview of the selected media"
+      />
     </div>
 
     <div class="post-composer__toolbar">
@@ -102,15 +169,24 @@ function preparePost() {
           <select v-model="privacy">
             <option value="public">Public</option>
             <option value="followers">Followers only</option>
-            <option value="private">Selected followers</option>
+            <option value="selected" disabled>Selected followers (coming soon)</option>
           </select>
         </label>
 
-        <button class="post-button" type="submit" :disabled="!canPost">Post</button>
+        <button class="post-button" type="submit" :disabled="!canPost || isPosting">
+          {{ isPosting ? 'Posting…' : 'Post' }}
+        </button>
       </div>
     </div>
 
-    <p v-if="message" class="post-composer__message" role="status">{{ message }}</p>
+    <p
+      v-if="message"
+      class="post-composer__message"
+      :class="{ 'post-composer__message--error': messageType === 'error' }"
+      role="status"
+    >
+      {{ message }}
+    </p>
   </form>
 </template>
 
@@ -166,6 +242,21 @@ textarea::placeholder {
   background: var(--color-input);
   color: var(--color-text-muted);
   font-size: 0.875rem;
+}
+
+.selected-preview {
+  margin: var(--space-3) 0 0 calc(var(--touch-target) + var(--space-3));
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-input);
+}
+
+.selected-preview img {
+  display: block;
+  width: 100%;
+  max-height: 18rem;
+  object-fit: contain;
 }
 
 .selected-file span {
@@ -340,6 +431,10 @@ textarea::placeholder {
   margin: var(--space-3) 0 0;
   color: var(--color-mint);
   font-size: 0.875rem;
+}
+
+.post-composer__message--error {
+  color: var(--color-coral);
 }
 
 @media (min-width: 48rem) {

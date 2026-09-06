@@ -18,8 +18,8 @@ func TestPostPrivacyFiltersTheFeed(t *testing.T) {
 	insertPostTestUser(t, db, 4, "selected")
 
 	_, err := db.Exec(`
-		INSERT INTO follows (follower_id, following_id)
-		VALUES (2, 1), (4, 1)
+		INSERT INTO user_followers (follower_id, target_id, status)
+		VALUES (2, 1, 1), (4, 1, 1)
 	`)
 	if err != nil {
 		t.Fatal(err)
@@ -102,7 +102,7 @@ func newPostTestDatabase(t *testing.T) *sql.DB {
 	_, err = db.Exec(`
 		PRAGMA foreign_keys = ON;
 
-		CREATE TABLE users (
+		CREATE TABLE user (
 			id INTEGER PRIMARY KEY,
 			email TEXT NOT NULL UNIQUE,
 			username TEXT NOT NULL UNIQUE,
@@ -132,22 +132,23 @@ func newPostTestDatabase(t *testing.T) *sql.DB {
 			like_count INTEGER NOT NULL DEFAULT 0,
 			dislike_count INTEGER NOT NULL DEFAULT 0,
 			comment_count INTEGER NOT NULL DEFAULT 0,
-			FOREIGN KEY (user_id) REFERENCES users(id),
+			FOREIGN KEY (user_id) REFERENCES user(id),
 			FOREIGN KEY (group_id) REFERENCES groups(id)
 		);
 
-		CREATE TABLE follows (
+		CREATE TABLE user_followers (
 			follower_id INTEGER NOT NULL,
-			following_id INTEGER NOT NULL,
-			PRIMARY KEY (follower_id, following_id),
-			FOREIGN KEY (follower_id) REFERENCES users(id),
-			FOREIGN KEY (following_id) REFERENCES users(id)
+			target_id INTEGER NOT NULL,
+			status INTEGER NOT NULL DEFAULT 1,
+			PRIMARY KEY (follower_id, target_id),
+			FOREIGN KEY (follower_id) REFERENCES user(id),
+			FOREIGN KEY (target_id) REFERENCES user(id)
 		);
 
 		CREATE TABLE profile (
 			user_id INTEGER PRIMARY KEY,
 			avatar_path TEXT,
-			FOREIGN KEY (user_id) REFERENCES users(id)
+			FOREIGN KEY (user_id) REFERENCES user(id)
 		);
 
 		CREATE TABLE post_viewers (
@@ -155,7 +156,7 @@ func newPostTestDatabase(t *testing.T) *sql.DB {
 			viewer_id INTEGER NOT NULL,
 			PRIMARY KEY (post_id, viewer_id),
 			FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
-			FOREIGN KEY (viewer_id) REFERENCES users(id) ON DELETE CASCADE
+			FOREIGN KEY (viewer_id) REFERENCES user(id) ON DELETE CASCADE
 		);
 	`)
 	if err != nil {
@@ -168,7 +169,7 @@ func newPostTestDatabase(t *testing.T) *sql.DB {
 func insertPostTestUser(t *testing.T, db *sql.DB, id int, username string) {
 	t.Helper()
 	_, err := db.Exec(`
-		INSERT INTO users (id, email, username, first_name, last_name, dob, password)
+		INSERT INTO user (id, email, username, first_name, last_name, dob, password)
 		VALUES (?, ?, ?, 'Test', 'User', '2000-01-01', 'password')
 	`, id, username+"@orbit.test", username)
 	if err != nil {
