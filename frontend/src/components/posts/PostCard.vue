@@ -1,7 +1,8 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import CommentInput from '@/components/comments/CommentInput.vue'
 import CommentPreview from '@/components/comments/CommentPreview.vue'
+import { createComment, getComments } from '@/api/posts/comments.js'
 
 const props = defineProps({
   post: {
@@ -11,24 +12,65 @@ const props = defineProps({
 })
 
 const liked = ref(false)
-const newComment = ref(null)
-const addedComments = ref(0)
+const comments = ref([])
+const commentsError = ref('')
+const isLoadingComments = ref(true)
+const isSubmittingComment = ref(false)
 
 const likeCount = computed(() => props.post.likes + (liked.value ? 1 : 0))
-const commentCount = computed(() => props.post.comments + addedComments.value)
+const commentCount = computed(() => Math.max(props.post.comments, comments.value.length))
 
 function toggleLike() {
   liked.value = !liked.value
 }
 
-function addComment(content) {
-  newComment.value = {
-    author: 'Noa Ferreira',
+function commentForPreview(comment) {
+  return {
+    ...comment,
+    author: comment.author || 'Orbit member',
     avatarColor: 'var(--gradient-action)',
-    content,
   }
-  addedComments.value += 1
 }
+
+async function loadComments() {
+  isLoadingComments.value = true
+  commentsError.value = ''
+
+  try {
+    const result = await getComments(props.post.id)
+    comments.value = (result?.comments || []).map(commentForPreview)
+  } catch (error) {
+    commentsError.value = error.message || 'Could not load comments.'
+  } finally {
+    isLoadingComments.value = false
+  }
+}
+
+async function addComment(comment) {
+  isSubmittingComment.value = true
+  commentsError.value = ''
+
+  try {
+    const result = await createComment(props.post.id, comment)
+    if (!result?.comment) {
+      throw new Error('Could not create comment')
+    }
+
+    comments.value.push(commentForPreview(result.comment))
+  } catch (error) {
+    commentsError.value = error.message || 'Could not create comment.'
+  } finally {
+    isSubmittingComment.value = false
+  }
+}
+
+function imageUrl(imagePath) {
+  if (!imagePath) return ''
+
+  return imagePath.startsWith('/') ? imagePath : `/uploads/${imagePath}`
+}
+
+onMounted(loadComments)
 </script>
 
 <template>
@@ -50,14 +92,22 @@ function addComment(content) {
 
     <p class="post-card__content">{{ post.content }}</p>
 
-    <div v-if="post.hasMedia" class="post-card__media" role="img" :aria-label="post.mediaDescription">
+    <div v-if="post.imagePath" class="post-card__media post-card__media--uploaded">
+      <img :src="imageUrl(post.imagePath)" alt="Image attached to this post" />
+    </div>
+
+    <div v-else-if="post.hasMedia" class="post-card__media" role="img" :aria-label="post.mediaDescription">
       <span class="post-card__sun" aria-hidden="true"></span>
       <span class="post-card__mountain post-card__mountain--back" aria-hidden="true"></span>
       <span class="post-card__mountain post-card__mountain--front" aria-hidden="true"></span>
     </div>
 
-    <CommentPreview v-if="post.previewComment" :comment="post.previewComment" />
-    <CommentPreview v-if="newComment" :comment="newComment" />
+    <p v-if="isLoadingComments" class="comments-state">Loading comments...</p>
+    <div v-else-if="commentsError" class="comments-state comments-state--error">
+      <span>{{ commentsError }}</span>
+      <button type="button" @click="loadComments">Retry</button>
+    </div>
+    <CommentPreview v-for="comment in comments" v-else :key="comment.id" :comment="comment" />
 
     <footer class="post-card__actions">
       <button
@@ -81,7 +131,11 @@ function addComment(content) {
       </button>
     </footer>
 
-    <CommentInput :input-id="`comment-${post.id}`" @submit="addComment" />
+    <CommentInput
+      :input-id="`comment-${post.id}`"
+      :disabled="isSubmittingComment"
+      @submit="addComment"
+    />
   </article>
 </template>
 
@@ -170,6 +224,18 @@ function addComment(content) {
   background: linear-gradient(110deg, #44538e 0%, #aa5e9d 54%, #ff8e8b 100%);
 }
 
+.post-card__media--uploaded {
+  min-height: 0;
+  background: var(--color-input);
+}
+
+.post-card__media--uploaded img {
+  display: block;
+  width: 100%;
+  max-height: 30rem;
+  object-fit: contain;
+}
+
 .post-card__sun {
   position: absolute;
   top: 18%;
@@ -201,6 +267,30 @@ function addComment(content) {
   align-items: center;
   gap: var(--space-4);
   margin-top: var(--space-2);
+}
+
+.comments-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-faint);
+  font-size: 0.875rem;
+}
+
+.comments-state--error {
+  color: var(--color-coral);
+}
+
+.comments-state button {
+  min-height: var(--touch-target);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
 }
 
 .post-action {

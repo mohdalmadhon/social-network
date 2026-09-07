@@ -4,8 +4,10 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"social/database/notifications"
 	profiles "social/database/profile"
 	"social/internal/helpers"
+	"social/internal/models"
 	"strconv"
 )
 
@@ -180,6 +182,19 @@ func (app *App) RequestFollow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if requestCode == 0 {
+		actorID := followerID
+		_, notificationErr := notifications.Create(app.DB, targetID, models.CreateNotificationRequest{
+			ActorID:  &actorID,
+			Category: "requests",
+			Type:     "follow_request",
+			Message:  "Someone requested to follow you",
+		})
+		if notificationErr != nil {
+			log.Printf("follow request created but notification failed: %v", notificationErr)
+		}
+	}
+
 	helpers.WriteJson(w, http.StatusOK, map[string]any{
 		"status":       true,
 		"followStatus": requestCode,
@@ -269,7 +284,7 @@ func (app *App) GetFollowers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) GetFollowing(w http.ResponseWriter, r *http.Request) {
-	_, ok := r.Context().Value("userID").(int)
+	currentUserID, ok := r.Context().Value("userID").(int)
 	if !ok {
 		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
 			"status":  false,
@@ -281,13 +296,17 @@ func (app *App) GetFollowing(w http.ResponseWriter, r *http.Request) {
 	queryID := r.URL.Query().Get("targetid")
 	queryCount := r.URL.Query().Get("count")
 
-	targetID, err := strconv.Atoi(queryID)
-	if err != nil {
-		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
-			"status":  false,
-			"message": "invalid target id",
-		})
-		return
+	targetID := currentUserID
+	if queryID != "" {
+		var err error
+		targetID, err = strconv.Atoi(queryID)
+		if err != nil {
+			helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "invalid target id",
+			})
+			return
+		}
 	}
 	count, err := strconv.Atoi(queryCount)
 	if err != nil {

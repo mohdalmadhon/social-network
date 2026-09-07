@@ -1,21 +1,71 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { createPost } from '@/api/posts/posts.js'
+import { getMyFollowing } from '@/api/users/profiles.js'
 
+const emit = defineEmits(['post-created'])
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024
 const content = ref('')
 const privacy = ref('public')
 const feeling = ref('')
 const selectedFile = ref(null)
+const selectedFollowerIds = ref([])
+const following = ref([])
+const followingError = ref('')
+const isLoadingFollowing = ref(false)
+const previewUrl = ref('')
 const fileInput = ref(null)
 const showFeelings = ref(false)
 const message = ref('')
+const messageType = ref('success')
+const isPosting = ref(false)
 
 const feelings = ['Happy', 'Excited', 'Grateful', 'Thoughtful']
 
-const canPost = computed(() => content.value.trim() !== '' || selectedFile.value !== null)
+const canPost = computed(() => {
+  const hasContent = content.value.trim() !== '' || selectedFile.value !== null
+  const hasSelectedFollowers = privacy.value !== 'selected' || selectedFollowerIds.value.length > 0
+  return hasContent && hasSelectedFollowers && !isLoadingFollowing.value
+})
+
+async function loadFollowing() {
+  isLoadingFollowing.value = true
+  followingError.value = ''
+
+  try {
+    const result = await getMyFollowing(100)
+    following.value = Object.entries(result?.data || {}).map(([id, user]) => ({
+      id: Number(id),
+      name: `${user.FirstName} ${user.LastName}`.trim(),
+    }))
+  } catch (error) {
+    followingError.value = error.message || 'Could not load your followers.'
+  } finally {
+    isLoadingFollowing.value = false
+  }
+}
 
 function selectFile(event) {
-  selectedFile.value = event.target.files[0] || null
+  const file = event.target.files[0] || null
+
+  if (previewUrl.value) {
+    URL.revokeObjectURL(previewUrl.value)
+    previewUrl.value = ''
+  }
+
+  if (file && file.size > MAX_FILE_SIZE) {
+    selectedFile.value = null
+    message.value = 'File must be smaller than 5 MB.'
+    messageType.value = 'error'
+    event.target.value = ''
+    return
+  }
+
+  selectedFile.value = file
   message.value = ''
+  messageType.value = 'success'
+  previewUrl.value = file ? URL.createObjectURL(file) : ''
 }
 
 function openFilePicker() {
@@ -24,7 +74,14 @@ function openFilePicker() {
 
 function removeFile() {
   selectedFile.value = null
-  if (fileInput.value) fileInput.value.value = ''
+  if (previewUrl.value) {
+    URL.revokeObjectURL(previewUrl.value)
+    previewUrl.value = ''
+  }
+
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
 }
 
 function selectFeeling(value) {
@@ -32,11 +89,49 @@ function selectFeeling(value) {
   showFeelings.value = false
 }
 
-function preparePost() {
+async function preparePost() {
   if (!canPost.value) return
 
-  message.value = 'Your draft is ready. Saving it comes with the posts API task.'
+  const formData = new FormData()
+  formData.append('content', content.value)
+  formData.append('privacy', privacy.value)
+  formData.append('selectedFollowerIds', JSON.stringify(selectedFollowerIds.value))
+
+  if (selectedFile.value) {
+    formData.append('image', selectedFile.value)
+  }
+
+  isPosting.value = true
+  message.value = ''
+
+  try {
+    const result = await createPost(formData)
+
+    if (!result?.status) {
+      throw new Error(result?.message || 'Could not create post')
+    }
+
+    content.value = ''
+    feeling.value = ''
+    privacy.value = 'public'
+    selectedFollowerIds.value = []
+    removeFile()
+    emit('post-created', result.post)
+    message.value = 'Post published successfully.'
+    messageType.value = 'success'
+  } catch (error) {
+    message.value = error.message || 'Could not create post'
+    messageType.value = 'error'
+  } finally {
+    isPosting.value = false
+  }
 }
+
+watch(privacy, (value) => {
+  if (value === 'selected' && following.value.length === 0 && !followingError.value) {
+    loadFollowing()
+  }
+})
 </script>
 
 <template>
@@ -48,7 +143,7 @@ function preparePost() {
       <textarea
         id="post-content"
         v-model="content"
-        maxlength="1000"
+        maxlength="500"
         placeholder="What's happening in your orbit, Noa?"
         rows="2"
         @input="message = ''"
@@ -58,6 +153,13 @@ function preparePost() {
     <div v-if="selectedFile" class="selected-file">
       <span>{{ selectedFile.name }}</span>
       <button type="button" aria-label="Remove selected file" @click="removeFile">×</button>
+    </div>
+
+    <div v-if="previewUrl" class="selected-preview">
+      <img
+        :src="previewUrl"
+        alt="Preview of the selected media"
+      />
     </div>
 
     <div class="post-composer__toolbar">
@@ -102,15 +204,37 @@ function preparePost() {
           <select v-model="privacy">
             <option value="public">Public</option>
             <option value="followers">Followers only</option>
-            <option value="private">Selected followers</option>
+            <option value="selected">Selected followers</option>
           </select>
         </label>
 
-        <button class="post-button" type="submit" :disabled="!canPost">Post</button>
+        <div v-if="privacy === 'selected'" class="selected-followers">
+          <p class="selected-followers__label">Choose followers</p>
+          <p v-if="isLoadingFollowing" class="selected-followers__state">Loading your followers...</p>
+          <p v-else-if="followingError" class="selected-followers__state selected-followers__state--error">
+            {{ followingError }}
+          </p>
+          <p v-else-if="following.length === 0" class="selected-followers__state">You have no approved followers yet.</p>
+          <label v-for="person in following" v-else :key="person.id" class="selected-follower">
+            <input v-model="selectedFollowerIds" type="checkbox" :value="person.id" />
+            <span>{{ person.name || 'Orbit member' }}</span>
+          </label>
+        </div>
+
+        <button class="post-button" type="submit" :disabled="!canPost || isPosting">
+          {{ isPosting ? 'Posting…' : 'Post' }}
+        </button>
       </div>
     </div>
 
-    <p v-if="message" class="post-composer__message" role="status">{{ message }}</p>
+    <p
+      v-if="message"
+      class="post-composer__message"
+      :class="{ 'post-composer__message--error': messageType === 'error' }"
+      role="status"
+    >
+      {{ message }}
+    </p>
   </form>
 </template>
 
@@ -166,6 +290,21 @@ textarea::placeholder {
   background: var(--color-input);
   color: var(--color-text-muted);
   font-size: 0.875rem;
+}
+
+.selected-preview {
+  margin: var(--space-3) 0 0 calc(var(--touch-target) + var(--space-3));
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-input);
+}
+
+.selected-preview img {
+  display: block;
+  width: 100%;
+  max-height: 18rem;
+  object-fit: contain;
 }
 
 .selected-file span {
@@ -320,6 +459,42 @@ textarea::placeholder {
   color: var(--color-text);
 }
 
+.selected-followers {
+  flex: 1 1 100%;
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-input);
+}
+
+.selected-followers__label,
+.selected-followers__state {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.selected-followers__state--error {
+  color: var(--color-coral);
+}
+
+.selected-follower {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target);
+  color: var(--color-text-soft);
+  cursor: pointer;
+}
+
+.selected-follower input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--color-violet);
+}
+
 .post-button {
   min-width: 5rem;
   padding-inline: var(--space-4);
@@ -342,6 +517,10 @@ textarea::placeholder {
   font-size: 0.875rem;
 }
 
+.post-composer__message--error {
+  color: var(--color-coral);
+}
+
 @media (min-width: 48rem) {
   .post-composer {
     padding: var(--space-5);
@@ -354,7 +533,12 @@ textarea::placeholder {
   }
 
   .post-composer__actions {
+    flex-wrap: wrap;
     justify-content: flex-end;
+  }
+
+  .selected-followers {
+    order: -1;
   }
 }
 </style>

@@ -22,7 +22,7 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("GET /api/user", middleware.AuthMiddleware(app.GetUserData))
 	mux.HandleFunc("POST /api/user", app.RegisterUser)
 	mux.HandleFunc("PATCH /api/user", middleware.AuthMiddleware(app.UpdateUserInfo))
-	
+
 	//session
 	mux.HandleFunc("POST /api/session", app.LoggingUser)
 	mux.HandleFunc("GET /api/session", app.AuthorizeSession)
@@ -42,6 +42,16 @@ func StartServer(db *sql.DB) *http.ServeMux {
 
 	//posts
 	mux.HandleFunc("/api/posts", app.Posts)
+	mux.HandleFunc("/api/posts/{postID}/comments", app.Comments)
+
+	//groups
+	mux.HandleFunc("POST /api/groups", app.CreateGroup)
+
+	//notifications
+	mux.HandleFunc("GET /api/notifications", app.Notifications)
+	mux.HandleFunc("PATCH /api/notifications/read-all", app.MarkAllNotificationsRead)
+	mux.HandleFunc("PATCH /api/notifications/{notificationID}/action", app.ApplyNotificationAction)
+	mux.HandleFunc("PATCH /api/notifications/{notificationID}/read", app.MarkNotificationRead)
 
 	//groups
 	mux.HandleFunc("GET /api/groups", middleware.AuthMiddleware(app.GetGroups))

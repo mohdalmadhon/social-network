@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"social/database/posts"
 	"social/internal/app/tokens"
+	"social/internal/helpers"
 	"social/internal/models"
 	"strings"
 )
 
-const maxPostBodySize = 1 << 20
+const maxPostBodySize = 6 << 20
+const maxPostImageSize = 5 * 1024 * 1024
 
 func (app *App) Posts(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -39,23 +41,80 @@ func (app App) createPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxPostBodySize)
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-
-	var request models.CreatePostRequest
-	if err = decoder.Decode(&request); err != nil {
+	if err = r.ParseMultipartForm(maxPostBodySize); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
-			"message": "invalid JSON body",
+			"message": "request body too large",
 		})
 		return
 	}
-	if err = decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+
+	request := models.CreatePostRequest{
+		Content: r.FormValue("content"),
+		Privacy: r.FormValue("privacy"),
+	}
+	selectedIDs := r.FormValue("selectedFollowerIds")
+	if selectedIDs != "" {
+		if err := json.Unmarshal([]byte(selectedIDs), &request.SelectedFollowerIDs); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "invalid selected followers",
+			})
+			return
+		}
+	}
+
+	imageFile, imageHeader, fileErr := r.FormFile("image")
+
+	if fileErr != nil && fileErr != http.ErrMissingFile {
 		writeJSON(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
-			"message": "request body must contain one JSON object",
+			"message": "invalid image upload",
 		})
 		return
+	}
+
+	if fileErr == nil {
+		defer imageFile.Close()
+
+		if imageHeader.Size > maxPostImageSize {
+			writeJSON(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "image must be smaller than 5 MB",
+			})
+			return
+		}
+
+		fileBytes := make([]byte, 512)
+		bytesRead, readErr := imageFile.Read(fileBytes)
+
+		if readErr != nil && readErr != io.EOF {
+			writeJSON(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "could not read image",
+			})
+			return
+		}
+
+		contentType := http.DetectContentType(fileBytes[:bytesRead])
+
+		if contentType != "image/jpeg" &&
+			contentType != "image/png" &&
+			contentType != "image/gif" {
+			writeJSON(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "only JPEG, PNG, and GIF images are allowed",
+			})
+			return
+		}
+
+		if _, seekErr := imageFile.Seek(0, io.SeekStart); seekErr != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "could not reset image",
+			})
+			return
+		}
 	}
 
 	request.Content = strings.TrimSpace(request.Content)
@@ -79,6 +138,19 @@ func (app App) createPost(w http.ResponseWriter, r *http.Request) {
 			"message": err.Error(),
 		})
 		return
+	}
+
+	if fileErr == nil {
+		imagePath, saveErr := helpers.SaveUploads(imageFile, imageHeader, "post")
+		if saveErr != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]any{
+				"status":  false,
+				"message": "could not save image",
+			})
+			return
+		}
+
+		request.ImagePath = imagePath
 	}
 
 	post, err := posts.CreatePost(app.DB, userID, request)

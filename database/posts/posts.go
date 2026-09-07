@@ -29,8 +29,8 @@ func CreatePost(db *sql.DB, userID int, request models.CreatePostRequest) (model
 			var followsAuthor int
 			err = tx.QueryRow(`
 				SELECT COUNT(*)
-				FROM follows
-				WHERE follower_id = ? AND following_id = ?
+				FROM user_followers AS follows
+				WHERE follower_id = ? AND target_id = ? AND status = 1
 			`, viewerID, userID).Scan(&followsAuthor)
 			if err != nil {
 				return models.Post{}, err
@@ -42,9 +42,9 @@ func CreatePost(db *sql.DB, userID int, request models.CreatePostRequest) (model
 	}
 
 	result, err := tx.Exec(`
-		INSERT INTO posts (type, title, content, image_path, user_id, group_id, privacy)
-		VALUES ('post', '', ?, '', ?, NULL, ?)
-	`, request.Content, userID, request.Privacy)
+	INSERT INTO posts (type, title, content, image_path, user_id, group_id, privacy)
+	VALUES ('post', '', ?, ?, ?, NULL, ?)
+	`, request.Content, request.ImagePath, userID, request.Privacy)
 	if err != nil {
 		return models.Post{}, err
 	}
@@ -80,7 +80,7 @@ func GetPostByID(db *sql.DB, postID int64) (models.Post, error) {
 		SELECT
 			posts.id,
 			posts.user_id,
-			users.username,
+			COALESCE(users.username, users.first_name || ' ' || users.last_name),
 			COALESCE(profile.avatar_path, ''),
 			posts.content,
 			posts.image_path,
@@ -89,7 +89,7 @@ func GetPostByID(db *sql.DB, postID int64) (models.Post, error) {
 			posts.like_count,
 			posts.comment_count
 		FROM posts
-		JOIN users ON users.id = posts.user_id
+		JOIN user AS users ON users.id = posts.user_id
 		LEFT JOIN profile ON profile.user_id = users.id
 		WHERE posts.id = ?
 	`, postID).Scan(
@@ -113,7 +113,7 @@ func ListFeedPosts(db *sql.DB, viewerID int) ([]models.Post, error) {
 		SELECT
 			posts.id,
 			posts.user_id,
-			users.username,
+			COALESCE(users.username, users.first_name || ' ' || users.last_name),
 			COALESCE(profile.avatar_path, ''),
 			posts.content,
 			posts.image_path,
@@ -122,7 +122,7 @@ func ListFeedPosts(db *sql.DB, viewerID int) ([]models.Post, error) {
 			posts.like_count,
 			posts.comment_count
 		FROM posts
-		JOIN users ON users.id = posts.user_id
+		JOIN user AS users ON users.id = posts.user_id
 		LEFT JOIN profile ON profile.user_id = users.id
 		WHERE posts.group_id IS NULL
 		AND (
@@ -132,9 +132,10 @@ func ListFeedPosts(db *sql.DB, viewerID int) ([]models.Post, error) {
 				posts.privacy = 'followers'
 				AND EXISTS (
 					SELECT 1
-					FROM follows
+					FROM user_followers AS follows
 					WHERE follows.follower_id = ?
-					AND follows.following_id = posts.user_id
+					AND follows.target_id = posts.user_id
+					AND follows.status = 1
 				)
 			)
 			OR (

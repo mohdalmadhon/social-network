@@ -3,6 +3,9 @@ import EditProfile from "@/views/profiles/EditProfile.vue";
 import PersonalProfile from "@/views/profiles/PersonalProfile.vue";
 import GroupsPage from "@/views/group/GroupsPage.vue";
 import GroupPage from "@/views/group/GroupPage.vue";
+import HomeFeedPage from "@/views/HomeFeedPage.vue";
+import ChatsPage from "@/views/ChatsPage.vue";
+import NotificationsPage from "@/views/NotificationsPage.vue";
 
 import { createRouter, createWebHistory } from "vue-router";
 
@@ -14,6 +17,7 @@ const routes = [
   {
     path: "/me",
     component: PersonalProfile,
+    alias: "/profile",
   },
   {
     path: "/me/edit",
@@ -26,6 +30,29 @@ const routes = [
   {
     path: "/groups/:groupId",
     component: GroupPage,
+  },
+
+  {
+    path: "/home",
+    component: HomeFeedPage,
+    alias: "/home-feed",
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: "/chats",
+    component: ChatsPage,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: "/notifications",
+    component: NotificationsPage,
+    meta: {
+      requiresAuth: true,
+    },
   },
 ];
 
