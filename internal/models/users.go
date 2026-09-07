@@ -5,6 +5,7 @@ import (
 )
 
 type UserRegistration struct {
+	ID        int
 	FirstName string
 	LastName  string
 	UserName  string

@@ -50,3 +50,14 @@ export async function logout() {
 
     router.push("/login")
 }
+
+export async function authorizeSession() {
+    const resp = await fetch("/api/session", {
+        method: "GET",
+        credentials: "include"
+    });
+
+    const result = await resp.json();
+
+    return result;
+}

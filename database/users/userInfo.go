@@ -57,7 +57,7 @@ func GetUserData(db *sql.DB, userID int) (models.UserData, error) {
 }
 
 func UpdateUserInfo(db *sql.DB, userID int, userData *models.UserRegistration) error {
-    _, err := db.Exec(`
+	_, err := db.Exec(`
         UPDATE user
         SET first_name = ?, last_name = ?, email = ?, username = ?
         WHERE id = ?
@@ -66,14 +66,14 @@ func UpdateUserInfo(db *sql.DB, userID int, userData *models.UserRegistration) e
 	if err != nil {
 		return err
 	}
-	
+
 	_, err = db.Exec(`
 		UPDATE profile
 		SET about = ?, is_private = ?
 		WHERE user_id = ?
 	`, userData.About, userData.IsPrivate, userID)
 
-    return err
+	return err
 }
 
 func UpdateUserAvatar(db *sql.DB, userID int, avatar_path string) error {
@@ -83,4 +83,25 @@ func UpdateUserAvatar(db *sql.DB, userID int, avatar_path string) error {
 		WHERE user_id = ?
 	`, avatar_path, userID)
 	return err
+}
+
+func UserExists(db *sql.DB, userID int) error {
+	var id int
+
+	return db.QueryRow(
+		`SELECT id FROM user WHERE id = ?`,
+		userID,
+	).Scan(&id)
+}
+
+func GetUserSimpleData(db *sql.DB, userID int) (models.UserRegistration, error) {
+	var user models.UserRegistration
+	err := db.QueryRow(`select id,first_name, last_name from user where id = ?`, userID).Scan(
+		&user.ID, &user.FirstName, &user.LastName,
+	)
+	if err != nil {
+		return models.UserRegistration{}, err
+	}
+	err = db.QueryRow(`select avatar_path from profile where user_id = ?`, userID).Scan(&user.Avatar)
+	return user,err
 }

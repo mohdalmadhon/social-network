@@ -73,7 +73,7 @@ func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	} else {
 		defer file.Close()
 
-		avatarPath, err := helpers.SaveUploads(file, header)
+		avatarPath, err := helpers.SaveUploads(file, header, "avatar")
 		if err != nil {
 			log.Println(err)
 

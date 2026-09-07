@@ -7,16 +7,11 @@ import { profileData } from '@/data/usersData';
 import SideNavigation from '@/components/layout/SideNavigation.vue';
 import TopNavigation from '@/components/layout/TopNavigation.vue';
 
-import ProfileAbout from '@/components/personalProfile/ProfileAbout.vue';
-import ProfileFollowers from '@/components/personalProfile/ProfileFollowers.vue';
-import ProfileFollowing from '@/components/personalProfile/ProfileFollowing.vue';
-import ProfileFriends from '@/components/personalProfile/ProfileFriends.vue';
-import ProfileGroups from '@/components/personalProfile/ProfileGroups.vue';
 import ProfileHeader from '@/components/personalProfile/ProfileHeader.vue';
-import ProfilePosts from '@/components/personalProfile/ProfilePosts.vue';
 import ProfileTabs from '@/components/personalProfile/ProfileTabs.vue';
 import AboutTab from '@/components/profile/AboutTab.vue';
 import FollowersTab from '@/components/profile/FollowersTab.vue';
+import GroupTab from '@/components/personalProfile/group/GroupTab.vue';
 
 const activeTab = ref('personal');
 const loading = ref(true);
@@ -61,6 +56,7 @@ onMounted(getData);
                     <FollowersTab v-if="activeTab === 'followers'" :followers="profileData.followers" />
                     <FollowersTab v-if="activeTab === 'following'" :followers="profileData.following" />
 
+                    <GroupTab  v-if="activeTab === 'groups'"/>
                 </template>
 
             </main>

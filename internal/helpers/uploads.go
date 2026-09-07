@@ -10,16 +10,24 @@ import (
 )
 
 const AVATAR_PATH = "uploads/avatars"
+const POSTS_PATH = "uploads/posts"
 
-func SaveUploads(file multipart.File, header *multipart.FileHeader) (string, error) {
+func SaveUploads(file multipart.File, header *multipart.FileHeader, Type string) (string, error) {
 	if err := os.MkdirAll(AVATAR_PATH, 0755); err != nil {
 		return "", err
 	}
 
+	var path string
+	if Type == "post" {
+		path = POSTS_PATH
+	} else if Type == "avatar" {
+		path = AVATAR_PATH
+	}
+	
 	extension := filepath.Ext(header.Filename)
 	filename := uuid.New().String() + extension
 
-	filePath := filepath.Join(AVATAR_PATH, filename)
+	filePath := filepath.Join(path, filename)
 
 	dst, err := os.Create(filePath)
 	if err != nil {

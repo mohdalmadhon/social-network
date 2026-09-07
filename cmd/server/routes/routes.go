@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"social/internal/app/api"
-	middleware "social/internal/app/middleWare"
 )
 
 func StartServer(db *sql.DB) *http.ServeMux {
@@ -19,28 +18,40 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	app := api.App{DB: db}
 
 	//user
-	mux.HandleFunc("GET /api/user", middleware.AuthMiddleware(app.GetUserData))
+	mux.HandleFunc("GET /api/user", app.AuthMiddleware(app.GetUserData))
 	mux.HandleFunc("POST /api/user", app.RegisterUser)
-	mux.HandleFunc("PATCH /api/user", middleware.AuthMiddleware(app.UpdateUserInfo))
+	mux.HandleFunc("PATCH /api/user", app.AuthMiddleware(app.UpdateUserInfo))
 
 	//session
 	mux.HandleFunc("POST /api/session", app.LoggingUser)
-	mux.HandleFunc("GET /api/session", app.AuthorizeSession)
+	mux.HandleFunc("GET /api/session", app.AuthMiddleware(app.AuthorizeSession))
 	mux.HandleFunc("DELETE /api/session", app.DeleteSession)
-	
+
 	//profiles
-	mux.HandleFunc("PATCH /api/profile/avatar", middleware.AuthMiddleware(app.UpdateUserAvatar))
-	mux.HandleFunc("GET /api/profile/about", middleware.AuthMiddleware(app.GetUserAbout))
-	mux.HandleFunc("PATCH /api/profile/about", middleware.AuthMiddleware(app.UpdateUserAbout))
-	mux.HandleFunc("GET /api/profile", middleware.AuthMiddleware(app.GetUserProfile))
+	mux.HandleFunc("PATCH /api/profile/avatar", app.AuthMiddleware(app.UpdateUserAvatar))
+	mux.HandleFunc("GET /api/profile/about", app.AuthMiddleware(app.GetUserAbout))
+	mux.HandleFunc("PATCH /api/profile/about", app.AuthMiddleware(app.UpdateUserAbout))
+	mux.HandleFunc("GET /api/profile", app.AuthMiddleware(app.GetUserProfile))
 
 	// follow handler
-	mux.HandleFunc("POST /api/profile/follow", middleware.AuthMiddleware(app.RequestFollow))
-	mux.HandleFunc("DELETE /api/profile/follow", middleware.AuthMiddleware(app.CancelRequest))
-	mux.HandleFunc("GET /api/profile/follow", middleware.AuthMiddleware(app.GetFollowers))
-	mux.HandleFunc("GET /api/profile/following", middleware.AuthMiddleware(app.GetFollowing))
-	
+	mux.HandleFunc("POST /api/profile/follow", app.AuthMiddleware(app.RequestFollow))
+	mux.HandleFunc("DELETE /api/profile/follow", app.AuthMiddleware(app.CancelRequest))
+	mux.HandleFunc("GET /api/profile/follow", app.AuthMiddleware(app.GetFollowers))
+	mux.HandleFunc("GET /api/profile/following", app.AuthMiddleware(app.GetFollowing))
+
 	//folder handlers
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadsDir))))
+
+	// posts
+	mux.HandleFunc("GET /api/location/search", app.SearchLocation)
+	mux.HandleFunc("GET /api/friends/", app.AuthMiddleware(app.GetFriends))
+	mux.HandleFunc("POST /api/post", app.AuthMiddleware(app.AddPost))
+
+	// post's groups
+	mux.HandleFunc("GET /api/post/groups", app.AuthMiddleware(app.GetPostGroups))
+	mux.HandleFunc("POST /api/post/groups", app.AuthMiddleware(app.AddPostGroup))
+	mux.HandleFunc("DELETE /api/post/groups", app.AuthMiddleware(app.DeletePostGroup))
+	mux.HandleFunc("PATCH /api/post/groups", app.AuthMiddleware(app.UpdatePostGroup))
+	
 	return mux
 }

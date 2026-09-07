@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	"social/database/users/profiles"
+	"social/database/profiles"
 	"social/internal/helpers"
 	"strconv"
 )

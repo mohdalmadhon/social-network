@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 	database "social/database/users"
-	"social/database/users/profiles"
+	"social/database/profiles"
 	"social/internal/helpers"
 	"social/internal/models"
 	"social/internal/validation"
@@ -165,7 +165,7 @@ func (app *App) UpdateUserAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	avatarPath, err := helpers.SaveUploads(file, header)
+	avatarPath, err := helpers.SaveUploads(file, header, "avatar")
 	if err != nil {
 		log.Println(err)
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
