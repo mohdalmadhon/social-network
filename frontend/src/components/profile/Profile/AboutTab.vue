@@ -9,7 +9,7 @@ const props = defineProps({
         required: true
     }
 });
-console.log(props.about)
+
 const tabs = [
     {
         id: 'information',
@@ -183,74 +183,78 @@ const tabs = [
 <style scoped>
 .about-section {
     width: 100%;
-    scroll-margin-top: 100px;
+    scroll-margin-top: 6.25rem;
 }
 
 .section-heading {
-    margin-bottom: clamp(14px, 2.5vw, 20px);
+    margin-bottom: var(--space-4);
 }
 
 .eyebrow {
-    margin: 0 0 5px;
-    color: #a855f7;
-    font-size: clamp(10px, 1.2vw, 11px);
+    margin: 0 0 var(--space-1);
+    color: var(--color-violet);
+    font-family: var(--font-meta);
+    font-size: 0.625rem;
     font-weight: 600;
-    letter-spacing: 2px;
+    letter-spacing: 0.15em;
 }
 
 h2 {
     margin: 0;
-    color: #fff;
-    font-size: clamp(18px, 4vw, 20px);
+    font-family: var(--font-display);
     font-weight: 700;
+    font-size: 1.8125rem;
+    color: var(--color-text);
 }
 
 .about-card {
     display: grid;
-    grid-template-columns: minmax(150px, 200px) 1fr;
-    min-height: 360px;
-    border: 1px solid #232332;
-    border-radius: 16px;
-    background: #12121c;
+    grid-template-columns: minmax(9.375rem, 12.5rem) 1fr;
+    min-height: 22.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-large);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-raised);
     overflow: hidden;
 }
 
 .about-navigation {
     display: flex;
     flex-direction: column;
-    gap: 5px;
-    padding: clamp(12px, 2vw, 18px);
-    border-right: 1px solid #232332;
-    background: #171724;
+    gap: var(--space-1);
+    padding: var(--space-4);
+    border-right: 1px solid var(--color-border);
+    background: var(--color-sidebar);
 }
 
 .about-navigation button {
     width: 100%;
-    padding: 11px 10px;
-    border: 0;
-    border-radius: 8px;
+    padding: var(--space-3) var(--space-3);
+    border: none;
+    border-radius: var(--radius-medium);
     background: transparent;
-    color: #8b8b9e;
-    font-size: clamp(12px, 1.4vw, 13px);
-    font-weight: 500;
+    color: var(--color-text-muted);
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
     text-align: left;
     cursor: pointer;
-    transition: 0.15s ease;
+    transition: background 0.15s ease, color 0.15s ease;
 }
 
 .about-navigation button:hover {
-    color: #fff;
+    background: var(--color-surface-raised);
+    color: var(--color-text-soft);
 }
 
 .about-navigation button.active {
-    background: #1c1c2a;
-    color: #a855f7;
-    font-weight: 600;
+    background: var(--gradient-action);
+    color: var(--color-text);
 }
 
 .about-content {
     min-width: 0;
-    padding: clamp(18px, 3vw, 28px);
+    padding: var(--space-6);
 }
 
 .content-section {
@@ -258,36 +262,38 @@ h2 {
 }
 
 .content-heading {
-    margin-bottom: clamp(18px, 3vw, 25px);
+    margin-bottom: var(--space-5);
 }
 
 .info-list {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--space-4);
 }
 
 .info-item {
     display: grid;
-    grid-template-columns: minmax(90px, 130px) 1fr;
-    gap: 20px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid #232332;
+    grid-template-columns: minmax(5.625rem, 8.125rem) 1fr;
+    gap: var(--space-5);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .info-item span,
 .link-item span {
-    color: #8b8b9e;
-    font-size: clamp(10px, 1.2vw, 11px);
+    color: var(--color-text-muted);
+    font-family: var(--font-meta);
+    font-size: 0.625rem;
     font-weight: 600;
-    letter-spacing: 0.6px;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
 }
 
 .info-item p {
     margin: 0;
-    color: #c4c4d4;
-    font-size: clamp(12px, 1.8vw, 13px);
+    color: var(--color-text-soft);
+    font-family: var(--font-body);
+    font-size: 0.875rem;
     line-height: 1.5;
     word-break: break-word;
 }
@@ -295,40 +301,43 @@ h2 {
 .links-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-3);
 }
 
 .link-item {
     display: grid;
-    grid-template-columns: minmax(90px, 130px) 1fr;
-    gap: 20px;
-    padding: 14px;
-    border: 1px solid #232332;
-    border-radius: 12px;
-    background: #171724;
-    color: #c4c4d4;
+    grid-template-columns: minmax(5.625rem, 8.125rem) 1fr;
+    gap: var(--space-5);
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-medium);
+    background: var(--color-surface-raised);
+    color: var(--color-text-soft);
     text-decoration: none;
-    transition: 0.15s ease;
+    transition: border-color 0.15s ease, transform 0.15s ease;
 }
 
 .link-item:hover {
-    border-color: #a855f7;
+    transform: translateY(-1px);
+    border-color: var(--color-violet);
 }
 
 .link-item p {
     margin: 0;
-    color: #c4c4d4;
-    font-size: clamp(11px, 1.7vw, 12px);
+    color: var(--color-text-soft);
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
     word-break: break-all;
 }
 
 .empty {
     margin: 0;
-    color: #6b6b7d;
-    font-size: 12px;
+    color: var(--color-text-faint);
+    font-family: var(--font-meta);
+    font-size: 0.625rem;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 37.5rem) {
     .about-card {
         grid-template-columns: 1fr;
     }
@@ -336,7 +345,7 @@ h2 {
     .about-navigation {
         flex-direction: row;
         border-right: none;
-        border-bottom: 1px solid #232332;
+        border-bottom: 1px solid var(--color-border);
         overflow-x: auto;
     }
 
@@ -347,11 +356,11 @@ h2 {
     }
 }
 
-@media (max-width: 500px) {
+@media (max-width: 31.25rem) {
     .info-item,
     .link-item {
         grid-template-columns: 1fr;
-        gap: 6px;
+        gap: var(--space-2);
     }
 }
 </style>

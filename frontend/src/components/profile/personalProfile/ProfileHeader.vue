@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { requestFollow } from '@/api/users/profiles';
 import { useRoute } from 'vue-router';
 import { addNotification } from '@/data/notifications';
@@ -7,16 +7,46 @@ import { addNotification } from '@/data/notifications';
 const route = useRoute();
 
 const props = defineProps({
-    addEdit: Boolean,
-    firstName: String,
-    lastName: String,
-    username: String,
-    bio: String,
-    avatarPath: String,
-    numOfPosts: Number,
-    numOfFollowing: Number,
-    numOfFollowers: Number,
-    isFollowing: Number
+    addEdit: {
+        type: Boolean,
+        default: false
+    },
+    firstName: {
+        type: String,
+        default: ''
+    },
+    lastName: {
+        type: String,
+        default: ''
+    },
+    username: {
+        type: String,
+        default: ''
+    },
+    bio: {
+        type: String,
+        default: ''
+    },
+    avatarPath: {
+        type: String,
+        default: ''
+    },
+    numOfPosts: {
+        type: Number,
+        default: 0
+    },
+    numOfFollowing: {
+        type: Number,
+        default: 0
+    },
+    numOfFollowers: {
+        type: Number,
+        default: 0
+    },
+    isFollowing: {
+        type: Number,
+        default: -1
+    }
 });
 
 const emit = defineEmits([
@@ -27,21 +57,39 @@ const emit = defineEmits([
 
 const followingStatus = ref(props.isFollowing);
 
+watch(
+    () => props.isFollowing,
+    (newStatus) => {
+        followingStatus.value = newStatus;
+    }
+);
+
 async function handleFollow() {
     const id = route.query.id;
 
-    try {
-        const result = await requestFollow(id, "POST");
+    if (!id) {
+        addNotification('Could not follow user', 'error');
+        return;
+    }
 
-        if (result.status) {
-            followingStatus.value = result.followStatus;
+    try {
+        const result = await requestFollow(id, 'POST');
+
+        if (!result.status) {
+            addNotification('Could not follow user', 'error');
+            return;
+        }
+
+        followingStatus.value = result.followStatus;
+
+        if (result.followStatus === 0) {
             emit('follow');
-        } else {
-            addNotification("could not follow user", 'error')
+        } else if (result.followStatus === 1) {
+            emit('follow');
         }
     } catch (err) {
-        addNotification("could not follow user", 'error')
         console.error(err);
+        addNotification('Could not follow user', 'error');
     }
 }
 
@@ -49,36 +97,40 @@ async function handleRemoveFollow() {
     const id = route.query.id;
     const oldStatus = followingStatus.value;
 
-    try {
-        const result = await requestFollow(id, "DELETE");
+    if (!id) {
+        addNotification('Could not unfollow user', 'error');
+        return;
+    }
 
-        if (result.status) {
-            followingStatus.value = result.followStatus;
-            addNotification("could not unfollow user", 'error')
-            if (oldStatus === 0) {
-                emit('cancel-request');
-            } else if (oldStatus === 1) {
-                emit('unfollow');
-            }
+    try {
+        const result = await requestFollow(id, 'DELETE');
+
+        if (!result.status) {
+            addNotification('Could not unfollow user', 'error');
+            return;
+        }
+
+        followingStatus.value = result.followStatus;
+
+        if (oldStatus === 0) {
+            emit('cancel-request');
+        } else if (oldStatus === 1) {
+            emit('unfollow');
         }
     } catch (err) {
-        addNotification("could not unfollow user", 'error')
         console.error(err);
+        addNotification('Could not unfollow user', 'error');
     }
 }
 </script>
 
 <template>
     <section class="profile-header">
-        <div class="cover">
-            <div class="cover-grid"></div>
-        </div>
-
         <div class="profile-information">
             <div class="avatar">
                 <img
-                    v-if="props.avatarPath"
-                    :src="props.avatarPath"
+                    v-if="avatarPath"
+                    :src="avatarPath"
                     alt="Profile avatar"
                 >
             </div>
@@ -87,16 +139,16 @@ async function handleRemoveFollow() {
                 <div class="name-row">
                     <div>
                         <h1>
-                            {{ props.firstName }} {{ props.lastName }}
+                            {{ firstName }} {{ lastName }}
                         </h1>
 
                         <p class="username">
-                            {{ props.username || '' }}
+                            {{ username }}
                         </p>
                     </div>
 
                     <a
-                        v-if="props.addEdit"
+                        v-if="addEdit"
                         href="/me/edit"
                         class="edit-button"
                     >
@@ -106,6 +158,7 @@ async function handleRemoveFollow() {
                     <button
                         v-else-if="followingStatus === -1"
                         class="relationship-button follow"
+                        type="button"
                         @click="handleFollow"
                     >
                         Follow
@@ -114,6 +167,7 @@ async function handleRemoveFollow() {
                     <button
                         v-else-if="followingStatus === 0"
                         class="relationship-button requested"
+                        type="button"
                         @click="handleRemoveFollow"
                     >
                         Requested
@@ -122,27 +176,34 @@ async function handleRemoveFollow() {
                     <button
                         v-else-if="followingStatus === 1"
                         class="relationship-button following"
+                        type="button"
                         @click="handleRemoveFollow"
                     >
                         Following
                     </button>
                 </div>
 
-                <p class="about">
-                    {{ props.bio }}
+                <p
+                    v-if="bio"
+                    class="about"
+                >
+                    {{ bio }}
                 </p>
 
                 <div class="profile-stats">
                     <span>
-                        <strong>{{ props.numOfPosts }}</strong> Posts
+                        <strong>{{ numOfPosts }}</strong>
+                        Posts
                     </span>
 
                     <span>
-                        <strong>{{ props.numOfFollowing }}</strong> Following
+                        <strong>{{ numOfFollowing }}</strong>
+                        Following
                     </span>
 
                     <span>
-                        <strong>{{ props.numOfFollowers }}</strong> Followers
+                        <strong>{{ numOfFollowers }}</strong>
+                        Followers
                     </span>
                 </div>
             </div>
@@ -153,57 +214,33 @@ async function handleRemoveFollow() {
 <style scoped>
 .profile-header {
     overflow: hidden;
-    border: 1px solid #232332;
-    border-radius: 16px;
-    background: #12121c;
-}
-
-.cover {
-    position: relative;
-    height: 150px;
-    z-index: -1;
-    overflow: hidden;
-    background: #171724;
-    border-bottom: 1px solid #232332;
-}
-
-.cover::before,
-.cover::after {
-    position: absolute;
-    content: "";
-    border-radius: 50%;
-}
-
-.cover::before {
-    width: 220px;
-    height: 220px;
-    right: -60px;
-    top: -110px;
-    background: rgba(168, 85, 247, 0.14);
-}
-
-.cover::after {
-    width: 140px;
-    height: 140px;
-    left: 60px;
-    bottom: -90px;
-    background: rgba(16, 185, 129, 0.08);
-}
-
-.cover-grid {
-    position: absolute;
-    inset: 0;
-    opacity: 0.15;
-    background-image:
-        linear-gradient(rgba(168, 85, 247, 0.6) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(168, 85, 247, 0.6) 1px, transparent 1px);
-    background-size: 25px 25px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-large);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-raised);
 }
 
 .profile-information {
     display: flex;
-    gap: 28px;
-    padding: 0 35px 30px;
+    gap: var(--space-6);
+    padding: var(--space-6);
+}
+
+.avatar {
+    flex-shrink: 0;
+    width: 9.375rem;
+    height: 9.375rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 4px solid var(--color-surface);
+    border-radius: 50%;
+    background: var(--gradient-action);
+    color: var(--color-text);
+    font-family: var(--font-display);
+    font-size: 4rem;
+    box-shadow: var(--shadow-raised);
+    overflow: hidden;
 }
 
 .avatar img {
@@ -213,133 +250,104 @@ async function handleRemoveFollow() {
     border-radius: 50%;
 }
 
-.avatar {
-    flex-shrink: 0;
-    width: 150px;
-    height: 150px;
-    margin-top: -75px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 4px solid #12121c;
-    border-radius: 50%;
-    background: #1d1d2b;
-    color: white;
-    font-size: 65px;
-    font-weight: 700;
-}
-
 .profile-details {
     width: 100%;
-    padding-top: 22px;
+    padding-top: 0.5rem;
 }
 
 .name-row {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 20px;
+    gap: var(--space-5);
 }
 
 h1 {
     margin: 0;
-    color: #fff;
-    font-size: 22px;
+    color: var(--color-text);
+    font-family: var(--font-display);
     font-weight: 700;
-    line-height: 1.2;
+    font-size: 2.25rem;
+    line-height: 1;
 }
 
 .username {
-    margin: 4px 0 0;
-    color: #8b8b9e;
-    font-size: 13px;
+    margin: var(--space-2) 0 0;
+    color: var(--color-text-muted);
+    font-family: var(--font-meta);
+    font-size: 0.625rem;
 }
 
 .edit-button,
 .relationship-button {
     flex-shrink: 0;
-    padding: 8px 16px;
+    padding: var(--space-3) var(--space-4);
     border: none;
-    border-radius: 8px;
-    background: #f5f5f7;
-    color: #111;
-    font-size: 13px;
-    font-weight: 600;
+    border-radius: 1.5625rem;
+    background: var(--gradient-action);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 700;
     text-decoration: none;
     cursor: pointer;
-    transition: opacity 0.15s;
+    transition: transform 0.15s ease, filter 0.15s ease;
 }
 
 .edit-button:hover,
 .relationship-button:hover {
-    opacity: 0.85;
-}
-
-.relationship-button.follow {
-    background: #a855f7;
-    color: white;
+    filter: brightness(1.08);
+    transform: translateY(-1px);
 }
 
 .relationship-button.requested {
-    background: #1c1c2a;
-    color: #8b8b9e;
-    border: 1px solid #2a2a3a;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-soft);
 }
 
 .relationship-button.following {
-    background: transparent;
-    color: #a855f7;
-    border: 1px solid #a855f7;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-violet);
+    color: var(--color-text);
 }
 
 .relationship-button:active {
-    opacity: 0.7;
+    transform: translateY(0);
 }
 
 .about {
-    max-width: 650px;
-    margin: 14px 0;
-    color: #c4c4d4;
-    font-size: 13px;
+    max-width: 40.625rem;
+    margin: var(--space-4) 0;
+    color: var(--color-text-soft);
+    font-size: 0.875rem;
     line-height: 1.6;
 }
 
 .profile-stats {
     display: flex;
     flex-wrap: wrap;
-    gap: 22px;
-    color: #8b8b9e;
-    font-size: 12px;
+    gap: var(--space-5);
+    color: var(--color-text-muted);
+    font-family: var(--font-meta);
+    font-size: 0.625rem;
 }
 
 .profile-stats strong {
-    color: #fff;
-    font-size: 14px;
+    color: var(--color-text);
+    font-size: 0.75rem;
 }
 
-@media (max-width: 650px) {
-    .cover {
-        height: 150px;
-    }
-
+@media (max-width: 40.625rem) {
     .profile-information {
         display: block;
-        padding: 0 20px 25px;
+        padding: var(--space-5);
     }
 
     .avatar {
-        width: 115px;
-        height: 115px;
-        margin-top: -58px;
-        font-size: 48px;
-    }
-
-    .profile-details {
-        padding-top: 20px;
-    }
-
-    h1 {
-        font-size: 19px;
+        width: 7.1875rem;
+        height: 7.1875rem;
+        font-size: 3rem;
     }
 
     .name-row {
@@ -347,7 +355,7 @@ h1 {
     }
 
     .profile-stats {
-        gap: 12px;
+        gap: var(--space-3);
     }
 }
 </style>

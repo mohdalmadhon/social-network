@@ -101,25 +101,6 @@ export async function requestFollow(id, method) {
     return result
 }
 
-export async function getFollowers(id, count) {
-    const resp = await fetch(`/api/profile/follow?targetid=${id}&count=${count}`, {
-        method: "GET",
-        credentials: 'include'
-    });
-
-    if (!checkSessionResponse(resp)) {
-        router.replace("/login");
-        return;
-    }
-
-    if (!resp.ok) {
-        throw new Error('could not connect to network')
-    }
-
-    const result = await resp.json();
-    return result;
-}
-
 export async function getFollowing(id, count) {
     const params = new URLSearchParams({ count: String(count) })
     if (id) params.set('targetid', id)

@@ -37,8 +37,6 @@ defineEmits(['update:modelValue'])
 </template>
 
 <style scoped>
-@import '../../../styles/global.css';
-
 .form-field {
     display: flex;
     flex-direction: column;
@@ -47,36 +45,26 @@ defineEmits(['update:modelValue'])
 }
 
 label {
-    color: var(--color-text-soft);
-    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-meta);
+    font-size: 0.6875rem;
     font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 input,
 textarea {
     width: 100%;
-    padding: 0 var(--space-3);
-    background: var(--color-input);
+    padding: var(--space-3);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-small);
+    border-radius: var(--radius-medium);
+    background: var(--color-input);
     color: var(--color-text);
-    font: inherit;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
     box-sizing: border-box;
-    transition:
-        border-color 0.18s ease,
-        background 0.18s ease,
-        box-shadow 0.18s ease;
-}
-
-input {
-    min-height: var(--touch-target);
-}
-
-textarea {
-    min-height: 8rem;
-    padding-block: var(--space-3);
-    line-height: 1.55;
-    resize: vertical;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 input::placeholder,
@@ -84,17 +72,15 @@ textarea::placeholder {
     color: var(--color-text-faint);
 }
 
-input:hover,
-textarea:hover {
-    border-color: var(--color-text-faint);
-    background: var(--color-surface-raised);
+textarea {
+    min-height: 6.875rem;
+    resize: vertical;
 }
 
 input:focus,
 textarea:focus {
     outline: none;
     border-color: var(--color-violet);
-    background: var(--color-surface-raised);
     box-shadow: var(--focus-ring);
 }
 </style>

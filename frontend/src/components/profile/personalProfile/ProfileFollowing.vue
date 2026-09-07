@@ -38,56 +38,57 @@
 
 <style scoped>
 .profile-section {
-    scroll-margin-top: 100px;
+    scroll-margin-top: 6.25rem;
 }
 
 .section-heading {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-5);
 }
 
 .eyebrow {
-    margin: 0 0 5px;
-    color: #a855f7;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 2px;
+    margin: 0 0 var(--space-1);
+    color: var(--color-violet);
+    font-family: var(--font-meta);
+    font-size: 0.625rem;
+    letter-spacing: 0.15em;
 }
 
 h2 {
     margin: 0;
-    color: #fff;
-    font-size: 20px;
+    font-family: var(--font-display);
     font-weight: 700;
+    font-size: 1.8125rem;
+    color: var(--color-text);
 }
 
 .list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-3);
 }
 
 .list-item {
     display: flex;
     align-items: center;
-    gap: 15px;
-    padding: 15px 16px;
-    border: 1px solid #232332;
-    border-radius: 12px;
-    background: #171724;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-5);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-medium);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-raised);
 }
 
 .list-avatar {
-    width: 44px;
-    height: 44px;
-    flex-shrink: 0;
+    width: 3rem;
+    height: 3rem;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: #a855f7;
-    color: white;
-    font-weight: 700;
-    font-size: 16px;
+    background: var(--gradient-action);
+    color: var(--color-text);
+    font-family: var(--font-display);
+    font-size: 1.25rem;
 }
 
 .list-item div:nth-child(2) {
@@ -100,26 +101,31 @@ h2 {
 }
 
 .list-item strong {
-    color: #fff;
-    font-size: 13px;
-    font-weight: 600;
+    color: var(--color-text);
+    font-size: 0.75rem;
 }
 
 .list-item span {
-    margin-top: 3px;
-    color: #6b6b7d;
-    font-size: 11px;
+    margin-top: 0.1875rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-meta);
+    font-size: 0.5rem;
 }
 
 .list-item button {
-    flex-shrink: 0;
-    padding: 7px 12px;
-    border: 1px solid #a855f7;
-    border-radius: 8px;
-    background: transparent;
-    color: #a855f7;
-    font-size: 12px;
-    font-weight: 500;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: 1.5625rem;
+    background: var(--color-surface-raised);
+    color: var(--color-text-soft);
+    font-family: var(--font-body);
+    font-size: 0.5rem;
+    font-weight: 700;
     cursor: pointer;
+    transition: filter 0.15s ease;
+}
+
+.list-item button:hover {
+    filter: brightness(1.15);
 }
 </style>

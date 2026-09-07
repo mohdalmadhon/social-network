@@ -157,8 +157,6 @@ async function onFileChange(event) {
 </template>
 
 <style scoped>
-@import '../../../styles/global.css';
-
 .avatar-uploader {
     display: flex;
     flex-wrap: wrap;
@@ -168,16 +166,17 @@ async function onFileChange(event) {
 
 .avatar-preview {
     flex-shrink: 0;
-    width: clamp(72px, 12vw, 96px);
-    height: clamp(72px, 12vw, 96px);
+    width: 5rem;
+    height: 5rem;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    background: var(--color-surface-raised);
-    border: 4px solid var(--color-surface);
+    border: 0.1875rem solid var(--color-surface);
+    outline: 2px solid transparent;
     border-radius: 50%;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+    background: var(--gradient-action);
+    box-shadow: var(--shadow-raised);
 }
 
 .avatar-preview img {
@@ -194,31 +193,21 @@ async function onFileChange(event) {
 }
 
 .upload-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: var(--touch-target);
-    padding-inline: var(--space-4);
+    padding: var(--space-2) var(--space-4);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-small);
-    background: var(--color-input);
-    color: var(--color-text-soft);
-    font: inherit;
+    border-radius: 1.5625rem;
+    background: var(--color-surface-raised);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 0.75rem;
     font-weight: 600;
     white-space: nowrap;
     cursor: pointer;
-    transition:
-        border-color 0.15s ease,
-        color 0.15s ease,
-        background 0.15s ease;
+    transition: transform 0.15s ease, filter 0.15s ease;
 }
 
-.upload-button:hover:not(:disabled),
-.upload-button:focus-visible:not(:disabled) {
-    border-color: var(--color-violet);
-    color: var(--color-text);
-    background: var(--color-surface-raised);
-    outline: none;
+.upload-button:hover:not(:disabled) {
+    filter: brightness(1.15);
 }
 
 .upload-button:disabled {
@@ -229,12 +218,13 @@ async function onFileChange(event) {
 .hint {
     color: var(--color-text-faint);
     font-family: var(--font-meta);
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
 }
 
 .error {
-    color: var(--color-danger, #ef4444);
-    font-size: 0.75rem;
+    color: var(--color-coral);
+    font-family: var(--font-meta);
+    font-size: 0.6875rem;
 }
 
 .hidden-input {

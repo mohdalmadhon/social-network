@@ -9,28 +9,90 @@ import (
 
 func GetUserAbout(db *sql.DB, userID int) (models.UserAbout, error) {
 	var userProfile models.UserAbout
+
+	var work sql.NullString
+	var hobbies sql.NullString
+	var education sql.NullString
+	var intrests sql.NullString
+	var travel sql.NullString
+	var website sql.NullString
+	var linkedin sql.NullString
+	var instgram sql.NullString
+	var twitter sql.NullString
+	var bio sql.NullString
+
 	err := db.QueryRow(`
-		SELECT work,hobbies,education,intrests,travel,website,linkedin,instgram,twitter
+		SELECT work, hobbies, education, intrests, travel,
+		       website, linkedin, instgram, twitter
 		FROM user_about
-		WHERE user_id = ?;
+		WHERE user_id = ?
 	`, userID).Scan(
-		&userProfile.Work,
-		&userProfile.Hobbies,
-		&userProfile.Education,
-		&userProfile.Intrests,
-		&userProfile.Travel,
-		&userProfile.Website,
-		&userProfile.Linkedin,
-		&userProfile.Instgram,
-		&userProfile.Twitter,
+		&work,
+		&hobbies,
+		&education,
+		&intrests,
+		&travel,
+		&website,
+		&linkedin,
+		&instgram,
+		&twitter,
 	)
 
 	if err != nil {
 		return models.UserAbout{}, err
 	}
 
-	err = db.QueryRow(`select about from profile where user_id = ?`, userID).Scan(&userProfile.Bio)
-	return userProfile, err
+	if work.Valid {
+		userProfile.Work = work.String
+	}
+
+	if hobbies.Valid {
+		userProfile.Hobbies = hobbies.String
+	}
+
+	if education.Valid {
+		userProfile.Education = education.String
+	}
+
+	if intrests.Valid {
+		userProfile.Intrests = intrests.String
+	}
+
+	if travel.Valid {
+		userProfile.Travel = travel.String
+	}
+
+	if website.Valid {
+		userProfile.Website = website.String
+	}
+
+	if linkedin.Valid {
+		userProfile.Linkedin = linkedin.String
+	}
+
+	if instgram.Valid {
+		userProfile.Instgram = instgram.String
+	}
+
+	if twitter.Valid {
+		userProfile.Twitter = twitter.String
+	}
+
+	err = db.QueryRow(`
+		SELECT about
+		FROM profile
+		WHERE user_id = ?
+	`, userID).Scan(&bio)
+
+	if err != nil {
+		return models.UserAbout{}, err
+	}
+
+	if bio.Valid {
+		userProfile.Bio = bio.String
+	}
+
+	return userProfile, nil
 }
 
 func UpdateUserAbout(db *sql.DB, userID int, UserAbout models.UserAbout) error {

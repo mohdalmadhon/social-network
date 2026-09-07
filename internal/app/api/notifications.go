@@ -8,15 +8,16 @@ import (
 	"social/database/events"
 	"social/database/groups"
 	"social/database/notifications"
-	profiles "social/database/profile"
+	"social/database/profiles"
+	"social/internal/helpers"
 	"social/internal/models"
 	"strconv"
 )
 
 func (app App) Notifications(w http.ResponseWriter, r *http.Request) {
-	userID, err := authenticatedUserID(r)
-	if err != nil {
-		writeJSON(w, http.StatusUnauthorized, map[string]any{
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
 			"status":  false,
 			"message": "authentication required",
 		})
@@ -25,7 +26,7 @@ func (app App) Notifications(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
-		writeJSON(w, http.StatusMethodNotAllowed, map[string]any{
+		helpers.WriteJson(w, http.StatusMethodNotAllowed, map[string]any{
 			"status":  false,
 			"message": "method not allowed",
 		})
@@ -35,14 +36,14 @@ func (app App) Notifications(w http.ResponseWriter, r *http.Request) {
 	category := r.URL.Query().Get("category")
 	result, err := notifications.List(app.DB, userID, category)
 	if errors.Is(err, notifications.ErrInvalidCategory) {
-		writeJSON(w, http.StatusBadRequest, map[string]any{
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": err.Error(),
 		})
 		return
 	}
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
 			"message": "could not load notifications",
 		})
@@ -51,14 +52,14 @@ func (app App) Notifications(w http.ResponseWriter, r *http.Request) {
 
 	unreadCount, err := notifications.UnreadCount(app.DB, userID)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
 			"message": "could not load notification count",
 		})
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{
+	helpers.WriteJson(w, http.StatusOK, map[string]any{
 		"status":        true,
 		"notifications": result,
 		"unreadCount":   unreadCount,
@@ -66,9 +67,9 @@ func (app App) Notifications(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app App) MarkNotificationRead(w http.ResponseWriter, r *http.Request) {
-	userID, err := authenticatedUserID(r)
-	if err != nil {
-		writeJSON(w, http.StatusUnauthorized, map[string]any{
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
 			"status":  false,
 			"message": "authentication required",
 		})
@@ -77,7 +78,7 @@ func (app App) MarkNotificationRead(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPatch {
 		w.Header().Set("Allow", http.MethodPatch)
-		writeJSON(w, http.StatusMethodNotAllowed, map[string]any{
+		helpers.WriteJson(w, http.StatusMethodNotAllowed, map[string]any{
 			"status":  false,
 			"message": "method not allowed",
 		})
@@ -86,7 +87,7 @@ func (app App) MarkNotificationRead(w http.ResponseWriter, r *http.Request) {
 
 	notificationID, err := strconv.ParseInt(r.PathValue("notificationID"), 10, 64)
 	if err != nil || notificationID <= 0 {
-		writeJSON(w, http.StatusBadRequest, map[string]any{
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "invalid notification id",
 		})
@@ -94,20 +95,20 @@ func (app App) MarkNotificationRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := notifications.MarkRead(app.DB, userID, notificationID); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
 			"message": "could not mark notification as read",
 		})
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{"status": true})
+	helpers.WriteJson(w, http.StatusOK, map[string]any{"status": true})
 }
 
 func (app App) MarkAllNotificationsRead(w http.ResponseWriter, r *http.Request) {
-	userID, err := authenticatedUserID(r)
-	if err != nil {
-		writeJSON(w, http.StatusUnauthorized, map[string]any{
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
 			"status":  false,
 			"message": "authentication required",
 		})
@@ -116,7 +117,7 @@ func (app App) MarkAllNotificationsRead(w http.ResponseWriter, r *http.Request) 
 
 	if r.Method != http.MethodPatch {
 		w.Header().Set("Allow", http.MethodPatch)
-		writeJSON(w, http.StatusMethodNotAllowed, map[string]any{
+		helpers.WriteJson(w, http.StatusMethodNotAllowed, map[string]any{
 			"status":  false,
 			"message": "method not allowed",
 		})
@@ -124,14 +125,14 @@ func (app App) MarkAllNotificationsRead(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := notifications.MarkAllRead(app.DB, userID); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
 			"message": "could not mark notifications as read",
 		})
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{"status": true})
+	helpers.WriteJson(w, http.StatusOK, map[string]any{"status": true})
 }
 
 type notificationActionRequest struct {
@@ -139,9 +140,9 @@ type notificationActionRequest struct {
 }
 
 func (app App) ApplyNotificationAction(w http.ResponseWriter, r *http.Request) {
-	userID, err := authenticatedUserID(r)
-	if err != nil {
-		writeJSON(w, http.StatusUnauthorized, map[string]any{
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
 			"status":  false,
 			"message": "authentication required",
 		})
@@ -150,16 +151,16 @@ func (app App) ApplyNotificationAction(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPatch {
 		w.Header().Set("Allow", http.MethodPatch)
-		writeJSON(w, http.StatusMethodNotAllowed, map[string]any{
+		helpers.WriteJson(w, http.StatusMethodNotAllowed, map[string]any{
 			"status":  false,
 			"message": "method not allowed",
 		})
 		return
 	}
-
-	notificationID, err := strconv.ParseInt(r.PathValue("notificationID"), 10, 64)
+	notificationIDQuery := r.URL.Query().Get("notificationID")
+	notificationID, err := strconv.ParseInt(notificationIDQuery, 10, 64)
 	if err != nil || notificationID <= 0 {
-		writeJSON(w, http.StatusBadRequest, map[string]any{
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "invalid notification id",
 		})
@@ -170,7 +171,7 @@ func (app App) ApplyNotificationAction(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 2<<10))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&request); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]any{
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "invalid notification action",
 		})
@@ -179,14 +180,14 @@ func (app App) ApplyNotificationAction(w http.ResponseWriter, r *http.Request) {
 
 	notification, err := notifications.GetByID(app.DB, userID, notificationID)
 	if errors.Is(err, sql.ErrNoRows) {
-		writeJSON(w, http.StatusNotFound, map[string]any{
+		helpers.WriteJson(w, http.StatusNotFound, map[string]any{
 			"status":  false,
 			"message": "notification not found",
 		})
 		return
 	}
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
 			"message": "could not load notification",
 		})
@@ -198,7 +199,7 @@ func (app App) ApplyNotificationAction(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, sql.ErrNoRows) || errors.Is(err, groups.ErrGroupNotFound) || errors.Is(err, events.ErrEventNotFound) {
 			status = http.StatusNotFound
 		}
-		writeJSON(w, status, map[string]any{
+		helpers.WriteJson(w, status, map[string]any{
 			"status":  false,
 			"message": err.Error(),
 		})
@@ -206,14 +207,14 @@ func (app App) ApplyNotificationAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := notifications.MarkRead(app.DB, userID, notificationID); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
 			"message": "action completed but notification could not be marked read",
 		})
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{
+	helpers.WriteJson(w, http.StatusOK, map[string]any{
 		"status": true,
 		"action": request.Action,
 	})

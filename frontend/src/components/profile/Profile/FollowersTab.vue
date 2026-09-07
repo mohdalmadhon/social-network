@@ -21,6 +21,7 @@ const followerList = computed(() => {
 function takeToProfile(id) {
     router.push(`/user?id=${id}`);
     window.location.reload();
+    return;
 }
 </script>
 
@@ -32,11 +33,21 @@ function takeToProfile(id) {
         </div>
 
         <div class="followers-card">
-            <div v-if="followerList.length" class="followers-grid">
-                <article v-for="follower in followerList" :key="follower.id" class="follower-card"
-                    @click="takeToProfile(follower.id)">
-                    <img :src="follower.Avatar ? `/uploads/${follower.Avatar}` : '/default-avatar.png'"
-                        :alt="`${follower.FirstName} ${follower.LastName}`" class="follower-avatar">
+            <div 
+                v-if="followerList.length"
+                class="followers-grid"
+            >
+                <article
+                    v-for="follower in followerList"
+                    :key="follower.id"
+                    @click="takeToProfile(follower.id)"
+                    class="follower-card"
+                >
+                    <img
+                        :src="follower.Avatar ? `/uploads/${follower.Avatar}` : '/default-avatar.png'"
+                        :alt="`${follower.firstName} ${follower.LastName}`"
+                        class="follower-avatar"
+                    >
 
                     <div class="follower-info">
                         <p class="follower-name">
@@ -46,46 +57,47 @@ function takeToProfile(id) {
                 </article>
             </div>
 
-            <p v-else class="empty">
+            <p
+                v-else
+                class="empty"
+            >
                 No followers yet.
             </p>
         </div>
     </section>
-
 </template>
 
 <style scoped>
 .followers-section {
     width: 100%;
-    scroll-margin-top: 100px;
+    scroll-margin-top: 6.25rem;
 }
 
 .section-heading {
-    margin-bottom: var(--space-5);
+    margin-bottom: var(--space-4);
 }
 
 .eyebrow {
     margin: 0 0 var(--space-1);
     color: var(--color-violet);
     font-family: var(--font-meta);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 2px;
+    font-size: 0.625rem;
+    letter-spacing: 0.15em;
 }
 
 h2 {
     margin: 0;
-    color: var(--color-text);
-    font-family: var(--font-body);
-    font-size: 1.5rem;
+    font-family: var(--font-display);
     font-weight: 700;
+    font-size: 1.8125rem;
+    color: var(--color-text);
 }
 
 .followers-card {
     width: 100%;
     padding: var(--space-5);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-medium);
+    border-radius: var(--radius-large);
     background: var(--color-surface);
     box-shadow: var(--shadow-raised);
     box-sizing: border-box;
@@ -93,7 +105,7 @@ h2 {
 
 .followers-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(13.75rem, 1fr));
     gap: var(--space-4);
 }
 
@@ -102,30 +114,24 @@ h2 {
     align-items: center;
     gap: var(--space-3);
     min-width: 0;
-    min-height: var(--touch-target);
-    padding: var(--space-3);
+    padding: var(--space-4);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-small);
+    border-radius: var(--radius-medium);
     background: var(--color-surface-raised);
     box-sizing: border-box;
     cursor: pointer;
-    transition:
-        transform 0.15s ease,
-        border-color 0.15s ease,
-        background 0.15s ease;
+    transition: border-color 0.15s ease, transform 0.15s ease;
 }
 
 .follower-card:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     border-color: var(--color-violet);
-    background: var(--color-input);
 }
 
 .follower-avatar {
     flex: 0 0 auto;
-    width: 52px;
-    height: 52px;
-    border: 2px solid var(--color-border);
+    width: 3.125rem;
+    height: 3.125rem;
     border-radius: 50%;
     object-fit: cover;
 }
@@ -136,9 +142,9 @@ h2 {
 
 .follower-name {
     margin: 0;
-    color: var(--color-text-soft);
-    font-family: var(--font-display);
-    font-size: 0.8125rem;
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 0.875rem;
     font-weight: 600;
     line-height: 1.4;
     overflow-wrap: anywhere;
@@ -146,37 +152,16 @@ h2 {
 
 .empty {
     margin: 0;
-    padding: var(--space-6) var(--space-2);
+    padding: var(--space-5) var(--space-2);
     color: var(--color-text-muted);
     font-family: var(--font-meta);
     font-size: 0.6875rem;
     text-align: center;
 }
 
-@media (max-width: 64rem) {
-    .followers-grid {
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    }
-}
-
-@media (max-width: 48rem) {
-    .followers-card {
-        padding: var(--space-4);
-    }
-
+@media (max-width: 37.5rem) {
     .followers-grid {
         grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 25rem) {
-    .follower-card {
-        padding: var(--space-2);
-    }
-
-    .follower-avatar {
-        width: 45px;
-        height: 45px;
     }
 }
 </style>

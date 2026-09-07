@@ -4,7 +4,6 @@ const emit = defineEmits(['changeTab']);
 const tabs = [
     'posts',
     'friends',
-    'groups',
     'following',
     'followers',
     'about'
@@ -31,42 +30,47 @@ function selectTab(tab) {
 <style scoped>
 .profile-tabs {
     position: sticky;
-    top: 64px;
+    top: var(--space-4);
     z-index: 50;
     display: flex;
-    gap: 28px;
-    margin: 25px 0;
+    gap: var(--space-1);
+    margin: var(--space-5) 0;
+    padding: var(--space-1);
     overflow-x: auto;
-    border-bottom: 1px solid #232332;
-    background: #0a0a12;
-    padding: 0 4px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-large);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-raised);
 }
 
 .profile-tabs button {
-    flex: none;
-    min-width: 80px;
-    padding: 12px 0;
+    flex: 1;
+    min-width: 6.5625rem;
+    padding: var(--space-3) var(--space-4);
     border: 0;
+    border-radius: var(--radius-medium);
     background: transparent;
-    color: #8b8b9e;
+    color: var(--color-text-muted);
     text-align: center;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
     text-transform: capitalize;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
 }
 
 .profile-tabs button:hover {
-    color: #fff;
+    color: var(--color-text-soft);
+    background: var(--color-surface-raised);
 }
 
 .profile-tabs button.active {
-    color: #a855f7;
-    font-weight: 600;
-    border-bottom: 2px solid #a855f7;
+    background: var(--gradient-action);
+    color: var(--color-text);
 }
 
-@media (max-width: 800px) {
+@media (max-width: 48rem) {
     .profile-tabs {
         top: 0;
     }
