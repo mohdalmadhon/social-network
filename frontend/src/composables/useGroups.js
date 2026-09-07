@@ -1,36 +1,27 @@
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
+import {
+  getGroups,
+  createGroupApi,
+  groupJoinRequest,
+  undoJoinGroup,
+  deleteGroupApi,
+} from "@/api/groups/Groups";
 
 export function useGroups() {
   const activeTab = ref("discover");
   const searchInputValue = ref("");
   const modalStatus = ref(false);
 
-  const AllGroupsdata = ref([
-    {
-      id: 1,
-      title: "friends",
-      description: "it our privite group.",
-      memberCount: 7,
-      isMember: false,
-      isRequested: false,
-    },
-    {
-      id: 20,
-      title: "work",
-      description: "it our work group.",
-      memberCount: 77,
-      isMember: false,
-      isRequested: false,
-    },
-    {
-      id: 2,
-      title: "reboot",
-      description: "it our reboot group.",
-      memberCount: 11,
-      isMember: true,
-      isRequested: false,
-    },
-  ]);
+  const AllGroupsdata = ref([]);
+  onMounted(async () => {
+    try {
+      const result = await getGroups();
+
+      AllGroupsdata.value = result.groups;
+    } catch (error) {
+      console.error(error);
+    }
+  });
 
   const filteredGroup = computed(() => {
     let groups = AllGroupsdata.value;
@@ -62,11 +53,23 @@ export function useGroups() {
     searchInputValue.value = input;
   }
 
-  function toggleJoinRequest(id) {
+  async function toggleJoinRequest(id) {
     const groupToModify = AllGroupsdata.value.find((group) => group.id === id);
 
-    if (groupToModify) {
-      groupToModify.isRequested = !groupToModify.isRequested;
+    if (!groupToModify) {
+      return;
+    }
+
+    if (!groupToModify.isRequested) {
+      const result = await groupJoinRequest(id);
+      if (result?.status) {
+        groupToModify.isRequested = true;
+      }
+    } else {
+      const result = await undoJoinGroup(id);
+      if (result?.status) {
+        groupToModify.isRequested = false;
+      }
     }
   }
 
@@ -78,15 +81,32 @@ export function useGroups() {
     modalStatus.value = false;
   }
 
-  function createGroup(data) {
-    AllGroupsdata.value.push({
-      id: 99,
-      title: data.title,
-      description: data.description,
-      memberCount: 1,
-      isMember: true,
-      isRequested: false,
-    });
+  async function createGroup(data) {
+    try {
+      const result = await createGroupApi(data);
+
+      const group = result.group;
+
+      AllGroupsdata.value.push(group);
+
+      closeModal();
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async function deleteGroup(groupID) {
+    try {
+      const result = await deleteGroupApi(groupID);
+
+      if (result?.status) {
+        AllGroupsdata.value = AllGroupsdata.value.filter(
+          (group) => group.id !== groupID,
+        );
+      }
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   return {
@@ -100,5 +120,6 @@ export function useGroups() {
     openModal,
     closeModal,
     createGroup,
+    deleteGroup,
   };
 }

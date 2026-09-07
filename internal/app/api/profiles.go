@@ -220,7 +220,6 @@ func (app *App) CancelRequest(w http.ResponseWriter, r *http.Request) {
 		"followStatus": -1,
 		"message":      "request removed",
 	})
-	return
 }
 
 func (app *App) GetFollowers(w http.ResponseWriter, r *http.Request) {
