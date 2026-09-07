@@ -1,25 +1,18 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue';
 
-import TopNavigation from '@/components/layout/TopNavigation.vue';
-import SideNavigation from '@/components/layout/SideNavigation.vue';
-import ProfileHeader from '@/components/profile/personalProfile/ProfileHeader.vue';
-import { profileData } from '@/data/usersData';
 import { getUserData } from '@/api/users/personalProfile';
-import { addNotification } from '@/data/notifications';
+import { profileData } from '@/data/usersData';
+
+import SideNavigation from '@/components/layout/SideNavigation.vue';
+import TopNavigation from '@/components/layout/TopNavigation.vue';
+import ProfileHeader from '@/components/profile/personalProfile/ProfileHeader.vue';
 import ProfileTabs from '@/components/profile/personalProfile/ProfileTabs.vue';
-import ProfilePosts from '@/components/profile/personalProfile/ProfilePosts.vue';
-import ProfileFriends from '@/components/profile/personalProfile/ProfileFriends.vue';
-import ProfileGroups from '@/components/profile/personalProfile/ProfileGroups.vue';
-import ProfileFollowing from '@/components/profile/personalProfile/ProfileFollowing.vue';
-import AboutTab from '@/components/profile/Profile/AboutTab.vue';
-import FollowersTab from '@/components/profile/Profile/FollowersTab.vue';
+import AboutTab from '@/components/profile/profile/AboutTab.vue';
+import FollowersTab from '@/components/profile/profile/FollowersTab.vue';
 
-function handleChangeTab(tab) {
-    activeTab.value = tab
-}
 
-const activeTab = ref('about');
+const activeTab = ref('personal');
 const loading = ref(true);
 
 async function getData() {
@@ -34,57 +27,73 @@ async function getData() {
     }
 }
 
-onMounted(getData)
+onMounted(getData);
 </script>
 
 <template>
-    <header>
+    <div class="page-shell">
         <TopNavigation />
-    </header>
 
-    <div class="app-body">
-        <SideNavigation active-page="personalPage" />
+        <div class="page-body">
+            <SideNavigation active-page="profile" />
 
-        <div v-if="loading">
-            Loading profile...
+            <main class="page-content">
+
+                <div v-if="loading" class="loading-state">
+                    Loading profile...
+                </div>
+
+                <template v-else>
+                    <ProfileHeader :first-name="profileData.userInfo.firstName" :last-name="profileData.userInfo.lastName"
+                        :username="profileData.userInfo.userName" :add-edit="true" :bio="profileData.userInfo.about" :avatar-path="`/uploads/${profileData.userInfo.avatar}`"
+                        :num-of-posts="profileData.numOfPosts" :num-of-following="profileData.numOfFollowing"
+                        :num-of-followers="profileData.numOfFollowers" />
+
+                    <ProfileTabs @change-tab="activeTab = $event" />
+                    <AboutTab v-if="activeTab === 'about'" :about="profileData.about" />
+
+                    <FollowersTab v-if="activeTab === 'followers'" :followers="profileData.followers" />
+                    <FollowersTab v-if="activeTab === 'following'" :followers="profileData.following" />
+                </template>
+
+            </main>
         </div>
-        <main v-else>
-            <ProfileHeader add-edit :first-name="profileData.userInfo.firstName"
-                :last-name="profileData.userInfo.lastName" :username="profileData.userInfo.username"
-                :bio="profileData.about.bio" :avatar-path="`/uploads/${profileData.userInfo.avatar}`"
-                :num-of-posts="profileData.numOfPosts" :num-of-following="profileData.numOfFollowing"
-                :num-of-followers="profileData.numOfFollowers" />
-
-            <ProfileTabs @change-tab="handleChangeTab" />
-
-            <div class="profile-content">
-                <ProfilePosts v-if="activeTab === 'posts'" />
-                <ProfileFriends v-else-if="activeTab === 'friends'" />
-                <ProfileGroups v-else-if="activeTab === 'groups'" />
-                <FollowersTab :followers="profileData.following" v-else-if="activeTab === 'following'" />
-                <FollowersTab :followers="profileData.following" v-else-if="activeTab === 'followers'" />
-                <AboutTab :about="profileData.about" v-else-if="activeTab === 'about'" />
-            </div>
-        </main>
     </div>
 </template>
 
 <style scoped>
-.app-body {
+.page-shell {
+    min-height: 100vh;
+    background: var(--color-background);
+    color: var(--color-text);
+    font-family: var(--font-body);
+}
+
+.page-body {
     display: flex;
     align-items: flex-start;
 }
 
-main {
+.page-content {
     flex: 1;
     min-width: 0;
-    padding: 24px 32px;
-    max-width: 1240px;
+    width: 100%;
+    max-width: 68.75rem;
     margin: 0 auto;
-    box-sizing: border-box;
+    padding: var(--space-6) var(--space-5) calc(4.25rem + var(--space-6));
 }
 
-.profile-content {
-    margin-top: 24px;
+.loading-state {
+    padding: var(--space-6);
+    color: var(--color-text-muted);
+    font-family: var(--font-meta);
+    font-size: 0.8125rem;
+    text-align: center;
+}
+
+@media (min-width: 64rem) {
+    .page-content {
+        padding-bottom: var(--space-7);
+    }
 }
 </style>

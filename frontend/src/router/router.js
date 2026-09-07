@@ -1,5 +1,4 @@
 import LoginPage from "@/views/LoginPage.vue";
-import EditProfile from "@/views/profiles/EditProfile.vue";
 import PersonalProfile from "@/views/profiles/PersonalProfile.vue";
 import GroupsPage from "@/views/group/GroupsPage.vue";
 import GroupPage from "@/views/group/GroupPage.vue";
@@ -8,6 +7,8 @@ import ChatsPage from "@/views/ChatsPage.vue";
 import NotificationsPage from "@/views/NotificationsPage.vue";
 
 import { createRouter, createWebHistory } from "vue-router";
+import EditProfile from "@/views/profiles/EditProfile.vue";
+import UserProfile from "@/views/profiles/UserProfile.vue";
 
 const routes = [
   {
@@ -22,6 +23,10 @@ const routes = [
   {
     path: "/me/edit",
     component: EditProfile,
+  },
+  {
+    path: "/user",
+    component: UserProfile
   },
   {
     path: "/groups",

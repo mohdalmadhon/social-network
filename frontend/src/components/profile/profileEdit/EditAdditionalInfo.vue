@@ -134,8 +134,6 @@ async function confirmChanges() {
                 </div>
             </div>
 
-            <div class="details-divider"></div>
-
             <div class="section-heading links-heading">
                 <p class="eyebrow">SOCIAL</p>
                 <h2>Links</h2>
@@ -215,81 +213,60 @@ async function confirmChanges() {
 </template>
 
 <style scoped>
-@import '../../../styles/global.css';
 .edit-section {
-    scroll-margin-top: 100px;
+    scroll-margin-top: 6.25rem;
     width: 100%;
     max-width: 100%;
 }
 
 .error {
     margin: 0;
-    color: var(--color-danger, #ef4444);
-    font-size: 0.75rem;
+    color: var(--color-coral);
+    font-family: var(--font-meta);
+    font-size: 0.625rem;
 }
 
 .section-heading {
-    margin-bottom: var(--space-5);
+    margin-bottom: var(--space-4);
 }
 
 .links-heading {
-    margin-top: 0;
+    margin-top: var(--space-1);
 }
 
 .eyebrow {
     margin: 0 0 var(--space-1);
     color: var(--color-violet);
     font-family: var(--font-meta);
-    font-size: 0.7rem;
+    font-size: 0.625rem;
     font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    letter-spacing: 0.15em;
 }
 
 h2 {
     margin: 0;
-    color: var(--color-text);
     font-family: var(--font-display);
-    font-size: 1.4rem;
     font-weight: 700;
-    letter-spacing: -0.02em;
+    font-size: clamp(1.25rem, 4vw, 1.75rem);
+    color: var(--color-text);
 }
 
 .edit-card {
-    position: relative;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
     gap: var(--space-5);
-    padding: var(--space-6);
-    background:
-        linear-gradient(145deg, rgb(124 92 255 / 5%), transparent 32%),
-        var(--color-surface);
+    padding: var(--space-5);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-large);
+    background: var(--color-surface);
     box-shadow: var(--shadow-raised);
     max-width: 100%;
     box-sizing: border-box;
 }
 
-.edit-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: var(--gradient-action);
-}
-
-.details-divider {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--color-border), transparent);
-}
-
 .field-grid {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(min(13.75rem, 100%), 1fr));
     gap: var(--space-4);
 }
 
@@ -301,77 +278,55 @@ h2 {
 }
 
 .form-field label {
-    color: var(--color-text-soft);
-    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-meta);
+    font-size: 0.625rem;
     font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .form-field textarea {
     width: 100%;
-    min-height: 6.5rem;
+    min-height: 5.625rem;
     padding: var(--space-3);
-    background: var(--color-input);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-small);
+    border-radius: var(--radius-medium);
+    background: var(--color-input);
     color: var(--color-text);
-    font: inherit;
-    line-height: 1.55;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
     resize: vertical;
     box-sizing: border-box;
-    transition:
-        border-color 0.18s ease,
-        background 0.18s ease,
-        box-shadow 0.18s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .form-field textarea::placeholder {
     color: var(--color-text-faint);
 }
 
-.form-field textarea:hover {
-    border-color: var(--color-text-faint);
-    background: var(--color-surface-raised);
-}
-
 .form-field textarea:focus {
     outline: none;
     border-color: var(--color-violet);
-    background: var(--color-surface-raised);
     box-shadow: var(--focus-ring);
 }
 
 .confirm-button {
     align-self: flex-start;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: var(--touch-target);
-    padding-inline: var(--space-5);
-    border: 1px solid transparent;
-    border-radius: var(--radius-small);
+    padding: var(--space-3) var(--space-5);
+    border: none;
+    border-radius: 1.5625rem;
     background: var(--gradient-action);
-    color: #fff;
-    font: inherit;
-    font-weight: 600;
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 700;
     cursor: pointer;
-    box-shadow: var(--shadow-raised);
-    transition: filter 0.15s ease, transform 0.15s ease;
+    transition: transform 0.15s ease, filter 0.15s ease;
 }
 
 .confirm-button:hover {
     filter: brightness(1.08);
     transform: translateY(-1px);
-}
-
-@media (min-width: 40rem) {
-    .field-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
-@media (min-width: 64rem) {
-    .edit-card {
-        padding: var(--space-7);
-    }
 }
 </style>

@@ -57,110 +57,121 @@
 
 <style scoped>
 .profile-section {
-    scroll-margin-top: 100px;
-    margin-bottom: 35px;
+    scroll-margin-top: 6.25rem;
+    margin-bottom: var(--space-6);
 }
 
 .section-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 18px;
+    margin-bottom: var(--space-4);
 }
 
 .eyebrow {
-    margin: 0 0 5px;
-    color: #a855f7;
-    font-size: 11px;
+    margin: 0 0 var(--space-1);
+    color: var(--color-violet);
+    font-family: var(--font-meta);
+    font-size: 0.625rem;
     font-weight: 600;
-    letter-spacing: 2px;
+    letter-spacing: 0.15em;
 }
 
 h2 {
     margin: 0;
-    color: #fff;
-    font-size: 20px;
+    font-family: var(--font-display);
     font-weight: 700;
+    font-size: 1.8125rem;
+    color: var(--color-text);
 }
 
 .primary-button {
-    padding: 9px 16px;
+    padding: var(--space-3) var(--space-4);
     border: none;
-    border-radius: 8px;
-    background: #a855f7;
-    color: white;
-    font-size: 13px;
-    font-weight: 600;
+    border-radius: 1.5625rem;
+    background: var(--gradient-action);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 700;
     cursor: pointer;
+    transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.primary-button:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
 }
 
 .post-card {
-    margin-bottom: 16px;
-    padding: 20px;
-    border: 1px solid #232332;
-    border-radius: 16px;
-    background: #12121c;
+    margin-bottom: var(--space-4);
+    padding: var(--space-5);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-large);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-raised);
 }
 
 .post-header {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-3);
 }
 
 .small-avatar {
-    width: 42px;
-    height: 42px;
+    width: 2.625rem;
+    height: 2.625rem;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: #a855f7;
-    color: white;
-    font-weight: 700;
-    font-size: 16px;
+    background: var(--gradient-action);
+    color: var(--color-text);
+    font-family: var(--font-display);
+    font-size: 1.125rem;
 }
 
 .post-header strong,
 .post-header span {
     display: block;
+    color: var(--color-text);
 }
 
 .post-header strong {
-    color: #fff;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 0.75rem;
 }
 
 .post-header span {
-    margin-top: 3px;
-    color: #6b6b7d;
-    font-size: 11px;
+    margin-top: 0.1875rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-meta);
+    font-size: 0.5625rem;
 }
 
 .post-text {
-    margin: 18px 0;
-    color: #c4c4d4;
-    font-size: 13px;
+    margin: var(--space-5) 0;
+    color: var(--color-text-soft);
+    font-size: 0.875rem;
     line-height: 1.7;
 }
 
 .post-actions {
     display: flex;
-    gap: 16px;
-    padding-top: 14px;
-    border-top: 1px solid #232332;
+    gap: var(--space-3);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border);
 }
 
 .post-actions button {
     border: 0;
     background: transparent;
-    color: #8b8b9e;
-    font-size: 12px;
+    color: var(--color-text-muted);
+    font-family: var(--font-meta);
+    font-size: 0.5625rem;
     cursor: pointer;
 }
 
 .post-actions button:hover {
-    color: #a855f7;
+    color: var(--color-violet);
 }
 </style>
