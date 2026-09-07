@@ -14,8 +14,8 @@ const emit = defineEmits(['toggle-join-request', 'view-group'])
 <template>
     <div class="groups-list-wrapper">
         <div v-if="groups.length" class="groups-grid">
-            <GroupCard v-for="group in groups" :key="group.id" :group="group" @toggle-join-request="emit('toggle-join-request', $event)"
-                @view-group="emit('view-group', $event)" />
+            <GroupCard v-for="group in groups" :key="group.id" :group="group"
+                @toggle-join-request="emit('toggle-join-request', $event)" @view-group="emit('view-group', $event)" />
         </div>
 
         <div v-else class="empty-state">

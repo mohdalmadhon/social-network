@@ -44,9 +44,6 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("/api/posts", app.Posts)
 	mux.HandleFunc("/api/posts/{postID}/comments", app.Comments)
 
-	//groups
-	mux.HandleFunc("POST /api/groups", app.CreateGroup)
-
 	//notifications
 	mux.HandleFunc("GET /api/notifications", app.Notifications)
 	mux.HandleFunc("PATCH /api/notifications/read-all", app.MarkAllNotificationsRead)

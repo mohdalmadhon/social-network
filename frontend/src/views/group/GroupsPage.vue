@@ -1,4 +1,5 @@
 <script setup>
+import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout.vue'
 import { router } from '@/router/router.js'
 import { useGroups } from '@/composables/useGroups.js'
 import GroupsHeader from '@/components/groups/GroupsHeader.vue'
@@ -26,19 +27,21 @@ function viewGroup(id) {
 </script>
 
 <template>
-  <main class="groups-page">
-    <div class="groups-content">
-      <GroupsHeader @create-group="openModal" />
+  <AuthenticatedLayout active-page="groups">
+    <main class="groups-page">
+      <div class="groups-content">
+        <GroupsHeader @create-group="openModal" />
 
-      <GroupsTabs @change-tab="tabChanged" :active-tab="activeTab" />
+        <GroupsTabs @change-tab="tabChanged" :active-tab="activeTab" />
 
-      <GroupSearch @update:model-value="userSearchInput" :model-value="searchInputValue" />
+        <GroupSearch @update:model-value="userSearchInput" :model-value="searchInputValue" />
 
-      <GroupsList @toggle-join-request="toggleJoinRequest" @view-group="viewGroup" :groups="filteredGroup" />
-    </div>
+        <GroupsList @toggle-join-request="toggleJoinRequest" @view-group="viewGroup" :groups="filteredGroup" />
+      </div>
 
-    <CreateGroupModal @close="closeModal" @create="createGroup" :show="modalStatus" />
-  </main>
+      <CreateGroupModal @close="closeModal" @create="createGroup" :show="modalStatus" />
+    </main>
+  </AuthenticatedLayout>
 </template>
 
 <style scoped>
