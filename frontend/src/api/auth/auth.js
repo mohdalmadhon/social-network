@@ -9,6 +9,7 @@ export async function registerUser(userData) {
 
     const result = await resp.json()
 
+
     if (!resp.ok) {
         throw new Error(result.message || `Registration failed: ${resp.status}`)
     }
@@ -48,4 +49,15 @@ export async function logout() {
     }
 
     router.push("/login")
+}
+
+export async function authorizeSession() {
+    const resp = await fetch("/api/session", {
+        method: "GET",
+        credentials: "include"
+    });
+
+    const result = await resp.json();
+
+    return result;
 }

@@ -41,70 +41,72 @@
 
 <style scoped>
 .profile-section {
-    scroll-margin-top: 100px;
+    scroll-margin-top: 6.25rem;
 }
 
 .section-heading {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-5);
 }
 
 .eyebrow {
-    margin: 0 0 5px;
-    color: #a855f7;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 2px;
+    margin: 0 0 var(--space-1);
+    color: var(--color-violet);
+    font-family: var(--font-meta);
+    font-size: 0.625rem;
+    letter-spacing: 0.15em;
 }
 
 h2 {
     margin: 0;
-    color: #fff;
-    font-size: 20px;
+    font-family: var(--font-display);
     font-weight: 700;
+    font-size: 1.8125rem;
+    color: var(--color-text);
 }
 
 .about-card {
-    padding: 4px 20px;
-    border: 1px solid #232332;
-    border-radius: 16px;
-    background: #12121c;
+    padding: 0.625rem var(--space-5);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-large);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-raised);
 }
 
 .about-row {
     display: grid;
-    grid-template-columns: 180px 1fr;
-    gap: 20px;
-    padding: 18px 0;
-    border-bottom: 1px solid #232332;
+    grid-template-columns: 11.25rem 1fr;
+    gap: var(--space-5);
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .label {
-    color: #8b8b9e;
-    font-size: 11px;
+    color: var(--color-text-muted);
+    font-family: var(--font-meta);
+    font-size: 0.625rem;
     font-weight: 600;
 }
 
 .about-row strong {
-    color: #c4c4d4;
-    font-size: 13px;
-    font-weight: 600;
+    color: var(--color-text);
+    font-size: 0.75rem;
 }
 
 .about-description {
-    padding: 18px 0;
+    padding: var(--space-4) 0;
 }
 
 .about-description p {
-    margin: 10px 0 0;
-    color: #c4c4d4;
-    font-size: 13px;
+    margin: var(--space-3) 0 0;
+    color: var(--color-text-soft);
+    font-size: 0.8125rem;
     line-height: 1.7;
 }
 
-@media (max-width: 550px) {
+@media (max-width: 34.375rem) {
     .about-row {
         grid-template-columns: 1fr;
-        gap: 7px;
+        gap: var(--space-2);
     }
 }
 </style>

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	profiles "social/database/profile"
 	database "social/database/users"
+	"social/database/profiles"
 	"social/internal/helpers"
 	"social/internal/models"
 	"social/internal/validation"
@@ -20,7 +20,7 @@ func (app *App) GetUserData(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
+	
 	userData, err := database.GetUserData(app.DB, userID)
 	if err != nil {
 		log.Println(err)
@@ -30,7 +30,6 @@ func (app *App) GetUserData(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	userData.UserID = userID
 
 	userAbout, err := profiles.GetUserAbout(app.DB, userID)
 	if err != nil {
@@ -43,7 +42,7 @@ func (app *App) GetUserData(w http.ResponseWriter, r *http.Request) {
 	}
 	userData.About = userAbout
 
-	followers, err := profiles.GetFollowers(app.DB, userID, 10)
+	followers, err := profiles.GetFollowers(app.DB, userID, 10) 
 	if err != nil {
 		log.Println(err)
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
@@ -55,7 +54,7 @@ func (app *App) GetUserData(w http.ResponseWriter, r *http.Request) {
 
 	userData.Followers = followers
 
-	following, err := profiles.GetFollowing(app.DB, userID, 10)
+	following, err := profiles.GetFollowers(app.DB, userID, 10) 
 	if err != nil {
 		log.Println(err)
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{

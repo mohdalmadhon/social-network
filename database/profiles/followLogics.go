@@ -130,7 +130,6 @@ func GetFollowing(db *sql.DB, followerID, count int) (map[int]models.UserRegistr
 		LEFT JOIN profile p
 			ON p.user_id = u.id
 		WHERE uf.follower_id = ?
-		AND uf.status = 1
 		LIMIT ?
 	`, followerID, count)
 
