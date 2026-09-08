@@ -30,6 +30,7 @@ type UserData struct {
 	About          UserAbout
 	Followers      map[int]UserRegistration
 	Following      map[int]UserRegistration
+	Friends        map[int]UserRegistration
 	IsPrivate      int
 }
 

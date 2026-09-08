@@ -62,7 +62,7 @@ export async function getProfileData(id, count) {
 
     // get followers
     try {
-        const result = await getFollowers(id, count)
+        const result = await getFollowers(id, count, 0)
         if (!result.status) {
             throw new Error("could not get user data")
         }
@@ -71,7 +71,7 @@ export async function getProfileData(id, count) {
         throw new Error("network error, could not connet to server")
     }
     try {
-        const result = await getFollowing(id, count)
+        const result = await getFollowing(id, count, 0)
         if (!result.status) {
             throw new Error("could not get user data")
         }
@@ -101,8 +101,8 @@ export async function requestFollow(id, method) {
     return result
 }
 
-export async function getFollowers(id, count) {
-    const resp = await fetch(`/api/profile/follow?targetid=${id}&count=${count}`, {
+export async function getFollowers(id, count, offset = 0) {
+    const resp = await fetch(`/api/profile/follow?targetid=${id}&count=${count}&offset=${offset}`, {
         method: "GET",
         credentials: 'include'
     });
@@ -120,8 +120,8 @@ export async function getFollowers(id, count) {
     return result;
 }
 
-export async function getFollowing(id, count) {
-    const resp = await fetch(`/api/profile/following?targetid=${id}&count=${count}`, {
+export async function getFollowing(id, count, offset = 0) {
+    const resp = await fetch(`/api/profile/following?targetid=${id}&count=${count}&offset=${offset}`, {
         method: "GET",
         credentials: 'include'
     });
@@ -133,6 +133,34 @@ export async function getFollowing(id, count) {
 
     if (!resp.ok) {
         throw new Error('could not connect to network')
+    }
+
+    const result = await resp.json();
+    return result;
+}
+
+export async function searchFollows(searchValue = "") {
+    const resp = await fetch(`/api/profile/follows/search?search=${searchValue}`, {
+        method: "GET",
+        credentials: 'include'
+    });
+
+    if (!resp.ok) {
+        throw new Error("could not connect to server")
+    }
+
+    const result = await resp.json();
+    return result;
+}
+
+export async function searchFollowing(searchValue = "") {
+    const resp = await fetch(`/api/profile/following/search?search=${searchValue}`, {
+        method: "GET",
+        credentials: 'include'
+    });
+
+    if (!resp.ok) {
+        throw new Error("could not connect to server")
     }
 
     const result = await resp.json();

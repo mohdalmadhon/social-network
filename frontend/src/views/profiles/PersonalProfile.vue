@@ -12,6 +12,7 @@ import ProfileTabs from '@/components/personalProfile/ProfileTabs.vue';
 import AboutTab from '@/components/profile/AboutTab.vue';
 import FollowersTab from '@/components/profile/FollowersTab.vue';
 import GroupTab from '@/components/personalProfile/group/GroupTab.vue';
+import { addNotification } from '@/data/notifications';
 
 const activeTab = ref('personal');
 const loading = ref(true);
@@ -20,6 +21,7 @@ async function getData() {
     try {
         await getUserData();
         console.log(profileData)
+        
     } catch (err) {
         addNotification('could not get user data', 'error')
         console.error(err);
@@ -27,6 +29,7 @@ async function getData() {
         loading.value = false;
     }
 }
+
 
 onMounted(getData);
 </script>
@@ -45,18 +48,23 @@ onMounted(getData);
                 </div>
 
                 <template v-else>
-                    <ProfileHeader :first-name="profileData.userInfo.firstName" :last-name="profileData.userInfo.lastName"
-                        :username="profileData.userInfo.userName" :add-edit="true" :bio="profileData.userInfo.about" :avatar-path="`/uploads/${profileData.userInfo.avatar}`"
-                        :num-of-posts="profileData.numOfPosts" :num-of-following="profileData.numOfFollowing"
-                        :num-of-followers="profileData.numOfFollowers" />
+                    <ProfileHeader :first-name="profileData.userInfo.firstName"
+                        :last-name="profileData.userInfo.lastName" :username="profileData.userInfo.userName"
+                        :add-edit="true" :bio="profileData.userInfo.about"
+                        :avatar-path="`/uploads/${profileData.userInfo.avatar}`" :num-of-posts="profileData.numOfPosts"
+                        :num-of-following="profileData.numOfFollowing" :num-of-followers="profileData.numOfFollowers" />
 
                     <ProfileTabs @change-tab="activeTab = $event" />
                     <AboutTab v-if="activeTab === 'about'" :about="profileData.about" />
 
-                    <FollowersTab v-if="activeTab === 'followers'" :followers="profileData.followers" />
-                    <FollowersTab v-if="activeTab === 'following'" :followers="profileData.following" />
+                    <FollowersTab v-if="activeTab === 'followers'" type="followers"
+                        :followers="profileData.followers" />
 
-                    <GroupTab  v-if="activeTab === 'groups'"/>
+                    <FollowersTab v-if="activeTab === 'following'" type="following"
+                        :followers="profileData.following" />
+
+                    <FollowersTab v-if="activeTab === 'friends'" type="friends" :followers="profileData.friends" />
+                    <GroupTab v-if="activeTab === 'groups'" />
                 </template>
 
             </main>

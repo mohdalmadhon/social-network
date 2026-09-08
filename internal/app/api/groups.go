@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 	"social/database/groups"
-	database "social/database/users"
+	"social/database/users"
 	"social/internal/helpers"
 	"social/internal/models"
 	"strings"
@@ -69,7 +69,7 @@ func (app *App) AddPostGroup(w http.ResponseWriter, r *http.Request) {
 
 	valid := func() bool {
 		for _, id := range newGroup.Users {
-			err := database.UserExists(app.DB, id)
+			err := users.UserExists(app.DB, id)
 			if err != nil {
 				return false
 			}
@@ -94,12 +94,12 @@ func (app *App) AddPostGroup(w http.ResponseWriter, r *http.Request) {
 					"message": "error already exists",
 				})
 				return
+			}
 			log.Println(err)
 			helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 				"status":  false,
 				"message": "could not add group",
 			})
-		}
 		return
 	}
 

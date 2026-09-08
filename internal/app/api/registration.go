@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	database "social/database/users"
+	"social/database/users"
 	"social/internal/helpers"
 	"social/internal/models"
 	"social/internal/validation"
@@ -100,7 +100,7 @@ func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 
 	userData.Password = hashedPassword
 
-	if err := database.RegisterUser(app.DB, &userData); err != nil {
+	if err := users.RegisterUser(app.DB, &userData); err != nil {
 		log.Println(err)
 
 		status, message := helpers.NormalizeSQLError(err)

@@ -43,7 +43,6 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadsDir))))
 
 	// posts
-	mux.HandleFunc("GET /api/location/search", app.SearchLocation)
 	mux.HandleFunc("GET /api/friends/", app.AuthMiddleware(app.GetFriends))
 	mux.HandleFunc("POST /api/post", app.AuthMiddleware(app.AddPost))
 
@@ -52,6 +51,10 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("POST /api/post/groups", app.AuthMiddleware(app.AddPostGroup))
 	mux.HandleFunc("DELETE /api/post/groups", app.AuthMiddleware(app.DeletePostGroup))
 	mux.HandleFunc("PATCH /api/post/groups", app.AuthMiddleware(app.UpdatePostGroup))
-	
+
+	// searches
+	mux.HandleFunc("GET /api/profile/follows/search", app.AuthMiddleware(app.SearchFollows))
+	mux.HandleFunc("GET /api/profile/following/search", app.AuthMiddleware(app.SearchFollowing))
+	mux.HandleFunc("GET /api/location/search", app.SearchLocation)
 	return mux
 }

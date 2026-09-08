@@ -75,6 +75,7 @@ async function onDelete(id) {
         addNotification(err, 'error');
     }
 }
+
 </script>
 
 <template>

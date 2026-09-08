@@ -43,4 +43,5 @@ export async function getUserData() {
     profileData.about.twitter = result.data.About.Twitter
     profileData.followers = result.data.Followers;
     profileData.following = result.data.Following;
+    profileData.friends = result.data.Friends;
 }

@@ -148,4 +148,3 @@ onMounted(getData);
     }
 }
 </style>
-```

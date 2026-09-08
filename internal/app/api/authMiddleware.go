@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
-	database "social/database/users"
+	"social/database/users"
 	"social/internal/app/tokens"
 )
 
@@ -33,7 +33,7 @@ func (app *App) AuthMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		err = database.UserExists(app.DB, payload.UserID)
+		err = users.UserExists(app.DB, payload.UserID)
 		if err == sql.ErrNoRows {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusUnauthorized)

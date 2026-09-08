@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	database "social/database/users"
 	"social/database/profiles"
+	"social/database/users"
 	"social/internal/helpers"
 	"social/internal/models"
 	"social/internal/validation"
@@ -21,9 +21,9 @@ func (app *App) GetUserData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	userData, err := database.GetUserData(app.DB, userID)
+	userData, err := users.GetUserData(app.DB, userID)
 	if err != nil {
-		log.Println(err)
+		log.Println(err, "here")
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
 			"message": "could not get user data",
@@ -33,7 +33,7 @@ func (app *App) GetUserData(w http.ResponseWriter, r *http.Request) {
 
 	userAbout, err := profiles.GetUserAbout(app.DB, userID)
 	if err != nil {
-		log.Println(err)
+		log.Println(err, "here1")
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
 			"message": "could not get user data",
@@ -42,7 +42,7 @@ func (app *App) GetUserData(w http.ResponseWriter, r *http.Request) {
 	}
 	userData.About = userAbout
 
-	followers, err := profiles.GetFollowers(app.DB, userID, 10) 
+	followers, err := profiles.GetFollowers(app.DB, userID, 10, 0) 
 	if err != nil {
 		log.Println(err)
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
@@ -54,7 +54,7 @@ func (app *App) GetUserData(w http.ResponseWriter, r *http.Request) {
 
 	userData.Followers = followers
 
-	following, err := profiles.GetFollowers(app.DB, userID, 10) 
+	following, err := profiles.GetFollowers(app.DB, userID, 10, 0) 
 	if err != nil {
 		log.Println(err)
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
@@ -65,7 +65,19 @@ func (app *App) GetUserData(w http.ResponseWriter, r *http.Request) {
 	}
 	userData.Following = following
 
+	friends, err := users.GetFriends(app.DB, userID, 0)
+	if err != nil {
+		log.Println(err)
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not get user data",
+		})
+		return
+	}
+
+	userData.Friends = friends
 	helpers.WriteJson(w, http.StatusOK, map[string]any{
+		"status": true,
 		"data": userData,
 	})
 }
@@ -111,7 +123,7 @@ func (app *App) UpdateUserInfo(w http.ResponseWriter, r *http.Request) {
 		userData.Password = hashedPassword
 	}
 
-	if err := database.UpdateUserInfo(app.DB, userID, &userData); err != nil {
+	if err := users.UpdateUserInfo(app.DB, userID, &userData); err != nil {
 		log.Println(err)
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
@@ -175,7 +187,7 @@ func (app *App) UpdateUserAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = database.UpdateUserAvatar(app.DB, userID, avatarPath)
+	err = users.UpdateUserAvatar(app.DB, userID, avatarPath)
 	if err != nil {
 		log.Println(err)
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
@@ -236,7 +248,7 @@ func (app *App) UpdateUserAbout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := profiles.UpdateUserAbout(app.DB, userID, userAbout); err != nil {
+	if err := profiles.UpdateUserAbout(app.DB, userID, &userAbout); err != nil {
 		log.Println(err)
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
@@ -250,3 +262,4 @@ func (app *App) UpdateUserAbout(w http.ResponseWriter, r *http.Request) {
 		"message": "user updated!",
 	})
 }
+

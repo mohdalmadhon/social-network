@@ -1,6 +1,8 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import FollowersDialog from '../personalProfile/group/FollowersDialog.vue';
+
 
 const router = useRouter();
 
@@ -8,8 +10,18 @@ const props = defineProps({
     followers: {
         type: Object,
         default: () => ({})
+    },
+    type: {
+        type: String,
+        default: 'followers'
+    },
+    targetId: {
+        type: [String, Number],
+        default: null
     }
 });
+
+const showDialog = ref(false);
 
 const followerList = computed(() => {
     return Object.entries(props.followers).map(([id, follower]) => ({
@@ -18,36 +30,51 @@ const followerList = computed(() => {
     }));
 });
 
-function takeToProfile(id) {
-    router.push(`/user?id=${id}`);
+async function takeToProfile(id) {
+    await router.push(`/user?id=${id}`);
     window.location.reload();
     return;
+}
+
+function openDialog() {
+    showDialog.value = true;
+}
+
+function closeDialog() {
+    showDialog.value = false;
 }
 </script>
 
 <template>
     <section class="followers-section">
         <div class="section-heading">
-            <p class="eyebrow">SOCIAL</p>
-            <h2>Followers</h2>
+            <div class="heading-row">
+                <div>
+                    <p class="eyebrow">SOCIAL</p>
+
+                    <h2>
+                        {{
+                            type === 'following'
+                                ? 'Following'
+                                : type === 'friends'
+                                    ? 'Friends'
+                                    : 'Followers'
+                        }}
+                    </h2>
+                </div>
+
+                <button v-if="followerList.length" type="button" class="show-all-btn" @click="openDialog">
+                    Show all
+                </button>
+            </div>
         </div>
 
         <div class="followers-card">
-            <div 
-                v-if="followerList.length"
-                class="followers-grid"
-            >
-                <article
-                    v-for="follower in followerList"
-                    :key="follower.id"
-                    @click="takeToProfile(follower.id)"
-                    class="follower-card"
-                >
-                    <img
-                        :src="follower.Avatar ? `/uploads/${follower.Avatar}` : '/default-avatar.png'"
-                        :alt="`${follower.firstName} ${follower.LastName}`"
-                        class="follower-avatar"
-                    >
+            <div v-if="followerList.length" class="followers-grid">
+                <article v-for="follower in followerList" :key="follower.id" @click="takeToProfile(follower.id)"
+                    class="follower-card">
+                    <img :src="follower.Avatar ? `/uploads/${follower.Avatar}` : '/default-avatar.png'"
+                        :alt="`${follower.FirstName} ${follower.LastName}`" class="follower-avatar">
 
                     <div class="follower-info">
                         <p class="follower-name">
@@ -57,13 +84,13 @@ function takeToProfile(id) {
                 </article>
             </div>
 
-            <p
-                v-else
-                class="empty"
-            >
+            <p v-else class="empty">
                 No followers yet.
             </p>
         </div>
+
+        <FollowersDialog v-if="showDialog" :type="type" :target-id="targetId" @close="closeDialog"
+            @navigate="takeToProfile" />
     </section>
 </template>
 
@@ -75,6 +102,13 @@ function takeToProfile(id) {
 
 .section-heading {
     margin-bottom: clamp(14px, 2.5vw, 20px);
+}
+
+.heading-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px;
 }
 
 .eyebrow {
@@ -89,6 +123,28 @@ h2 {
     margin: 0;
     font-family: "Liter", serif;
     font-size: clamp(20px, 4vw, 29px);
+}
+
+.show-all-btn {
+    flex: 0 0 auto;
+    padding: 7px 14px;
+    border: 2px solid var(--main-color);
+    border-radius: 6px;
+    background: var(--bg-color);
+    box-shadow: 3px 3px var(--main-color);
+    color: var(--font-color);
+    font-family: "JetBrains Mono", monospace;
+    font-size: clamp(10px, 1.4vw, 12px);
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+.show-all-btn:hover {
+    transform: translate(-2px, -2px);
+}
+
+.show-all-btn:active {
+    transform: translate(0, 0);
 }
 
 .followers-card {
