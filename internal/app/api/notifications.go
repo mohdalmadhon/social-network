@@ -157,8 +157,12 @@ func (app App) ApplyNotificationAction(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	notificationIDQuery := r.URL.Query().Get("notificationID")
-	notificationID, err := strconv.ParseInt(notificationIDQuery, 10, 64)
+
+	notificationID, err := strconv.ParseInt(
+		r.PathValue("notificationID"),
+		10,
+		64,
+	)
 	if err != nil || notificationID <= 0 {
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
@@ -221,38 +225,118 @@ func (app App) ApplyNotificationAction(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app App) applyNotificationAction(userID int, notification models.Notification, action string) error {
+
 	switch notification.Category {
+
 	case "requests":
 		if notification.Type != "follow_request" || notification.ActorID == nil {
 			return errors.New("this request cannot be acted on")
 		}
+
 		switch action {
 		case "accept":
-			return profiles.SendFollowRequest(app.DB, userID, *notification.ActorID, 1)
+			return profiles.SendFollowRequest(
+				app.DB,
+				userID,
+				*notification.ActorID,
+				1,
+			)
+
 		case "decline":
-			return profiles.SendFollowRequest(app.DB, userID, *notification.ActorID, -1)
+			return profiles.SendFollowRequest(
+				app.DB,
+				userID,
+				*notification.ActorID,
+				-1,
+			)
+
 		default:
 			return errors.New("request action must be accept or decline")
 		}
 
 	case "groups":
-		if action != "join" {
-			return errors.New("group action must be join")
-		}
 		if notification.RelatedID == nil {
 			return errors.New("group notification is missing its group")
 		}
-		return groups.JoinGroup(app.DB, userID, *notification.RelatedID)
+
+		switch notification.Type {
+
+		case "join_request":
+			if notification.ActorID == nil {
+				return errors.New("join request is missing requester")
+			}
+
+			switch action {
+			case "accept":
+				return groups.AcceptJoinRequest(
+					app.DB,
+					userID,
+					*notification.ActorID,
+					*notification.RelatedID,
+				)
+
+			case "reject":
+				return groups.RejectJoinRequest(
+					app.DB,
+					userID,
+					*notification.ActorID,
+					*notification.RelatedID,
+				)
+
+			default:
+				return errors.New(
+					"join request action must be accept or reject",
+				)
+			}
+
+		case "invitation":
+			switch action {
+			case "join":
+				return groups.AcceptInvitation(
+					app.DB,
+					userID,
+					*notification.RelatedID,
+				)
+
+			case "decline":
+				return groups.DeclineInvitation(
+					app.DB,
+					userID,
+					*notification.RelatedID,
+				)
+
+			default:
+				return errors.New(
+					"invitation action must be join or decline",
+				)
+			}
+
+		default:
+			return errors.New("unsupported group notification type")
+		}
 
 	case "events":
 		if notification.RelatedID == nil {
 			return errors.New("event notification is missing its event")
 		}
+
 		switch action {
 		case "rsvp":
-			return events.SetRSVP(app.DB, userID, *notification.RelatedID, "going")
+			return events.SetRSVP(
+				app.DB,
+				userID,
+				*notification.RelatedID,
+				"going",
+			)
+
 		case "decline":
-			return events.SetRSVP(app.DB, userID, *notification.RelatedID, "declined")
+			return events.SetRSVP(
+				app.DB,
+				userID,
+				*notification.RelatedID,
+				"declined",
+			)
+
 		default:
 			return errors.New("event action must be rsvp or decline")
 		}

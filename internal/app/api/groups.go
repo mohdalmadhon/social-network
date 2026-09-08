@@ -439,6 +439,34 @@ func (app App) JoinRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var creatorID int
+	
+	err = app.DB.QueryRow(`
+    SELECT creator_id
+    FROM groups
+    WHERE id = ?
+	`, groupID).Scan(&creatorID)
+	
+	_, err = app.DB.Exec(`
+	INSERT INTO notifications (
+		user_id,
+		actor_id,
+		category,
+		type,
+		message,
+		related_id,
+		is_read
+		)
+		VALUES (?, ?, ?, ?, ?, ?, 0)
+		`,
+		creatorID,
+		userID,
+		"groups",
+		"join_request",
+		"requested to join your group",
+		groupID,
+	)
+
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"status":  true,
 		"message": "join request sent",

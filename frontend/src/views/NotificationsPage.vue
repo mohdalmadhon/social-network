@@ -39,6 +39,7 @@ function actionLabel(action) {
   return {
     accept: 'Accepted',
     decline: 'Declined',
+    reject: 'Rejected',
     join: 'Joined',
     rsvp: 'Going',
   }[action] || action
@@ -50,7 +51,39 @@ function notificationForDisplay(notification) {
     groups: { icon: 'G', color: '#45d9d0' },
     events: { icon: 'E', color: '#ffb84d' },
   }
-  const style = categoryStyles[notification.category] || categoryStyles.groups
+
+  const style =
+    categoryStyles[notification.category] || categoryStyles.groups
+
+  let action = ''
+
+  if (
+    notification.category === 'requests' &&
+    notification.type === 'follow_request'
+  ) {
+    action = 'follow'
+  }
+
+  if (
+    notification.category === 'groups' &&
+    notification.type === 'join_request'
+  ) {
+    action = 'join_request'
+  }
+
+  if (
+    notification.category === 'groups' &&
+    notification.type === 'invitation'
+  ) {
+    action = 'invitation'
+  }
+
+  if (
+    notification.category === 'events' &&
+    notification.type === 'event_created'
+  ) {
+    action = 'rsvp'
+  }
 
   return {
     ...notification,
@@ -61,13 +94,7 @@ function notificationForDisplay(notification) {
     detail: notification.type.replaceAll('_', ' '),
     time: formatNotificationTime(notification.createdAt),
     unread: !notification.isRead,
-    action: notification.category === 'requests' && notification.type === 'follow_request'
-      ? 'follow'
-      : notification.category === 'groups'
-        ? 'join'
-        : notification.category === 'events'
-          ? 'rsvp'
-          : '',
+    action,
   }
 }
 
@@ -130,48 +157,43 @@ onMounted(loadNotifications)
       <header class="notifications-page__header">
         <div>
           <p class="orbit-meta">Stay in the loop</p>
-          <h1 id="notifications-title">Notifications</h1>
+
+          <h1 id="notifications-title">
+            Notifications
+          </h1>
+
           <p class="notifications-page__summary">
             {{ unreadCount ? `${unreadCount} unread updates` : 'You are all caught up' }}
           </p>
         </div>
-        <button
-          class="mark-all-button"
-          type="button"
-          :disabled="unreadCount === 0"
-          @click="markAllAsRead"
-        >
+
+        <button class="mark-all-button" type="button" :disabled="unreadCount === 0" @click="markAllAsRead">
           Mark all as read
         </button>
       </header>
 
       <nav class="notification-filters" aria-label="Notification filters">
-        <button
-          v-for="filter in filters"
-          :key="filter.id"
-          type="button"
-          :class="{ 'notification-filter--active': activeFilter === filter.id }"
-          @click="activeFilter = filter.id"
-        >
+        <button v-for="filter in filters" :key="filter.id" type="button"
+          :class="{ 'notification-filter--active': activeFilter === filter.id }" @click="activeFilter = filter.id">
           {{ filter.label }}
         </button>
       </nav>
 
-      <p v-if="isLoading" class="notifications-state">Loading notifications...</p>
+      <p v-if="isLoading" class="notifications-state">
+        Loading notifications...
+      </p>
 
       <div v-else-if="loadError" class="notifications-state notifications-state--error">
         <span>{{ loadError }}</span>
-        <button type="button" @click="loadNotifications">Try again</button>
+
+        <button type="button" @click="loadNotifications">
+          Try again
+        </button>
       </div>
 
       <div v-else-if="visibleNotifications.length" class="notification-list">
-        <article
-          v-for="item in visibleNotifications"
-          :key="item.id"
-          class="notification-item"
-          :class="{ 'notification-item--unread': item.unread }"
-          @click="markAsRead(item)"
-        >
+        <article v-for="item in visibleNotifications" :key="item.id" class="notification-item"
+          :class="{ 'notification-item--unread': item.unread }" @click="markAsRead(item)">
           <div class="notification-item__icon" :style="{ background: item.color }" aria-hidden="true">
             {{ item.icon }}
           </div>
@@ -182,32 +204,61 @@ onMounted(loadNotifications)
             <time>{{ item.time }}</time>
           </div>
 
+          <!-- Follow request -->
           <div v-if="item.action === 'follow'" class="notification-item__actions">
-            <button type="button" class="action-button action-button--primary" @click.stop="chooseAction(item, 'accept')">
+            <button type="button" class="action-button action-button--primary"
+              @click.stop="chooseAction(item, 'accept')">
               Accept
             </button>
+
             <button type="button" class="action-button" @click.stop="chooseAction(item, 'decline')">
               Decline
             </button>
           </div>
-          <div v-else-if="item.action === 'join'" class="notification-item__actions">
+
+          <!-- Someone requested to join my group -->
+          <div v-else-if="item.action === 'join_request'" class="notification-item__actions">
+            <button type="button" class="action-button action-button--primary"
+              @click.stop="chooseAction(item, 'accept')">
+              Accept
+            </button>
+
+            <button type="button" class="action-button" @click.stop="chooseAction(item, 'reject')">
+              Reject
+            </button>
+          </div>
+
+          <!-- I received a group invitation -->
+          <div v-else-if="item.action === 'invitation'" class="notification-item__actions">
             <button type="button" class="action-button action-button--primary" @click.stop="chooseAction(item, 'join')">
               Join
             </button>
+
+            <button type="button" class="action-button" @click.stop="chooseAction(item, 'decline')">
+              Decline
+            </button>
           </div>
+
+          <!-- Event -->
           <div v-else-if="item.action === 'rsvp'" class="notification-item__actions">
             <button type="button" class="action-button action-button--primary" @click.stop="chooseAction(item, 'rsvp')">
               RSVP
             </button>
+
             <button type="button" class="action-button" @click.stop="chooseAction(item, 'decline')">
               Decline
             </button>
           </div>
-          <span v-else-if="item.action" class="notification-item__result">{{ actionLabel(item.action) }}</span>
+
+          <span v-else-if="item.action" class="notification-item__result">
+            {{ actionLabel(item.action) }}
+          </span>
         </article>
       </div>
 
-      <p v-else class="notifications-empty">Nothing here yet.</p>
+      <p v-else class="notifications-empty">
+        Nothing here yet.
+      </p>
     </section>
   </AuthenticatedLayout>
 </template>
