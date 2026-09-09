@@ -80,66 +80,45 @@ defineProps({
 
 .eyebrow {
     margin: 0 0 5px;
-    color: var(--color-cyan);
-    font-family: var(--font-meta);
+    color: var(--input-focus);
+    font-family: "JetBrains Mono", monospace;
     font-size: clamp(8px, 1.2vw, 9px);
     letter-spacing: 2px;
-    text-transform: uppercase;
 }
 
 h3 {
     margin: 0;
-    color: var(--color-text);
-    font-family: var(--font-body);
+    font-family: "Liter", serif;
     font-size: clamp(20px, 3vw, 25px);
 }
 
 .links-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: 12px;
 }
 
 .link-item {
     display: grid;
     grid-template-columns: minmax(90px, 130px) 1fr;
-    gap: var(--space-5);
-    padding: var(--space-3);
-    border: 1px solid var(--color-border);
-    border-left: 3px solid var(--color-amber);
-    border-radius: var(--radius-small);
-    background: var(--color-surface);
-    color: var(--color-text);
+    gap: 20px;
+    padding: 14px;
+    border: 2px solid var(--main-color);
+    border-radius: 5px;
+    background: var(--bg-color);
+    color: var(--font-color);
     text-decoration: none;
     transition: 0.15s ease;
 }
 
-.link-item:nth-of-type(2) {
-    border-left-color: var(--color-blue);
-}
-
-.link-item:nth-of-type(3) {
-    border-left-color: var(--color-cyan);
-}
-
-.link-item:nth-of-type(4) {
-    border-left-color: var(--color-magenta);
-}
-
 .link-item:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-raised);
-    border-color: var(--color-violet);
-}
-
-.link-item:focus-visible {
-    outline: none;
-    box-shadow: var(--focus-ring);
+    transform: translate(-2px, -2px);
+    box-shadow: 3px 3px var(--main-color);
 }
 
 .link-item span {
-    color: var(--color-text-muted);
-    font-family: var(--font-meta);
+    color: var(--font-color-sub);
+    font-family: "JetBrains Mono", monospace;
     font-size: clamp(8px, 1.2vw, 10px);
     font-weight: 600;
     letter-spacing: 1px;
@@ -148,24 +127,23 @@ h3 {
 
 .link-item p {
     margin: 0;
-    color: var(--color-text-soft);
-    font-family: var(--font-display);
+    color: var(--font-color);
+    font-family: "Hedvig Letters Sans", sans-serif;
     font-size: clamp(11px, 1.7vw, 13px);
     word-break: break-all;
 }
 
 .empty {
     margin: 0;
-    color: var(--color-text-muted);
-    font-family: var(--font-meta);
+    color: var(--font-color-sub);
+    font-family: "JetBrains Mono", monospace;
     font-size: 10px;
 }
 
 @media (max-width: 500px) {
     .link-item {
         grid-template-columns: 1fr;
-        gap: var(--space-2);
-        border-left-width: 3px;
+        gap: 6px;
     }
 }
 </style>

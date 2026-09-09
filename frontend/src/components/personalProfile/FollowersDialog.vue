@@ -1,448 +1,466 @@
 <script setup>
-import { getFriends } from '@/api/common/friends';
-import { searchFollowing, searchFollows } from '@/api/users/profiles';
-import { onMounted, onUnmounted, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
 
 const props = defineProps({
+    followers: {
+        type: Object,
+        default: () => ({})
+    },
     type: {
         type: String,
         default: 'followers'
     },
     targetId: {
         type: [String, Number],
-        required: true
+        default: null
     }
 });
 
-const emit = defineEmits(['close']);
-const router = useRouter();
+const showDialog = ref(false);
 
-const PAGE_SIZE = 20;
-const SCROLL_THROTTLE_MS = 250;
-
-const list = ref([]);
-const offset = ref(0);
-const loading = ref(false);
-const searching = ref(false);
-const hasMore = ref(true);
-const error = ref(null);
-const searchResults = ref([]);
-const searchQuery = ref('');
-const scrollBox = ref(null);
-
-let searchDebounce;
-
-function throttle(fn, wait) {
-    let lastCall = 0;
-    let timeoutId = null;
-
-    return function throttled(...args) {
-        const now = Date.now();
-        const remaining = wait - (now - lastCall);
-
-        if (remaining <= 0) {
-            if (timeoutId) {
-                clearTimeout(timeoutId);
-                timeoutId = null;
-            }
-
-            lastCall = now;
-            fn.apply(this, args);
-        } else if (!timeoutId) {
-            timeoutId = setTimeout(() => {
-                lastCall = Date.now();
-                timeoutId = null;
-                fn.apply(this, args);
-            }, remaining);
-        }
-    };
-}
-
-const route = useRoute();
-const targetID = route.query.id;
-
-async function fetchPage() {
-    if (loading.value || !hasMore.value || searchQuery.value.trim()) {
-        return;
-    }
-
-    loading.value = true;
-    error.value = null;
-
-    const endpoint = props.type === 'following'
-        ? '/api/profile/following'
-        : props.type === 'friends'
-            ? '/api/friends'
-            : '/api/profile/follow';
-
-    try {
-        const res = await fetch(
-            `${endpoint}?targetid=${targetID}&offset=${offset.value}`,
-            {
-                method: 'GET',
-                credentials: 'include'
-            }
-        );
-
-        const body = await res.json();
-
-        if (!res.ok || !body.status) {
-            throw new Error(body.message || 'failed to load');
-        }
-
-        const page = Object.entries(body.data).map(([key, value]) => ({
-            ID: key,
-            FirstName: value.FirstName,
-            LastName: value.LastName,
-            Avatar: value.Avatar
-        }));
-
-        list.value.push(...page);
-        offset.value += PAGE_SIZE;
-
-        if (page.length < PAGE_SIZE) {
-            hasMore.value = false;
-        }
-    } catch (err) {
-        console.error(err);
-        error.value = 'Could not load more.';
-    } finally {
-        loading.value = false;
-    }
-}
-
-function checkAndFetch() {
-    if (searchQuery.value.trim()) {
-        return;
-    }
-
-    const el = scrollBox.value;
-
-    if (!el) {
-        return;
-    }
-
-    const distanceFromBottom =
-        el.scrollHeight - el.scrollTop - el.clientHeight;
-
-    if (distanceFromBottom < 120) {
-        fetchPage();
-    }
-}
-
-const throttledScroll = throttle(checkAndFetch, SCROLL_THROTTLE_MS);
-
-async function runSearch(query) {
-    if (!query) {
-        searchResults.value = [];
-        return;
-    }
-
-    searching.value = true;
-    error.value = null;
-
-    try {
-        let result;
-        if (props.type === 'following') {
-            result = await searchFollowing(query, props.targetId)
-        } else if (props.type === 'friends') {
-            result = await getFriends(query, props.targetId)
-        } else {
-            result = await searchFollows(query, props.targetId);
-        }
-
-        searchResults.value = Object.entries(result.data).map(
-            ([_, value]) => ({
-                UserID: value.ID,
-                ...value
-            })
-        );
-        console.log(searchResults.value)
-
-    } catch (err) {
-        console.error(err);
-        searchResults.value = [];
-    } finally {
-        searching.value = false;
-    }
-}
-
-watch(searchQuery, (value) => {
-    clearTimeout(searchDebounce);
-
-    const query = value.trim();
-
-    if (!query) {
-        searchResults.value = [];
-        searching.value = false;
-        error.value = null;
-        return;
-    }
-
-    searchDebounce = setTimeout(() => {
-        runSearch(query);
-    }, 300);
+const followerList = computed(() => {
+    return Object.entries(props.followers).map(([id, follower]) => ({
+        id,
+        ...follower
+    }));
 });
 
-function handleKeydown(e) {
-    if (e.key === 'Escape') {
-        emit('close');
-    }
-}
+const sectionTitle = computed(() => {
+    if (props.type === 'following') return 'Following';
+    if (props.type === 'friends') return 'Friends';
+    return 'Followers';
+});
 
-async function goToProfile(id) {
-    emit('close');
-    await router.replace(`/user?id=${id}`);
+async function takeToProfile(id) {
+    await router.push(`/user?id=${id}`);
     window.location.reload();
 }
 
-onMounted(() => {
-    fetchPage();
-    window.addEventListener('keydown', handleKeydown);
-});
+function openDialog() {
+    showDialog.value = true;
+}
 
-onUnmounted(() => {
-    window.removeEventListener('keydown', handleKeydown);
-    clearTimeout(searchDebounce);
-});
+function closeDialog() {
+    showDialog.value = false;
+}
 </script>
 
 <template>
-    <Teleport to="body">
-        <div class="dialog-overlay" @click="$emit('close')">
-            <aside class="dialog-panel" @click.stop>
-                <header class="dialog-header">
-                    <h2>
-                        {{ type === 'following' ? 'Following' : 'Followers' }}
-                    </h2>
+    <section class="followers-section">
+        <div class="section-heading">
+            <div class="heading-row">
+                <div class="heading-title">
+                    <span class="heading-accent"></span>
 
-                    <button type="button" class="close-btn" aria-label="Close" @click="$emit('close')">
-                        &times;
-                    </button>
-                </header>
-
-                <input v-model="searchQuery" type="text" placeholder="Search by name..." class="group-search-input" />
-
-                <div ref="scrollBox" class="dialog-body" @scroll="throttledScroll">
-                    <template v-if="searchQuery.trim()">
-                        <article v-for="user in searchResults" :key="user.ID" class="follower-row"
-                            @click="goToProfile(user.ID)">
-                            <img :src="user.Avatar
-                                ? `/uploads/${user.Avatar}`
-                                : '/default-avatar.png'
-                                " :alt="`${user.FirstName} ${user.LastName}`" class="follower-avatar" />
-
-                            <p class="follower-name">
-                                {{ user.FirstName }} {{ user.LastName }}
-                            </p>
-                        </article>
-
-                        <p v-if="searching" class="status-text">
-                            Searching…
-                        </p>
-
-                        <p v-if="
-                            !searching &&
-                            !searchResults.length
-                        " class="status-text">
-                            No users found.
-                        </p>
-                    </template>
-
-                    <template v-else>
-                        <article v-for="follower in list" :key="follower.ID" class="follower-row"
-                            @click="goToProfile(follower.ID)">
-                            <img :src="follower.Avatar
-                                ? `/uploads/${follower.Avatar}`
-                                : '/default-avatar.png'
-                                " :alt="`${follower.FirstName} ${follower.LastName}`" class="follower-avatar" />
-
-                            <p class="follower-name">
-                                {{ follower.FirstName }}
-                                {{ follower.LastName }}
-                            </p>
-                        </article>
-
-                        <p v-if="loading" class="status-text">
-                            Loading…
-                        </p>
-
-                        <p v-if="error" class="status-text error">
-                            {{ error }}
-                        </p>
-
-                        <p v-if="
-                            !hasMore &&
-                            !list.length &&
-                            !loading
-                        " class="status-text">
-                            No
-                            {{
-                                type === 'following'
-                                    ? 'following'
-                                    : 'followers'
-                            }}
-                            yet.
-                        </p>
-
-                        <p v-if="
-                            !hasMore &&
-                            list.length &&
-                            !loading
-                        " class="status-text">
-                            That's everyone.
-                        </p>
-                    </template>
+                    <div>
+                        <p class="eyebrow">SOCIAL</p>
+                        <h2>{{ sectionTitle }}</h2>
+                    </div>
                 </div>
-            </aside>
+
+                <button
+                    v-if="followerList.length"
+                    type="button"
+                    class="show-all-btn"
+                    @click="openDialog"
+                >
+                    <span>Show all</span>
+                    <span class="arrow">→</span>
+                </button>
+            </div>
         </div>
-    </Teleport>
+
+        <div class="followers-card">
+            <div v-if="followerList.length" class="followers-grid">
+                <article
+                    v-for="follower in followerList"
+                    :key="follower.id"
+                    class="follower-card"
+                    @click="takeToProfile(follower.id)"
+                >
+                    <div class="avatar-container">
+                        <img
+                            :src="
+                                follower.Avatar
+                                    ? `/uploads/${follower.Avatar}`
+                                    : '/default-avatar.png'
+                            "
+                            :alt="`${follower.FirstName} ${follower.LastName}`"
+                            class="follower-avatar"
+                        >
+                    </div>
+
+                    <div class="follower-info">
+                        <p class="follower-name">
+                            {{ follower.FirstName }} {{ follower.LastName }}
+                        </p>
+                        <span class="profile-label">VIEW PROFILE</span>
+                    </div>
+
+                    <span class="card-arrow">↗</span>
+                </article>
+            </div>
+
+            <div v-else class="empty-state">
+                <div class="empty-icon">◎</div>
+                <p class="empty-title">No {{ type }} yet</p>
+                <p class="empty-text">
+                    People will appear here when you have some.
+                </p>
+            </div>
+        </div>
+
+        <FollowersDialog
+            v-if="showDialog"
+            :type="type"
+            :target-id="targetId"
+            @close="closeDialog"
+            @navigate="takeToProfile"
+        />
+    </section>
 </template>
 
 <style scoped>
-.dialog-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgb(11 13 31 / 65%);
-    display: flex;
-    justify-content: flex-end;
-    z-index: 1000;
+.followers-section {
+    width: 100%;
+    scroll-margin-top: 100px;
 }
 
-.group-search-input {
-    padding: var(--space-3) var(--space-3);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-small);
-    background: var(--color-input);
-    color: var(--color-text);
-    font-family: var(--font-body);
-    font-size: 15px;
-    max-width: 320px;
-    margin-top: var(--space-4);
-    margin-left: var(--space-4);
-    transition: border-color 0.15s;
+.section-heading {
+    margin-bottom: 20px;
 }
 
-.group-search-input::placeholder {
-    color: var(--color-text-faint);
-}
-
-.group-search-input:focus-visible {
-    outline: none;
-    box-shadow: var(--focus-ring);
-    border-color: var(--color-cyan);
-}
-
-.dialog-panel {
-    width: min(380px, 92vw);
-    height: 100%;
-    background: var(--color-surface-violet);
-    border-left: 1px solid var(--color-border);
-    box-shadow: var(--shadow-raised);
-    display: flex;
-    flex-direction: column;
-    animation: slide-in 0.2s ease-out;
-}
-
-@keyframes slide-in {
-    from {
-        transform: translateX(100%);
-    }
-
-    to {
-        transform: translateX(0);
-    }
-}
-
-.dialog-header {
+.heading-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--space-5) var(--space-5);
-    border-bottom: 1px solid var(--color-border);
-    flex: 0 0 auto;
+    gap: 18px;
 }
 
-.dialog-header h2 {
-    margin: 0;
-    color: var(--color-text);
-    font-family: var(--font-display);
-    font-size: 22px;
-}
-
-.close-btn {
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-small);
-    background: var(--color-input);
-    width: var(--touch-target);
-    height: var(--touch-target);
-    line-height: 1;
-    font-size: 18px;
-    cursor: pointer;
-    color: var(--color-text);
-    transition: transform 0.1s, background 0.15s, color 0.15s;
-}
-
-.close-btn:hover {
-    transform: translateY(-1px);
-    background: var(--color-surface-coral);
-    color: var(--color-coral-soft);
-}
-
-.close-btn:focus-visible {
-    outline: none;
-    box-shadow: var(--focus-ring);
-}
-
-.dialog-body {
-    flex: 1 1 auto;
-    overflow-y: auto;
-    padding: var(--space-4) var(--space-4) var(--space-6);
-}
-
-.follower-row {
+.heading-title {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
-    padding: var(--space-3) var(--space-2);
-    border-radius: var(--radius-small);
-    cursor: pointer;
-    transition: background 0.15s ease;
+    gap: 12px;
 }
 
-.follower-row:hover {
-    background: var(--color-surface-raised);
+.heading-accent {
+    width: 5px;
+    height: 44px;
+    flex: 0 0 auto;
+    border: 1px solid var(--input-focus);
+    border-radius: 2px;
+    background: var(--input-focus);
+    box-shadow: 3px 3px var(--main-color);
+}
+
+.eyebrow {
+    margin: 0 0 5px;
+    color: var(--input-focus);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+h2 {
+    margin: 0;
+    color: var(--font-color);
+    font-family: "Liter", serif;
+    font-size: clamp(22px, 4vw, 30px);
+    line-height: 1;
+}
+
+.show-all-btn {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex: 0 0 auto;
+    padding: 9px 13px;
+    border: 2px solid var(--main-color);
+    border-radius: 6px;
+    background: var(--bg-color);
+    box-shadow: 4px 4px var(--main-color);
+    color: var(--font-color);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease,
+        border-color 0.15s ease;
+}
+
+.show-all-btn:hover {
+    border-color: var(--input-focus);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px var(--input-focus);
+}
+
+.show-all-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px var(--main-color);
+}
+
+.arrow {
+    color: var(--input-focus);
+    font-size: 15px;
+    transition: transform 0.15s ease;
+}
+
+.show-all-btn:hover .arrow {
+    transform: translateX(3px);
+}
+
+.followers-card {
+    width: 100%;
+    padding: clamp(14px, 2.5vw, 22px);
+    border: 2px solid var(--main-color);
+    border-radius: 8px;
+    background: var(--bg-color);
+    box-shadow: 7px 7px var(--main-color);
+    box-sizing: border-box;
+}
+
+.followers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 15px;
+}
+
+.follower-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    min-width: 0;
+    padding: 13px;
+    border: 2px solid var(--main-color);
+    border-radius: 7px;
+    background: var(--bg-color);
+    box-shadow: 4px 4px var(--main-color);
+    box-sizing: border-box;
+    cursor: pointer;
+    overflow: hidden;
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease,
+        border-color 0.15s ease;
+}
+
+.follower-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 5px;
+    height: 100%;
+    background: var(--input-focus);
+    transform: scaleY(0);
+    transform-origin: bottom;
+    transition: transform 0.15s ease;
+}
+
+.follower-card:hover {
+    border-color: var(--input-focus);
+    transform: translate(-3px, -3px);
+    box-shadow: 7px 7px var(--input-focus);
+}
+
+.follower-card:hover::before {
+    transform: scaleY(1);
+}
+
+.follower-card:active {
+    transform: translate(0, 0);
+    box-shadow: 1px 1px var(--main-color);
+}
+
+.avatar-container {
+    flex: 0 0 auto;
+    padding: 3px;
+    border: 2px solid var(--input-focus);
+    border-radius: 50%;
+    background: var(--bg-color);
+    box-shadow: 2px 2px var(--main-color);
 }
 
 .follower-avatar {
-    flex: 0 0 auto;
-    width: 44px;
-    height: 44px;
-    border: 2px solid var(--color-cyan);
+    display: block;
+    width: clamp(48px, 6vw, 58px);
+    height: clamp(48px, 6vw, 58px);
+    border: 2px solid var(--main-color);
     border-radius: 50%;
+    background: var(--bg-color);
     object-fit: cover;
+    box-sizing: border-box;
+}
+
+.follower-info {
+    min-width: 0;
+    flex: 1;
 }
 
 .follower-name {
     margin: 0;
-    color: var(--color-text);
-    font-family: var(--font-display);
-    font-size: 14px;
-    font-weight: 600;
+    color: var(--font-color);
+    font-family: "Hedvig Letters Sans", sans-serif;
+    font-size: clamp(12px, 1.8vw, 15px);
+    font-weight: 700;
+    line-height: 1.35;
     overflow-wrap: anywhere;
 }
 
-.status-text {
-    margin: 0;
-    padding: var(--space-4) 0;
-    text-align: center;
-    color: var(--color-text-muted);
-    font-family: var(--font-meta);
-    font-size: 11px;
+.profile-label {
+    display: block;
+    margin-top: 5px;
+    color: var(--input-focus);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.7px;
+    opacity: 0;
+    transform: translateY(3px);
+    transition:
+        opacity 0.15s ease,
+        transform 0.15s ease;
 }
 
-.status-text.error {
-    color: var(--color-danger);
+.follower-card:hover .profile-label {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.card-arrow {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    color: var(--input-focus);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 16px;
+    font-weight: 700;
+    opacity: 0;
+    transform: translate(-3px, 3px);
+    transition:
+        opacity 0.15s ease,
+        transform 0.15s ease;
+}
+
+.follower-card:hover .card-arrow {
+    opacity: 1;
+    transform: translate(0, 0);
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 150px;
+    padding: 25px 15px;
+    border: 2px dashed var(--main-color);
+    border-radius: 7px;
+    background: var(--bg-color);
+    text-align: center;
+}
+
+.empty-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    margin-bottom: 9px;
+    border: 2px solid var(--input-focus);
+    border-radius: 50%;
+    box-shadow: 3px 3px var(--main-color);
+    color: var(--input-focus);
+    font-family: "Liter", serif;
+    font-size: 25px;
+}
+
+.empty-title {
+    margin: 0;
+    color: var(--font-color);
+    font-family: "Hedvig Letters Sans", sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.empty-text {
+    max-width: 300px;
+    margin: 5px 0 0;
+    color: var(--font-color-sub);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9px;
+    line-height: 1.5;
+}
+
+@media (max-width: 700px) {
+    .followers-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .follower-card {
+        padding: 11px;
+    }
+
+    .profile-label,
+    .card-arrow {
+        display: none;
+    }
+}
+
+@media (max-width: 500px) {
+    .heading-row {
+        align-items: flex-end;
+    }
+
+    .heading-accent {
+        height: 37px;
+    }
+
+    .show-all-btn {
+        padding: 8px 10px;
+    }
+
+    .show-all-btn .arrow {
+        display: none;
+    }
+
+    .followers-card {
+        padding: 12px;
+        box-shadow: 5px 5px var(--main-color);
+    }
+
+    .followers-grid {
+        grid-template-columns: 1fr;
+        gap: 11px;
+    }
+
+    .follower-card {
+        padding: 12px;
+    }
+
+    .follower-avatar {
+        width: 50px;
+        height: 50px;
+    }
+}
+
+@media (max-width: 350px) {
+    .heading-title {
+        gap: 8px;
+    }
+
+    .heading-accent {
+        width: 4px;
+    }
+
+    .followers-card {
+        padding: 9px;
+    }
 }
 </style>

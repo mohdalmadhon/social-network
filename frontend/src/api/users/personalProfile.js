@@ -18,7 +18,7 @@ export async function getUserData() {
     if (!resp.ok) {
         throw new Error(result.message || `Registration failed: ${resp.status}`)
     }
-
+    console.log(result.data)
     profileData.userInfo.firstName = result.data.UserInfo.FirstName
     profileData.userInfo.lastName = result.data.UserInfo.LastName
     profileData.userInfo.userName = result.data.UserInfo.UserName
@@ -44,5 +44,5 @@ export async function getUserData() {
     profileData.followers = result.data.Followers;
     profileData.following = result.data.Following;
     profileData.friends = result.data.Friends;
-    console.log(result.data)
+    console.log(profileData)
 }

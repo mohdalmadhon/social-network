@@ -1,17 +1,45 @@
 <script setup>
+import { onMounted, ref } from 'vue';
+
 const emit = defineEmits(['changeTab']);
 
-const tabs = [
-    'posts',
-    'friends',
-    'following',
-    'followers',
-    'about'
-];
+const props = defineProps({
+    type: {
+        type: String,
+        default: 'personal'
+    }
+});
+
+const activeTab = ref('about');
+
+let tabs = [];
+
+if (props.type === 'personal') {
+    tabs = [
+        'posts',
+        'friends',
+        'groups',
+        'following',
+        'followers',
+        'about'
+    ];
+} else {
+    tabs = [
+        'posts',
+        'following',
+        'followers',
+        'about'
+    ];
+}
 
 function selectTab(tab) {
+    activeTab.value = tab;
     emit('changeTab', tab);
 }
+
+onMounted(() => {
+    selectTab('about');
+});
 </script>
 
 <template>
@@ -20,6 +48,7 @@ function selectTab(tab) {
             v-for="tab in tabs"
             :key="tab"
             type="button"
+            :class="{ active: activeTab === tab }"
             @click="selectTab(tab)"
         >
             {{ tab }}
@@ -33,68 +62,41 @@ function selectTab(tab) {
     top: 64px;
     z-index: 50;
     display: flex;
-    margin: var(--space-5) 0;
+    margin: 25px 0;
     overflow-x: auto;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-medium);
-    background: var(--color-surface);
-    box-shadow: var(--shadow-raised);
+    border: 2px solid var(--main-color);
+    border-radius: 6px;
+    background: var(--bg-color);
+    box-shadow: 5px 5px var(--main-color);
 }
 
 .profile-tabs button {
     flex: 1;
     min-width: 105px;
-    padding: var(--space-4);
+    padding: 15px 18px;
     border: 0;
-    border-right: 1px solid var(--color-border);
+    border-right: 2px solid var(--main-color);
     background: transparent;
-    color: var(--color-text-muted);
+    color: var(--font-color-sub);
     text-align: center;
-    text-transform: capitalize;
-    font-family: var(--font-meta);
+    font-family: "JetBrains Mono", monospace;
     font-size: 10px;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
 }
 
 .profile-tabs button:last-child {
     border-right: 0;
 }
 
-.profile-tabs button:nth-child(1):hover {
-    background: var(--color-surface-teal);
-    color: var(--color-cyan-soft);
-}
-
-.profile-tabs button:nth-child(2):hover {
-    background: var(--color-surface-violet);
-    color: var(--color-violet-soft);
-}
-
-.profile-tabs button:nth-child(3):hover {
-    background: var(--color-surface-coral);
-    color: var(--color-coral-soft);
-}
-
-.profile-tabs button:nth-child(4):hover {
-    background: var(--color-surface-amber);
-    color: var(--color-amber-soft);
-}
-
-.profile-tabs button:nth-child(5):hover {
-    background: var(--color-surface-violet);
-    color: var(--color-magenta-soft);
-}
-
-.profile-tabs button:focus-visible {
-    outline: none;
-    box-shadow: var(--focus-ring);
+.profile-tabs button:hover {
+    background: var(--page-background);
+    color: var(--main-color);
 }
 
 .profile-tabs button.active {
-    background: var(--gradient-cyber);
-    color: var(--color-text);
+    background: var(--input-focus);
+    color: white;
 }
 
 @media (max-width: 800px) {
@@ -103,3 +105,4 @@ function selectTab(tab) {
     }
 }
 </style>
+

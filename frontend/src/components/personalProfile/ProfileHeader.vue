@@ -51,10 +51,9 @@ async function handleRemoveFollow() {
 
     try {
         const result = await requestFollow(id, "DELETE");
-
+        
         if (result.status) {
             followingStatus.value = result.followStatus;
-            addNotification("could not unfollow user", 'error')
             if (oldStatus === 0) {
                 emit('cancel-request');
             } else if (oldStatus === 1) {
@@ -77,7 +76,6 @@ async function handleRemoveFollow() {
         <div class="profile-information">
             <div class="avatar">
                 <img
-                    
                     v-if="props.avatarPath"
                     :src="props.avatarPath"
                     alt="Profile avatar"
@@ -154,10 +152,10 @@ async function handleRemoveFollow() {
 <style scoped>
 .profile-header {
     overflow: hidden;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-large);
-    background: var(--color-surface);
-    box-shadow: var(--shadow-raised);
+    border: 2px solid var(--main-color);
+    border-radius: 8px;
+    background: var(--bg-color);
+    box-shadow: 7px 7px var(--main-color);
 }
 
 .cover {
@@ -165,17 +163,17 @@ async function handleRemoveFollow() {
     height: 150px;
     z-index: -1;
     overflow: hidden;
-    background: var(--gradient-aurora);
-    border-bottom: 1px solid var(--color-border);
+    background: var(--input-focus);
+    border-bottom: 2px solid var(--main-color);
 }
 
 .cover::before,
 .cover::after {
     position: absolute;
     content: "";
-    border: 1px solid var(--color-border);
-    background: var(--color-surface);
-    box-shadow: var(--shadow-raised);
+    border: 2px solid var(--main-color);
+    background: var(--bg-color);
+    box-shadow: 6px 6px var(--main-color);
 }
 
 .cover::before {
@@ -197,17 +195,17 @@ async function handleRemoveFollow() {
 .cover-grid {
     position: absolute;
     inset: 0;
-    opacity: 0.2;
+    opacity: 0.15;
     background-image:
-        linear-gradient(rgb(11 13 31 / 60%) 1px, transparent 1px),
-        linear-gradient(90deg, rgb(11 13 31 / 60%) 1px, transparent 1px);
+        linear-gradient(var(--main-color) 1px, transparent 1px),
+        linear-gradient(90deg, var(--main-color) 1px, transparent 1px);
     background-size: 25px 25px;
 }
 
 .profile-information {
     display: flex;
-    gap: var(--space-6);
-    padding: 0 var(--space-7) var(--space-6);
+    gap: 28px;
+    padding: 0 35px 30px;
 }
 
 .avatar img {
@@ -225,52 +223,53 @@ async function handleRemoveFollow() {
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 4px solid var(--color-surface);
-    outline: 2px solid var(--color-cyan);
+    border: 4px solid var(--bg-color);
+    outline: 2px solid var(--main-color);
     border-radius: 50%;
-    background: var(--gradient-cyber);
-    color: var(--color-text);
-    font-family: var(--font-display);
+    background: var(--main-color);
+    color: white;
+    font-family: "Liter", serif;
     font-size: 65px;
-    box-shadow: var(--shadow-raised);
+    box-shadow: 5px 5px var(--main-color);
 }
 
 .profile-details {
     width: 100%;
-    padding-top: var(--space-5);
+    padding-top: 22px;
 }
 
 .name-row {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: var(--space-5);
+    gap: 20px;
 }
 
 h1 {
     margin: 0;
-    color: var(--color-text);
-    font-family: var(--font-display);
+    color: var(--main-color);
+    font-family: "Liter", serif;
     font-size: 36px;
     line-height: 1;
 }
 
 .username {
-    margin: var(--space-2) 0 0;
-    color: var(--color-text-muted);
-    font-family: var(--font-meta);
+    margin: 7px 0 0;
+    color: var(--font-color-sub);
+    font-family: "JetBrains Mono", monospace;
     font-size: 10px;
 }
 
 .edit-button,
 .relationship-button {
     flex-shrink: 0;
-    padding: var(--space-3) var(--space-4);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-small);
-    background: var(--color-input);
-    color: var(--color-text);
-    font-family: var(--font-meta);
+    padding: 11px 18px;
+    border: 2px solid var(--main-color);
+    border-radius: 5px;
+    background: var(--input-focus);
+    box-shadow: 4px 4px var(--main-color);
+    color: white;
+    font-family: "JetBrains Mono", monospace;
     font-size: 10px;
     font-weight: 600;
     text-decoration: none;
@@ -280,44 +279,34 @@ h1 {
 
 .edit-button:hover,
 .relationship-button:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-raised);
-}
-
-.edit-button:focus-visible,
-.relationship-button:focus-visible {
-    outline: none;
-    box-shadow: var(--focus-ring);
+    transform: translate(-1px, -1px);
+    box-shadow: 5px 5px var(--main-color);
 }
 
 .relationship-button.follow {
-    background: var(--gradient-cyber);
-    border-color: transparent;
-    color: var(--color-text);
+    background: var(--input-focus);
+    color: white;
 }
 
 .relationship-button.requested {
-    background: var(--color-surface-amber);
-    border-color: var(--color-amber);
-    color: var(--color-amber-soft);
+    background: var(--bg-color);
+    color: var(--main-color);
 }
 
 .relationship-button.following {
-    background: var(--color-surface-violet);
-    border-color: var(--color-violet);
-    color: var(--color-violet-soft);
+    background: var(--main-color);
+    color: var(--bg-color);
 }
 
 .relationship-button:active {
-    transform: translateY(1px);
-    box-shadow: none;
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px var(--main-color);
 }
 
 .about {
     max-width: 650px;
-    margin: var(--space-5) 0;
-    color: var(--color-text-soft);
-    font-family: var(--font-body);
+    margin: 18px 0;
+    color: var(--font-color-sub);
     font-size: 14px;
     line-height: 1.6;
 }
@@ -325,25 +314,14 @@ h1 {
 .profile-stats {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-5);
-    color: var(--color-text-muted);
-    font-family: var(--font-meta);
+    gap: 22px;
+    color: var(--font-color-sub);
+    font-family: "JetBrains Mono", monospace;
     font-size: 10px;
 }
 
-.profile-stats span:nth-child(1) strong {
-    color: var(--color-cyan);
-}
-
-.profile-stats span:nth-child(2) strong {
-    color: var(--color-violet);
-}
-
-.profile-stats span:nth-child(3) strong {
-    color: var(--color-coral);
-}
-
 .profile-stats strong {
+    color: var(--main-color);
     font-size: 12px;
 }
 
@@ -354,7 +332,7 @@ h1 {
 
     .profile-information {
         display: block;
-        padding: 0 var(--space-5) var(--space-5);
+        padding: 0 20px 25px;
     }
 
     .avatar {
@@ -365,7 +343,7 @@ h1 {
     }
 
     .profile-details {
-        padding-top: var(--space-5);
+        padding-top: 20px;
     }
 
     h1 {
@@ -377,7 +355,7 @@ h1 {
     }
 
     .profile-stats {
-        gap: var(--space-3);
+        gap: 12px;
     }
 }
 </style>

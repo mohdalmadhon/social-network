@@ -1,3 +1,4 @@
+
 <script setup>
 defineProps({
     about: {
@@ -54,37 +55,35 @@ defineProps({
 
 .eyebrow {
     margin: 0 0 5px;
-    color: var(--color-mint);
-    font-family: var(--font-meta);
+    color: var(--input-focus);
+    font-family: "JetBrains Mono", monospace;
     font-size: clamp(8px, 1.2vw, 9px);
     letter-spacing: 2px;
-    text-transform: uppercase;
 }
 
 h3 {
     margin: 0;
-    color: var(--color-text);
-    font-family: var(--font-body);
+    font-family: "Liter", serif;
     font-size: clamp(20px, 3vw, 25px);
 }
 
 .info-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: 14px;
 }
 
 .info-item {
     display: grid;
     grid-template-columns: minmax(90px, 130px) 1fr;
-    gap: var(--space-5);
-    padding-bottom: var(--space-3);
-    border-bottom: 1px solid var(--color-border);
+    gap: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--main-color);
 }
 
 .info-item span {
-    color: var(--color-text-muted);
-    font-family: var(--font-meta);
+    color: var(--font-color-sub);
+    font-family: "JetBrains Mono", monospace;
     font-size: clamp(8px, 1.2vw, 10px);
     font-weight: 600;
     letter-spacing: 1px;
@@ -93,8 +92,8 @@ h3 {
 
 .info-item p {
     margin: 0;
-    color: var(--color-text-soft);
-    font-family: var(--font-display);
+    color: var(--font-color);
+    font-family: "Hedvig Letters Sans", sans-serif;
     font-size: clamp(12px, 1.8vw, 14px);
     line-height: 1.5;
     word-break: break-word;
@@ -103,7 +102,7 @@ h3 {
 @media (max-width: 500px) {
     .info-item {
         grid-template-columns: 1fr;
-        gap: var(--space-2);
+        gap: 6px;
     }
 }
 </style>
