@@ -1,18 +1,45 @@
 <script setup>
+import { onMounted, ref } from 'vue';
+
 const emit = defineEmits(['changeTab']);
 
-const tabs = [
-    'posts',
-    'friends',
-    'groups',
-    'following',
-    'followers',
-    'about'
-];
+const props = defineProps({
+    type: {
+        type: String,
+        default: 'personal'
+    }
+});
+
+const activeTab = ref('about');
+
+let tabs = [];
+
+if (props.type === 'personal') {
+    tabs = [
+        'posts',
+        'friends',
+        'groups',
+        'following',
+        'followers',
+        'about'
+    ];
+} else {
+    tabs = [
+        'posts',
+        'following',
+        'followers',
+        'about'
+    ];
+}
 
 function selectTab(tab) {
+    activeTab.value = tab;
     emit('changeTab', tab);
 }
+
+onMounted(() => {
+    selectTab('about');
+});
 </script>
 
 <template>
@@ -21,6 +48,7 @@ function selectTab(tab) {
             v-for="tab in tabs"
             :key="tab"
             type="button"
+            :class="{ active: activeTab === tab }"
             @click="selectTab(tab)"
         >
             {{ tab }}
@@ -77,3 +105,4 @@ function selectTab(tab) {
     }
 }
 </style>
+

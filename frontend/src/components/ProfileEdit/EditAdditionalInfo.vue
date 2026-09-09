@@ -43,7 +43,17 @@ async function confirmChanges() {
         return;
     }
 
-    const result = await updateAbout(form);
+    try {
+        const result = await updateAbout(form);
+        if(!result.status) {
+            addNotification(result.message, 'error')
+            return;
+        }
+        addNotification(result.message, 'success')
+    } catch(err) {
+        addNotification(err.message, 'error')
+    }
+    
 
     console.log(result);
 }

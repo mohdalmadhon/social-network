@@ -15,6 +15,7 @@ const loading = ref(true);
 async function getData() {
     try {
         await getUserData();
+        console.log(profileData)
     } catch (err) {
         addNotification('could not get user data', err)
         console.error(err);

@@ -29,8 +29,8 @@ function handleSearchFriends() {
 
         try {
             const result = await getFriends(value);
-
-            friends.value = Object.entries(result)
+            console.log(result)
+            friends.value = Object.entries(result[0])
                 .map(([id, person]) => ({
                     id: Number(id),
                     ...person

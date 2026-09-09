@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"social/database/profiles"
-	"social/database/users"
 	"social/internal/helpers"
 	"strconv"
 )
@@ -201,6 +200,7 @@ func (app *App) CancelRequest(w http.ResponseWriter, r *http.Request) {
 	queryID := r.URL.Query().Get("targetid")
 	targetID, err := strconv.Atoi(queryID)
 	if err != nil || targetID == followerID {
+		log.Println(err, "here")
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "invalid target ID",
@@ -209,6 +209,7 @@ func (app *App) CancelRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := profiles.SendFollowRequest(app.DB, targetID, followerID, -1); err != nil {
+		log.Println(err)
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "invalid target ID",
@@ -235,14 +236,11 @@ func (app *App) GetFollowers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	queryID := r.URL.Query().Get("targetid")
-
 	queryOffset := r.URL.Query().Get("offset")
+
 	offset, err := strconv.Atoi(queryOffset)
-
 	if err != nil || offset < 0 {
-		log.Println(queryOffset)
-		log.Println(err, "here1")
-
+		log.Println(err)
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "invalid offset",
@@ -250,57 +248,42 @@ func (app *App) GetFollowers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if queryID != "" && queryID != "null" {
-		log.Println(queryID)
-		targetID, err := strconv.Atoi(queryID)
-		if err != nil {
-			log.Println(err, "here2")
+	targetID := userID
+
+	if queryID != "" && queryID != "null" && queryID != "undefined" {
+		targetID, err = strconv.Atoi(queryID)
+		if err != nil || targetID <= 0 {
+			log.Println(err)
 			helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 				"status":  false,
 				"message": "invalid target id",
 			})
 			return
 		}
+	}
 
-		followers, err := profiles.GetFollowers(app.DB, targetID, 20, offset)
-		if err != nil {
-			log.Println(err)
-			helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
-				"status":  false,
-				"message": "could not get user followers",
+	followers, err := profiles.GetFollowers(app.DB, targetID, 20, offset)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			helpers.WriteJson(w, http.StatusOK, map[string]any{
+				"status": false,
+				"data":   nil,
 			})
 			return
 		}
 
-		helpers.WriteJson(w, http.StatusOK, map[string]any{
-			"status": true,
-			"data":   followers,
-		})
-	} else {
-		followers, err := users.GetFollowers(app.DB, userID, 20, offset)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				helpers.WriteJson(w, http.StatusOK, map[string]any{
-					"status": false,
-					"data":   nil,
-				})
-				return
-			}
-
-			log.Println(err)
-			helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
-				"status":  false,
-				"message": "could not get followers",
-			})
-			return
-		}
-
-		helpers.WriteJson(w, http.StatusOK, map[string]any{
-			"status": true,
-			"data":   followers,
+		log.Println(err)
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not get followers",
 		})
 		return
 	}
+
+	helpers.WriteJson(w, http.StatusOK, map[string]any{
+		"status": true,
+		"data":   followers,
+	})
 }
 
 func (app *App) GetFollowing(w http.ResponseWriter, r *http.Request) {
@@ -314,10 +297,11 @@ func (app *App) GetFollowing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	queryID := r.URL.Query().Get("targetid")
-
 	queryOffset := r.URL.Query().Get("offset")
+
 	offset, err := strconv.Atoi(queryOffset)
 	if err != nil || offset < 0 {
+		log.Println(err)
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "invalid offset",
@@ -325,54 +309,40 @@ func (app *App) GetFollowing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if queryID != "" && queryID != "null" {
-		targetID, err := strconv.Atoi(queryID)
-		if err != nil {
+	targetID := userID
+	log.Println(queryID)
+	if queryID != "" && queryID != "null" && queryID != "undefined" {
+		targetID, err = strconv.Atoi(queryID)
+		if err != nil || targetID <= 0 {
+			log.Println(err)
 			helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 				"status":  false,
 				"message": "invalid target id",
 			})
 			return
 		}
-		
+	}
 
-		following, err := profiles.GetFollowers(app.DB, targetID, 20, offset)
-		if err != nil {
-			log.Println(err)
-			helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
-				"status":  false,
-				"message": "could not get user followers",
+	following, err := profiles.GetFollowing(app.DB, targetID, 20, offset)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			helpers.WriteJson(w, http.StatusOK, map[string]any{
+				"status": false,
+				"data":   nil,
 			})
 			return
 		}
 
-		helpers.WriteJson(w, http.StatusOK, map[string]any{
-			"status": true,
-			"data":   following,
-		})
-	} else {
-		following, err := users.GetFollowing(app.DB, userID, 20, offset)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				helpers.WriteJson(w, http.StatusOK, map[string]any{
-					"status": false,
-					"data":   nil,
-				})
-				return
-			}
-
-			log.Println(err)
-			helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
-				"status":  false,
-				"message": "could not get followers",
-			})
-			return
-		}
-
-		helpers.WriteJson(w, http.StatusOK, map[string]any{
-			"status": true,
-			"data":   following,
+		log.Println(err)
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not get following",
 		})
 		return
 	}
+
+	helpers.WriteJson(w, http.StatusOK, map[string]any{
+		"status": true,
+		"data":   following,
+	})
 }

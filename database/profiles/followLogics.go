@@ -128,7 +128,7 @@ func GetFollowers(db *sql.DB, targetID, count, offset int) (map[int]models.UserR
 	return followers, nil
 }
 
-func GetFollowing(db *sql.DB, followerID, count int) (map[int]models.UserRegistration, error) {
+func GetFollowing(db *sql.DB, followerID, count, offset int) (map[int]models.UserRegistration, error) {
 	rows, err := db.Query(`
 		SELECT
 			u.id,

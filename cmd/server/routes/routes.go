@@ -45,6 +45,7 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	// posts
 	mux.HandleFunc("GET /api/friends/", app.AuthMiddleware(app.GetFriends))
 	mux.HandleFunc("POST /api/post", app.AuthMiddleware(app.AddPost))
+	mux.HandleFunc("GET /api/posts", app.AuthMiddleware(app.GetHomePosts))
 
 	// post's groups
 	mux.HandleFunc("GET /api/post/groups", app.AuthMiddleware(app.GetPostGroups))

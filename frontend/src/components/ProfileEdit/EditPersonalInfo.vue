@@ -4,6 +4,7 @@ import { reactive } from 'vue';
 import FormField from '@/components/ProfileEdit/FormField.vue';
 import AvatarUploader from '@/components/ProfileEdit/AvatarUploader.vue';
 import { updateUserInfo } from '@/api/users/editProfile';
+import { addNotification } from '@/data/notifications';
 
 const props = defineProps({
     firstName: String,
@@ -30,17 +31,22 @@ function togglePrivacy() {
 }
 
 async function updateInfo() {
-    if(form.IsPrivate) {
+    if (form.IsPrivate) {
         form.IsPrivate = 1
     } else {
         form.IsPrivate = 0
     }
-    const result = await updateUserInfo(form);
-
-    if (!result.status) {
-        console.error('failed to update data');
-        return;
+    try {
+        const result = await updateUserInfo(form);
+        if (!result.status) {
+            addNotification(result.message, 'error')
+            return;
+        }
+        addNotification(result.message, 'success')
+    } catch (err) {
+        addNotification(err.message, 'error')
     }
+
 
     console.log('Profile updated successfully');
 }
@@ -54,10 +60,7 @@ async function updateInfo() {
         </div>
 
         <div class="edit-card">
-            <AvatarUploader
-                :src="props.avatar_path"
-                @change="onAvatarChange"
-            />
+            <AvatarUploader :src="props.avatar_path" @change="onAvatarChange" />
 
             <div class="privacy-setting">
                 <div>
@@ -74,63 +77,28 @@ async function updateInfo() {
                     </p>
                 </div>
 
-                <button
-                    type="button"
-                    class="privacy-button"
-                    :class="{ private: form.IsPrivate }"
-                    @click="togglePrivacy"
-                >
+                <button type="button" class="privacy-button" :class="{ private: form.IsPrivate }"
+                    @click="togglePrivacy">
                     {{ form.IsPrivate ? 'Make public' : 'Make private' }}
                 </button>
             </div>
 
             <form @submit.prevent="updateInfo">
                 <div class="field-grid">
-                    <FormField
-                        id="firstName"
-                        label="First name"
-                        v-model="form.FirstName"
-                        placeholder="First name"
-                    />
+                    <FormField id="firstName" label="First name" v-model="form.FirstName" placeholder="First name" />
 
-                    <FormField
-                        id="lastName"
-                        label="Last name"
-                        v-model="form.LastName"
-                        placeholder="Last name"
-                    />
+                    <FormField id="lastName" label="Last name" v-model="form.LastName" placeholder="Last name" />
 
-                    <FormField
-                        id="username"
-                        label="Username"
-                        v-model="form.Username"
-                        placeholder="Username"
-                    />
+                    <FormField id="username" label="Username" v-model="form.Username" placeholder="Username" />
 
-                    <FormField
-                        id="email"
-                        label="Email"
-                        type="email"
-                        v-model="form.Email"
-                        placeholder="Email address"
-                    />
+                    <FormField id="email" label="Email" type="email" v-model="form.Email" placeholder="Email address" />
 
-                    <FormField
-                        id="password"
-                        label="Password"
-                        type="password"
-                        v-model="form.Password"
-                        placeholder="****************"
-                    />
+                    <FormField id="password" label="Password" type="password" v-model="form.Password"
+                        placeholder="****************" />
                 </div>
 
-                <FormField
-                    id="bio"
-                    label="Bio"
-                    type="textarea"
-                    v-model="form.About"
-                    placeholder="Tell people about yourself"
-                />
+                <FormField id="bio" label="Bio" type="textarea" v-model="form.About"
+                    placeholder="Tell people about yourself" />
 
                 <button type="submit" class="confirm-button">
                     Confirm changes

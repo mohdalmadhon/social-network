@@ -4,7 +4,7 @@ export const notifications = reactive([]);
 
 export function addNotification(message, type = 'success') {
     const id = Date.now();
-
+    console.log('notofication')
     notifications.push({
         id,
         message,

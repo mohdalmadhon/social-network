@@ -20,16 +20,14 @@ const loading = ref(true);
 async function getData() {
     try {
         await getUserData();
-        console.log(profileData)
-        
+        console.log(profileData.value);
     } catch (err) {
-        addNotification('could not get user data', 'error')
+        addNotification('Could not get user data', 'error');
         console.error(err);
     } finally {
         loading.value = false;
     }
 }
-
 
 onMounted(getData);
 </script>
@@ -42,7 +40,6 @@ onMounted(getData);
             <SideNavigation />
 
             <main class="profile-page">
-
                 <div v-if="loading">
                     Loading profile...
                 </div>
@@ -54,19 +51,21 @@ onMounted(getData);
                         :avatar-path="`/uploads/${profileData.userInfo.avatar}`" :num-of-posts="profileData.numOfPosts"
                         :num-of-following="profileData.numOfFollowing" :num-of-followers="profileData.numOfFollowers" />
 
-                    <ProfileTabs @change-tab="activeTab = $event" />
+                    <ProfileTabs type="personal" @change-tab="activeTab = $event" />
+
                     <AboutTab v-if="activeTab === 'about'" :about="profileData.about" />
 
-                    <FollowersTab v-if="activeTab === 'followers'" type="followers"
-                        :followers="profileData.followers" />
+                    <FollowersTab v-if="activeTab === 'followers'" type="followers" :target-id="profileData.userInfo.id"
+                        :follower-list="profileData.followers" />
 
-                    <FollowersTab v-if="activeTab === 'following'" type="following"
-                        :followers="profileData.following" />
+                    <FollowersTab v-if="activeTab === 'following'" type="following" :target-id="profileData.userInfo.id"
+                        :follower-list="profileData.following" />
 
-                    <FollowersTab v-if="activeTab === 'friends'" type="friends" :followers="profileData.friends" />
+                    <FollowersTab v-if="activeTab === 'friends'" type="friends" :target-id="profileData.userInfo.id"
+                        :follower-list="profileData.friends" />
+
                     <GroupTab v-if="activeTab === 'groups'" />
                 </template>
-
             </main>
         </div>
     </div>

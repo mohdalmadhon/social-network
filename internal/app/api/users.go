@@ -103,7 +103,6 @@ func (app *App) UpdateUserInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println(userData.IsPrivate)
 	if err := validation.ValidateUpdateInfo(&userData); err != nil {
-		log.Println(err)
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "invalid data:" + err.Error(),
@@ -124,10 +123,10 @@ func (app *App) UpdateUserInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := users.UpdateUserInfo(app.DB, userID, &userData); err != nil {
-		log.Println(err)
+		_, message := helpers.NormalizeSQLError(err)
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
-			"message": "Error happened updating data",
+			"message": message,
 		})
 		return
 	}
@@ -169,7 +168,7 @@ func (app *App) UpdateUserAvatar(w http.ResponseWriter, r *http.Request) {
 
 	contentType := header.Header.Get("Content-Type")
 
-	if contentType != "image/jpeg" && contentType != "image/png" {
+	if contentType != "image/jpeg" && contentType != "image/png" && contentType != "image/gif" {
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "avatar must be JPG or PNG",
@@ -247,7 +246,7 @@ func (app *App) UpdateUserAbout(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
+	log.Println(userAbout.Instgram)
 	if err := profiles.UpdateUserAbout(app.DB, userID, &userAbout); err != nil {
 		log.Println(err)
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{

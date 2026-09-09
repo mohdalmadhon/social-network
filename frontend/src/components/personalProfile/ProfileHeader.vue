@@ -51,10 +51,9 @@ async function handleRemoveFollow() {
 
     try {
         const result = await requestFollow(id, "DELETE");
-
+        
         if (result.status) {
             followingStatus.value = result.followStatus;
-            addNotification("could not unfollow user", 'error')
             if (oldStatus === 0) {
                 emit('cancel-request');
             } else if (oldStatus === 1) {

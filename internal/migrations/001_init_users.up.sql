@@ -49,3 +49,13 @@ BEGIN
     INSERT INTO user_about (user_id,work,hobbies,education,intrests,travel, website, linkedin, instgram, twitter)
     VALUES (NEW.id, '','','','','','','','','');
 END;
+
+CREATE TRIGGER IF NOT EXISTS trg_avatar_default
+AFTER INSERT ON profile
+FOR EACH ROW
+WHEN NEW.avatar_path IS NULL OR NEW.avatar_path = ''
+BEGIN
+    UPDATE profile
+    SET avatar_path = 'avatars/default.png'
+    WHERE user_id = NEW.user_id;
+END;

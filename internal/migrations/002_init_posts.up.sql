@@ -54,3 +54,14 @@ BEGIN
     SET num_of_posts = num_of_posts - 1
     WHERE user_id = OLD.user_id;
 END; 
+
+CREATE TRIGGER IF NOT EXISTS trg_post_groups
+AFTER INSERT ON user
+FOR EACH ROW
+BEGIN
+    INSERT INTO user_posts_groups (id, name, user_id, users)
+    VALUES (0, 'public', NULL, '');
+
+    INSERT INTO user_posts_groups (id, name, user_id, users)
+    VALUES (-1, 'private', NULL, '');
+END;

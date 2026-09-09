@@ -1,7 +1,9 @@
 <script setup>
+import { useRoute } from 'vue-router';
 import { logout } from '@/api/auth/auth';
 import { addNotification } from '@/data/notifications';
 
+const route = useRoute();
 
 async function logoutHandler() {
     try {
@@ -15,44 +17,32 @@ async function logoutHandler() {
 <template>
     <aside class="side-navigation">
         <nav>
-            <a href="/">
+            <a href="/" :class="{ active: route.path === '/' }">
                 <span class="icon">⌂</span>
                 <span class="label">Home</span>
             </a>
 
-            <a href="/profile" class="active">
+            <a href="/me" :class="{ active: route.path === '/me' }">
                 <span class="icon">◉</span>
                 <span class="label">Profile</span>
             </a>
 
-            <a href="/friends">
-                <span class="icon">♧</span>
-                <span class="label">Friends</span>
-            </a>
 
-            <a href="/groups">
+            <a href="/groups" :class="{ active: route.path === '/groups' }">
                 <span class="icon">▦</span>
                 <span class="label">Groups</span>
             </a>
 
-            <a href="/following">
-                <span class="icon">→</span>
-                <span class="label">Following</span>
-            </a>
 
-            <a href="/followers">
-                <span class="icon">←</span>
-                <span class="label">Followers</span>
-            </a>
         </nav>
 
         <div class="side-bottom">
-            <a href="/settings">
+            <a href="/settings" :class="{ active: route.path === '/settings' }">
                 <span class="icon">⚙</span>
                 <span class="label">Settings</span>
             </a>
 
-            <a @click="logoutHandler">
+            <a href="#" @click.prevent="logoutHandler">
                 <span class="icon">↪</span>
                 <span class="label">Log out</span>
             </a>
@@ -96,6 +86,7 @@ async function logoutHandler() {
     font-size: clamp(10px, 1.4vw, 11px);
     font-weight: 600;
     overflow: hidden;
+    text-decoration: none;
 }
 
 .side-navigation a:hover {
@@ -161,3 +152,4 @@ async function logoutHandler() {
     }
 }
 </style>
+

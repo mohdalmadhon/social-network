@@ -19,7 +19,6 @@ export async function getFriends(searchValue = "", targetId, offset = 0) {
     if (!result.status) {
         throw new Error("could not fetch data");
     }
-
     return result;
 }
 

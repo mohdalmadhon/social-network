@@ -59,7 +59,6 @@ export async function getProfileData(id, count) {
         profileData.NumOfFollowing = result.data.NumOfFollowing;
     }
 
-
     // get followers
     try {
         const result = await getFollowers(id, count, 0)
@@ -139,8 +138,13 @@ export async function getFollowing(id, count, offset = 0) {
     return result;
 }
 
-export async function searchFollows(searchValue = "") {
-    const resp = await fetch(`/api/profile/follows/search?search=${searchValue}`, {
+export async function searchFollows(searchValue = "", targetId) {
+    const params = new URLSearchParams({
+        search: searchValue,
+        targetid: targetId
+    });
+
+    const resp = await fetch(`/api/profile/follows/search?${params.toString()}`, {
         method: "GET",
         credentials: 'include'
     });
@@ -153,8 +157,13 @@ export async function searchFollows(searchValue = "") {
     return result;
 }
 
-export async function searchFollowing(searchValue = "") {
-    const resp = await fetch(`/api/profile/following/search?search=${searchValue}`, {
+export async function searchFollowing(searchValue = "", targetId) {
+    const params = new URLSearchParams({
+        search: searchValue,
+        targetid: targetId
+    });
+    
+    const resp = await fetch(`/api/profile/following/search?${params.toString()}`, {
         method: "GET",
         credentials: 'include'
     });

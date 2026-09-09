@@ -14,7 +14,6 @@ import (
 
 func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
-
 	if !ok {
 		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
 			"status":  false,
@@ -109,5 +108,49 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 	helpers.WriteJson(w, http.StatusCreated, map[string]any{
 		"status":  true,
 		"message": "post uploaded successfully",
+	})
+}
+
+func (app *App) GetHomePosts(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+
+	if !ok {
+		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
+			"status":  false,
+			"message": "could not authorize user",
+		})
+		return
+	}
+
+	offset := 0
+
+	if value := r.URL.Query().Get("offset"); value != "" {
+		var err error
+
+		offset, err = strconv.Atoi(value)
+
+		if err != nil || offset < 0 {
+			helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "invalid offset",
+			})
+			return
+		}
+	}
+
+	posts, err := posts.GetHomePosts(app.DB, userID, offset)
+
+	if err != nil {
+		log.Println(err)
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not get home posts",
+		})
+		return
+	}
+
+	helpers.WriteJson(w, http.StatusOK, map[string]any{
+		"status": true,
+		"posts":  posts,
 	})
 }

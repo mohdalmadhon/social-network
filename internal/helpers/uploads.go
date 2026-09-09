@@ -9,8 +9,8 @@ import (
 	"github.com/google/uuid"
 )
 
-const AVATAR_PATH = "uploads/avatars"
-const POSTS_PATH = "uploads/posts"
+const AVATAR_PATH = "uploads/posts"
+const POSTS_PATH = "uploads/avatars"
 
 func SaveUploads(file multipart.File, header *multipart.FileHeader, Type string) (string, error) {
 	if err := os.MkdirAll(AVATAR_PATH, 0755); err != nil {
