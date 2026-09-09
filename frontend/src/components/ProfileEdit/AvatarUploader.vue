@@ -157,26 +157,34 @@ async function onFileChange(event) {
 </template>
 
 <style scoped>
+@import '../../styles/global.css';
+@import '../../styles/variables.css';
+
 .avatar-uploader {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-4);
+    gap: clamp(12px, 3vw, 20px);
 }
 
 .avatar-preview {
     flex-shrink: 0;
-    width: 5rem;
-    height: 5rem;
+    width: clamp(72px, 12vw, 100px);
+    height: clamp(72px, 12vw, 100px);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    border: 0.1875rem solid var(--color-surface);
-    outline: 2px solid transparent;
+    border: 3px solid var(--color-surface);
+    outline: 2px solid var(--color-cyan);
     border-radius: 50%;
-    background: var(--gradient-action);
+    background: var(--gradient-cyber);
     box-shadow: var(--shadow-raised);
+    transition: outline-color 0.15s;
+}
+
+.avatar-preview:hover {
+    outline-color: var(--color-magenta);
 }
 
 .avatar-preview img {
@@ -193,21 +201,27 @@ async function onFileChange(event) {
 }
 
 .upload-button {
-    padding: var(--space-2) var(--space-4);
-    border: 1px solid var(--color-border);
-    border-radius: 1.5625rem;
-    background: var(--color-surface-raised);
+    padding: clamp(8px, 1.5vw, 10px) clamp(12px, 2vw, 16px);
+    border: 1px solid transparent;
+    border-radius: var(--radius-small);
+    background: var(--gradient-aurora);
+    box-shadow: var(--shadow-raised);
     color: var(--color-text);
-    font-family: var(--font-body);
-    font-size: 0.75rem;
+    font-family: var(--font-meta);
+    font-size: clamp(8px, 1.4vw, 9px);
     font-weight: 600;
     white-space: nowrap;
     cursor: pointer;
-    transition: transform 0.15s ease, filter 0.15s ease;
+    transition: transform 0.1s;
 }
 
 .upload-button:hover:not(:disabled) {
-    filter: brightness(1.15);
+    transform: translateY(-1px);
+}
+
+.upload-button:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
 }
 
 .upload-button:disabled {
@@ -216,22 +230,22 @@ async function onFileChange(event) {
 }
 
 .hint {
-    color: var(--color-text-faint);
+    color: var(--color-blue-soft);
     font-family: var(--font-meta);
-    font-size: 0.6875rem;
+    font-size: clamp(7px, 1.2vw, 8px);
 }
 
 .error {
     color: var(--color-coral);
     font-family: var(--font-meta);
-    font-size: 0.6875rem;
+    font-size: clamp(7px, 1.2vw, 8px);
 }
 
 .hidden-input {
     display: none;
 }
 
-@media (max-width: 25rem) {
+@media (max-width: 400px) {
     .avatar-uploader {
         flex-direction: column;
         align-items: flex-start;

@@ -1,18 +1,26 @@
-export async function getFriends(searchValue = "") {
-    const resp = await fetch(`/api/friends?search=${searchValue}`, {
+export async function getFriends(searchValue = "", targetId, offset = 0) {
+    const params = new URLSearchParams({
+        search: searchValue,
+        targetid: targetId,
+        offset: offset.toString()
+    });
+
+    const resp = await fetch(`/api/friends?${params.toString()}`, {
         method: "GET",
-        credentials: 'include'
+        credentials: "include"
     });
 
     if (!resp.ok) {
-        throw new Error(`could not fetch data`)
+        throw new Error("could not fetch data");
     }
 
     const result = await resp.json();
+
     if (!result.status) {
-        throw new Error(`could not fetch data`)
+        throw new Error("could not fetch data");
     }
-    return result.data;
+
+    return result;
 }
 
 export async function addPostGroup(data = {}) {
@@ -41,11 +49,24 @@ export async function getPostGroups() {
     }
 
     const result = await resp.json();
+    console.log(result.data)
     return result.data;
 }
 
-export async function updatePostGroup() {
-    
+export async function updatePostGroup(data) {
+    console.log(data)
+    const resp = await fetch("/api/post/groups", {
+        method: "PATCH",
+        credentials: 'include',
+        body: JSON.stringify(data)
+    });
+
+    if (!resp.ok) {
+        throw new Error("could not connect to network ")
+    }
+
+    const result = await resp.json();
+    return result;
 }
 
 export async function deletePostGroup(groupID) {

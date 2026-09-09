@@ -49,35 +49,35 @@ const tabs = [
 <style scoped>
 .about-section {
     width: 100%;
-    scroll-margin-top: 6.25rem;
+    scroll-margin-top: 100px;
 }
 
 .section-heading {
-    margin-bottom: var(--space-4);
+    margin-bottom: clamp(14px, 2.5vw, 20px);
 }
 
 .eyebrow {
-    margin: 0 0 var(--space-1);
+    margin: 0 0 5px;
     color: var(--color-violet);
     font-family: var(--font-meta);
-    font-size: 0.625rem;
-    letter-spacing: 0.15em;
+    font-size: clamp(8px, 1.2vw, 9px);
+    letter-spacing: 2px;
+    text-transform: uppercase;
 }
 
 h2 {
     margin: 0;
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.8125rem;
     color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: clamp(20px, 4vw, 29px);
 }
 
 .about-card {
     display: grid;
-    grid-template-columns: minmax(9.375rem, 12.5rem) 1fr;
-    min-height: 22.5rem;
+    grid-template-columns: minmax(150px, 200px) 1fr;
+    min-height: 360px;
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-large);
+    border-radius: var(--radius-medium);
     background: var(--color-surface);
     box-shadow: var(--shadow-raised);
     overflow: hidden;
@@ -87,42 +87,50 @@ h2 {
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
-    padding: var(--space-4);
+    padding: clamp(12px, 2vw, 18px);
     border-right: 1px solid var(--color-border);
-    background: var(--color-sidebar);
+    background: var(--color-surface-violet);
 }
 
 .about-navigation button {
     width: 100%;
-    padding: var(--space-3) var(--space-3);
-    border: none;
-    border-radius: var(--radius-medium);
+    padding: var(--space-3) var(--space-2);
+    border: 1px solid transparent;
+    border-radius: var(--radius-small);
     background: transparent;
     color: var(--color-text-muted);
-    font-family: var(--font-body);
-    font-size: 0.75rem;
+    font-family: var(--font-meta);
+    font-size: clamp(9px, 1.4vw, 11px);
     font-weight: 600;
     text-align: left;
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: 0.15s ease;
 }
 
 .about-navigation button:hover {
+    border-color: var(--color-border);
     background: var(--color-surface-raised);
-    color: var(--color-text-soft);
+    color: var(--color-text);
+}
+
+.about-navigation button:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
 }
 
 .about-navigation button.active {
-    background: var(--gradient-action);
+    border-color: transparent;
+    background: var(--gradient-cyber);
     color: var(--color-text);
+    box-shadow: var(--shadow-raised);
 }
 
 .about-content {
     min-width: 0;
-    padding: var(--space-6);
+    padding: clamp(18px, 3vw, 28px);
 }
 
-@media (max-width: 37.5rem) {
+@media (max-width: 600px) {
     .about-card {
         grid-template-columns: 1fr;
     }

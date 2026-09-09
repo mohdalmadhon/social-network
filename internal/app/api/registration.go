@@ -49,7 +49,7 @@ func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		DOB:       dob,
 		Avatar:    "",
 	}
-
+	
 	err = validation.ValidateRegisterData(&userData)
 	if err != nil {
 		log.Println(err)

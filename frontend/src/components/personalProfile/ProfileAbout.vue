@@ -41,7 +41,7 @@
 
 <style scoped>
 .profile-section {
-    scroll-margin-top: 6.25rem;
+    scroll-margin-top: 100px;
 }
 
 .section-heading {
@@ -52,58 +52,75 @@
     margin: 0 0 var(--space-1);
     color: var(--color-violet);
     font-family: var(--font-meta);
-    font-size: 0.625rem;
-    letter-spacing: 0.15em;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
 }
 
 h2 {
     margin: 0;
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.8125rem;
     color: var(--color-text);
+    font-family: var(--font-display);
+    font-size: 29px;
 }
 
 .about-card {
-    padding: 0.625rem var(--space-5);
+    padding: var(--space-3) var(--space-5);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-large);
-    background: var(--color-surface);
+    border-radius: var(--radius-medium);
+    background: var(--color-surface-violet);
     box-shadow: var(--shadow-raised);
 }
 
 .about-row {
     display: grid;
-    grid-template-columns: 11.25rem 1fr;
+    grid-template-columns: 180px 1fr;
     gap: var(--space-5);
-    padding: var(--space-4) 0;
+    padding: var(--space-5) 0;
     border-bottom: 1px solid var(--color-border);
+}
+
+.about-row:nth-child(1) strong {
+    color: var(--color-cyan-soft);
+}
+
+.about-row:nth-child(2) strong {
+    color: var(--color-blue-soft);
+}
+
+.about-row:nth-child(3) strong {
+    color: var(--color-amber-soft);
+}
+
+.about-row:nth-child(4) strong {
+    color: var(--color-mint-soft);
 }
 
 .label {
     color: var(--color-text-muted);
     font-family: var(--font-meta);
-    font-size: 0.625rem;
+    font-size: 9px;
     font-weight: 600;
 }
 
 .about-row strong {
     color: var(--color-text);
-    font-size: 0.75rem;
+    font-size: 12px;
 }
 
 .about-description {
-    padding: var(--space-4) 0;
+    padding: var(--space-5) 0;
 }
 
 .about-description p {
     margin: var(--space-3) 0 0;
     color: var(--color-text-soft);
-    font-size: 0.8125rem;
+    font-family: var(--font-body);
+    font-size: 13px;
     line-height: 1.7;
 }
 
-@media (max-width: 34.375rem) {
+@media (max-width: 550px) {
     .about-row {
         grid-template-columns: 1fr;
         gap: var(--space-2);

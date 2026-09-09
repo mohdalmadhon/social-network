@@ -1,34 +1,34 @@
 <template>
     <section class="profile-section">
         <div class="section-heading">
-            <p class="eyebrow">YOUR COMMUNITY</p>
-            <h2>Followers</h2>
+            <p class="eyebrow">NETWORK</p>
+            <h2>Following</h2>
         </div>
 
         <div class="list">
             <article class="list-item">
-                <div class="list-avatar">L</div>
+                <div class="list-avatar">T</div>
                 <div>
-                    <strong>Lucas Martin</strong>
-                    <span>@lucasmartin</span>
+                    <strong>Tech Daily</strong>
+                    <span>@techdaily</span>
                 </div>
-                <button>Follow back</button>
+                <button>Following</button>
             </article>
 
             <article class="list-item">
-                <div class="list-avatar">N</div>
+                <div class="list-avatar">C</div>
                 <div>
-                    <strong>Nora Smith</strong>
-                    <span>@norasmith</span>
+                    <strong>Creative Corner</strong>
+                    <span>@creativecorner</span>
                 </div>
-                <button>Follow back</button>
+                <button>Following</button>
             </article>
 
             <article class="list-item">
-                <div class="list-avatar">R</div>
+                <div class="list-avatar">D</div>
                 <div>
-                    <strong>Ryan Cooper</strong>
-                    <span>@ryancooper</span>
+                    <strong>Design Weekly</strong>
+                    <span>@designweekly</span>
                 </div>
                 <button>Following</button>
             </article>
@@ -47,7 +47,7 @@
 
 .eyebrow {
     margin: 0 0 var(--space-1);
-    color: var(--color-violet);
+    color: var(--color-magenta);
     font-family: var(--font-meta);
     font-size: 0.625rem;
     letter-spacing: 0.15em;
@@ -85,7 +85,7 @@ h2 {
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: var(--gradient-action);
+    background: var(--gradient-sunset);
     color: var(--color-text);
     font-family: var(--font-display);
     font-size: 1.25rem;
@@ -114,19 +114,18 @@ h2 {
 
 .list-item button {
     padding: var(--space-2) var(--space-3);
-    border: none;
+    border: 1px solid var(--color-violet);
     border-radius: 1.5625rem;
-    background: var(--gradient-action);
-    color: var(--color-text);
+    background: var(--color-surface-violet);
+    color: var(--color-violet-soft);
     font-family: var(--font-body);
     font-size: 0.5rem;
     font-weight: 700;
     cursor: pointer;
-    transition: transform 0.15s ease, filter 0.15s ease;
+    transition: filter 0.15s ease;
 }
 
 .list-item button:hover {
-    filter: brightness(1.08);
-    transform: translateY(-1px);
+    filter: brightness(1.15);
 }
 </style>

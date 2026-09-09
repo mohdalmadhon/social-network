@@ -1,9 +1,10 @@
 <script setup>
 import { reactive } from 'vue';
 
+import FormField from '@/components/ProfileEdit/FormField.vue';
+import AvatarUploader from '@/components/ProfileEdit/AvatarUploader.vue';
 import { updateUserInfo } from '@/api/users/editProfile';
-import AvatarUploader from './AvatarUploader.vue';
-import FormField from './FormField.vue';
+import { addNotification } from '@/data/notifications';
 
 const props = defineProps({
     firstName: String,
@@ -38,11 +39,11 @@ async function updateInfo() {
     const result = await updateUserInfo(form);
 
     if (!result.status) {
-        console.error('failed to update data');
+        addNotification(result.message);
         return;
     }
 
-    console.log('Profile updated successfully');
+    addNotification(result.message);
 }
 </script>
 
@@ -62,6 +63,10 @@ async function updateInfo() {
             <div class="privacy-setting">
                 <div>
                     <p class="privacy-title">
+                        <span
+                            class="status-dot"
+                            :class="{ private: form.IsPrivate }"
+                        ></span>
                         {{ form.IsPrivate ? 'Private account' : 'Public account' }}
                     </p>
 
@@ -141,50 +146,45 @@ async function updateInfo() {
 </template>
 
 <style scoped>
+@import '../../styles/global.css';
+@import '../../styles/variables.css';
 .edit-section {
-    scroll-margin-top: 6.25rem;
+    scroll-margin-top: 100px;
     width: 100%;
     max-width: 100%;
 }
 
 .section-heading {
-    margin-bottom: var(--space-4);
+    margin-bottom: clamp(14px, 2.5vw, 20px);
 }
 
 .eyebrow {
-    margin: 0 0 var(--space-1);
+    margin: 0 0 5px;
     color: var(--color-violet);
     font-family: var(--font-meta);
-    font-size: 0.625rem;
-    font-weight: 600;
-    letter-spacing: 0.15em;
+    font-size: clamp(8px, 1.2vw, 9px);
+    letter-spacing: 2px;
 }
 
 h2 {
     margin: 0;
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: clamp(1.25rem, 4vw, 1.75rem);
     color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: clamp(20px, 4vw, 29px);
 }
 
 .edit-card {
     display: flex;
     flex-direction: column;
-    gap: var(--space-5);
-    padding: var(--space-5);
+    gap: clamp(16px, 2.5vw, 22px);
+    padding: clamp(14px, 3vw, 25px);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-large);
-    background: var(--color-surface);
+    border-top: 3px solid var(--color-violet);
+    border-radius: var(--radius-medium);
+    background: var(--color-surface-violet);
     box-shadow: var(--shadow-raised);
     max-width: 100%;
     box-sizing: border-box;
-}
-
-.edit-card form {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
 }
 
 .privacy-setting {
@@ -192,74 +192,90 @@ h2 {
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: var(--space-4);
-    padding: var(--space-4);
+    gap: clamp(12px, 2.5vw, 20px);
+    padding: clamp(12px, 2.5vw, 18px);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-medium);
-    background: var(--color-surface-raised);
+    border-radius: var(--radius-small);
+    background: var(--color-surface);
 }
 
 .privacy-title {
-    margin: 0 0 var(--space-1);
-    font-family: var(--font-body);
-    font-size: 0.8125rem;
-    font-weight: 700;
+    margin: 0 0 5px;
+    display: flex;
+    align-items: center;
     color: var(--color-text);
+    font-family: var(--font-meta);
+    font-size: clamp(11px, 1.6vw, 12px);
+    font-weight: 700;
+}
+
+.status-dot {
+    width: 7px;
+    height: 7px;
+    margin-right: 7px;
+    border-radius: 50%;
+    background: var(--color-mint);
+    box-shadow: 0 0 6px var(--color-mint);
+}
+
+.status-dot.private {
+    background: var(--color-coral);
+    box-shadow: 0 0 6px var(--color-coral);
 }
 
 .privacy-description {
     margin: 0;
-    font-family: var(--font-body);
-    font-size: 0.75rem;
     color: var(--color-text-muted);
+    font-size: clamp(11px, 1.6vw, 12px);
 }
 
 .privacy-button {
     flex-shrink: 0;
-    padding: var(--space-3) var(--space-4);
-    border: 1px solid var(--color-border);
-    border-radius: 1.5625rem;
-    background: var(--color-surface);
-    color: var(--color-text-soft);
-    font-family: var(--font-body);
-    font-size: 0.75rem;
+    padding: clamp(9px, 1.8vw, 11px) clamp(14px, 2.5vw, 18px);
+    border: 1px solid transparent;
+    border-radius: var(--radius-small);
+    background: var(--gradient-aurora);
+    box-shadow: var(--shadow-raised);
+    color: var(--color-text);
+    font-family: var(--font-meta);
+    font-size: clamp(9px, 1.4vw, 10px);
     font-weight: 600;
     cursor: pointer;
-    transition: transform 0.15s ease, filter 0.15s ease;
+    transition: transform 0.1s;
 }
 
 .privacy-button:hover {
-    filter: brightness(1.1);
+    transform: translateY(-1px);
 }
 
 .privacy-button.private {
-    background: var(--gradient-action);
-    border-color: transparent;
-    color: var(--color-text);
+    background: var(--color-surface-coral);
+    border-color: var(--color-coral);
+    color: var(--color-coral-soft);
 }
 
 .field-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(13.75rem, 100%), 1fr));
-    gap: var(--space-4);
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+    gap: clamp(14px, 2.5vw, 20px);
 }
 
 .confirm-button {
     align-self: flex-start;
-    padding: var(--space-3) var(--space-5);
-    border: none;
-    border-radius: 1.5625rem;
-    background: var(--gradient-action);
+    padding: clamp(11px, 2vw, 13px) clamp(16px, 3vw, 22px);
+    border: 1px solid transparent;
+    border-radius: var(--radius-small);
+    background: var(--gradient-cyber);
+    box-shadow: var(--shadow-raised);
     color: var(--color-text);
-    font-family: var(--font-body);
-    font-size: 0.8125rem;
-    font-weight: 700;
+    font-family: var(--font-meta);
+    font-size: clamp(9px, 1.4vw, 10px);
+    font-weight: 600;
     cursor: pointer;
-    transition: transform 0.15s ease, filter 0.15s ease;
+    transition: transform 0.1s;
 }
 
 .confirm-button:hover {
-    filter: brightness(1.08);
     transform: translateY(-1px);
 }
 </style>

@@ -1,13 +1,14 @@
 <script setup>
 import SideNavigation from '@/components/layout/SideNavigation.vue';
 import TopNavigation from '@/components/layout/TopNavigation.vue';
-
+import EditProfileTabs from '@/components/ProfileEdit/EditProfileTabs.vue';
+import EditPersonalInfo from '@/components/ProfileEdit/EditPersonalInfo.vue';
+import EditAdditionalInfo from '@/components/ProfileEdit/EditAdditionalInfo.vue';
+import '@/styles/variables.css';
+import '@/styles/global.css';
 import { onMounted, ref } from 'vue';
 import { getUserData } from '@/api/users/personalProfile';
 import { profileData } from '@/data/usersData';
-import EditProfileTabs from '@/components/profile/ProfileEdit/EditProfileTabs.vue';
-import EditPersonalInfo from '@/components/profile/ProfileEdit/EditPersonalInfo.vue';
-import EditAdditionalInfo from '@/components/profile/ProfileEdit/EditAdditionalInfo.vue';
 
 const activeTab = ref('personal');
 const loading = ref(true);
@@ -28,13 +29,13 @@ onMounted(getData);
 </script>
 
 <template>
-    <div class="page-shell">
+    <div class="facebook-layout">
         <TopNavigation />
 
-        <div class="page-body">
-            <SideNavigation active-page="profile" />
+        <div class="page-layout">
+            <SideNavigation />
 
-            <main class="page-content">
+            <main class="profile-page">
                 <div class="page-heading">
                     <p class="eyebrow">SETTINGS</p>
                     <h1>Edit Profile</h1>
@@ -55,52 +56,51 @@ onMounted(getData);
 </template>
 
 <style scoped>
-.page-shell {
+@import '../../styles/global.css';
+@import '../../styles/variables.css';
+.facebook-layout {
     min-height: 100vh;
     background: var(--color-background);
-    color: var(--color-text);
-    font-family: var(--font-body);
 }
 
-.page-body {
+.page-layout {
     display: flex;
-    align-items: flex-start;
+    padding-top: 64px;
 }
 
-.page-content {
-    flex: 1;
-    min-width: 0;
+.profile-page {
     width: 100%;
-    max-width: 46rem;
+    max-width: 1100px;
     margin: 0 auto;
-    padding: var(--space-6) var(--space-5) calc(4.25rem + var(--space-6));
+    padding: 25px 30px 60px;
 }
 
 .page-heading .eyebrow {
-    margin: 0 0 var(--space-1);
-    color: var(--color-violet);
+    margin: 0 0 5px;
+    color: var(--color-cyan);
     font-family: var(--font-meta);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 0.15em;
+    font-size: 9px;
+    letter-spacing: 2px;
 }
 
 .page-heading h1 {
     margin: 0;
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: clamp(1.75rem, 4vw, 2.25rem);
     color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 36px;
 }
 
 .profile-content {
     width: 100%;
-    margin-top: var(--space-5);
 }
 
-@media (min-width: 64rem) {
-    .page-content {
-        padding-bottom: var(--space-7);
+@media (max-width: 800px) {
+    .page-layout {
+        display: block;
+    }
+
+    .profile-page {
+        padding: 20px 15px 50px;
     }
 }
 </style>

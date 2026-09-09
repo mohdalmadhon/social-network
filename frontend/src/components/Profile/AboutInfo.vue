@@ -49,58 +49,58 @@ defineProps({
 }
 
 .content-heading {
-    margin-bottom: var(--space-5);
+    margin-bottom: clamp(18px, 3vw, 25px);
 }
 
 .eyebrow {
-    margin: 0 0 var(--space-1);
-    color: var(--color-violet);
+    margin: 0 0 5px;
+    color: var(--color-mint);
     font-family: var(--font-meta);
-    font-size: 0.625rem;
-    letter-spacing: 0.15em;
+    font-size: clamp(8px, 1.2vw, 9px);
+    letter-spacing: 2px;
+    text-transform: uppercase;
 }
 
 h3 {
     margin: 0;
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.5625rem;
     color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: clamp(20px, 3vw, 25px);
 }
 
 .info-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-4);
+    gap: var(--space-3);
 }
 
 .info-item {
     display: grid;
-    grid-template-columns: minmax(5.625rem, 8.125rem) 1fr;
+    grid-template-columns: minmax(90px, 130px) 1fr;
     gap: var(--space-5);
-    padding-bottom: var(--space-4);
+    padding-bottom: var(--space-3);
     border-bottom: 1px solid var(--color-border);
 }
 
 .info-item span {
     color: var(--color-text-muted);
     font-family: var(--font-meta);
-    font-size: 0.625rem;
+    font-size: clamp(8px, 1.2vw, 10px);
     font-weight: 600;
-    letter-spacing: 0.06em;
+    letter-spacing: 1px;
     text-transform: uppercase;
 }
 
 .info-item p {
     margin: 0;
     color: var(--color-text-soft);
-    font-family: var(--font-body);
-    font-size: 0.875rem;
+    font-family: var(--font-display);
+    font-size: clamp(12px, 1.8vw, 14px);
     line-height: 1.5;
     word-break: break-word;
 }
 
-@media (max-width: 31.25rem) {
+@media (max-width: 500px) {
     .info-item {
         grid-template-columns: 1fr;
         gap: var(--space-2);
