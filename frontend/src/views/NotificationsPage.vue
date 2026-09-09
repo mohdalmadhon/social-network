@@ -57,31 +57,31 @@ function notificationForDisplay(notification) {
 
   let action = ''
 
-  if (
-    notification.category === 'requests' &&
-    notification.type === 'follow_request'
-  ) {
+  if (notification.category === 'requests' && notification.type === 'follow_request') {
     action = 'follow'
   }
 
-  if (
-    notification.category === 'groups' &&
-    notification.type === 'join_request'
-  ) {
-    action = 'join_request'
+  if (notification.category === 'groups' && notification.type === 'join_request') {
+    if (notification.requestStatus === 'accepted') {
+      action = 'accept'
+    } else if (notification.requestStatus === 'rejected') {
+      action = 'reject'
+    } else {
+      action = 'join_request'
+    }
   }
 
-  if (
-    notification.category === 'groups' &&
-    notification.type === 'invitation'
-  ) {
-    action = 'invitation'
+  if (notification.category === 'groups' && notification.type === 'invitation') {
+    if (notification.invitationStatus === 'accepted') {
+      action = 'join'
+    } else if (notification.invitationStatus === 'declined') {
+      action = 'decline'
+    } else {
+      action = 'invitation'
+    }
   }
 
-  if (
-    notification.category === 'events' &&
-    notification.type === 'event_created'
-  ) {
+  if (notification.category === 'events' && notification.type === 'event_created') {
     action = 'rsvp'
   }
 
@@ -250,7 +250,10 @@ onMounted(loadNotifications)
             </button>
           </div>
 
-          <span v-else-if="item.action" class="notification-item__result">
+          <span v-else-if="item.action" class="notification-item__result" :class="{
+            'notification-item__result--negative':
+              item.action === 'reject' || item.action === 'decline'
+          }">
             {{ actionLabel(item.action) }}
           </span>
         </article>
@@ -471,5 +474,9 @@ onMounted(loadNotifications)
   .notification-item__result {
     grid-column: auto;
   }
+}
+
+.notification-item__result--negative {
+  color: var(--color-coral);
 }
 </style>
