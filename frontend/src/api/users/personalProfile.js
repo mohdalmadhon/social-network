@@ -35,12 +35,14 @@ export async function getUserData() {
     profileData.about.work = result.data.About.Work
     profileData.about.education = result.data.About.Education
     profileData.about.travel = result.data.About.Travel
-    profileData.about.intrests = result.data.About.Intrests
+    profileData.about.intrests = result.data.About.interests
     profileData.about.hobbies = result.data.About.Hobbies
     profileData.about.website = result.data.About.Website
     profileData.about.linkedin = result.data.About.Linkedin
-    profileData.about.instgram = result.data.About.Instgram
+    profileData.about.instgram = result.data.About.instagram
     profileData.about.twitter = result.data.About.Twitter
     profileData.followers = result.data.Followers;
     profileData.following = result.data.Following;
+    profileData.friends = result.data.Friends;
+    console.log(result.data)
 }

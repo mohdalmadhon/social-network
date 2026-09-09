@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	database "social/database/users"
+	"social/database/users"
 	"social/internal/app/tokens"
 	"social/internal/helpers"
 	"social/internal/models"
@@ -24,7 +24,7 @@ func (app *App) LoggingUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hashedPassword, err := database.GetHashedPassowrd(app.DB, logger.Identifier)
+	hashedPassword, err := users.GetHashedPassowrd(app.DB, logger.Identifier)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
@@ -49,7 +49,7 @@ func (app *App) LoggingUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := database.GetUserID(app.DB, logger.Identifier)
+	userID := users.GetUserID(app.DB, logger.Identifier)
 	if userID == -1 {
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
@@ -86,30 +86,9 @@ func (app *App) LoggingUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) AuthorizeSession(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("token")
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]any{
-			"status":  false,
-			"message": "not authenticated",
-		})
-		return
-	}
-
-	_, err = tokens.VerifyToken(cookie.Value)
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]any{
-			"status":  false,
-			"message": "invalid or expired session",
-		})
-		return
-	}
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+
 	json.NewEncoder(w).Encode(map[string]any{
 		"status":  true,
 		"message": "valid session",

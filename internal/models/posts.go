@@ -12,6 +12,7 @@ type CreatePostRequest struct {
 	Content             string `json:"content"`
 	Privacy             string `json:"privacy"`
 	SelectedFollowerIDs []int  `json:"selectedFollowerIds"`
+	ImagePath           string `json:"-"`
 }
 
 type Post struct {

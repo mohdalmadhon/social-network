@@ -1,99 +1,150 @@
 <script setup>
-import { onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted, ref } from 'vue';
 
-import { userData } from '@/stores/userData'
-import TopNavigation from '@/components/layout/TopNavigation.vue'
-import SideNavigation from '@/components/layout/SideNavigation.vue'
-import ProfileHeader from '@/components/profile/personalProfile/ProfileHeader.vue'
-import ProfileTabs from '@/components/profile/personalProfile/ProfileTabs.vue'
-import ProfileAbout from '@/components/profile/personalProfile/ProfileAbout.vue'
-import ProfileFollowers from '@/components/profile/personalProfile/ProfileFollowers.vue'
+import SideNavigation from '@/components/layout/SideNavigation.vue';
+import TopNavigation from '@/components/layout/TopNavigation.vue';
+import ProfileHeader from '@/components/personalProfile/ProfileHeader.vue';
+import ProfileTabs from '@/components/personalProfile/ProfileTabs.vue';
+import PrivateProfileIcon from '@/components/ProfileEdit/PrivateProfileIcon.vue';
 
+import { getProfileData } from '@/api/users/profiles';
+import { profileData } from '@/data/usersData';
 
-const router = useRouter()
+import { useRoute } from 'vue-router';
+import { addNotification } from '@/data/notifications';
+import AboutTab from '@/components/Profile/AboutTab.vue';
+import FollowersTab from '@/components/Profile/FollowersTab.vue';
+
+const route = useRoute();
+
+const activeTab = ref('about');
+const loading = ref(true);
+const showPrivateProfile = ref(false);
 
 async function getData() {
+    const id = route.query.id;
+    const count = 10;
     try {
-        const resp = await fetch('/api/me', {
-            method: 'GET',
-            credentials: 'include'
-        })
-
-        const result = await resp.json()
-
-
-        if (!resp.ok || !result.status) {
-            router.replace('/login')
-            return
-        }
-
-        userData.value = {
-            ...userData.value,
-            ...result.data.user,
-        }
-
-        userData.value.numOfFollowers = result.data.profile.Followers;
-        userData.value.numOfFollowing = result.data.profile.Following;
-        userData.value.numOfPosts = result.data.profile.Posts;
-        userData.value.about = result.data.profile.About;
-        if (result.data.profile.Avatar_Path) {
-            userData.value.avatar_path = 
-                result.data.profile.Avatar_Path
-                    .replaceAll('\\', '/')
-                    .replace('..', '')
-        }
-        console.log(userData)
+        await getProfileData(id, count);
+        showPrivateProfile.value = !profileData.show;
     } catch (err) {
-        console.error(err)
-        router.replace('/login')
+        addNotification('could not get user data', 'error')
+        console.error(err);
+    } finally {
+        loading.value = false;
     }
 }
 
-onMounted(() => {
-    getData()
-})
+function handleUnfollow() {
+    if (profileData.userInfo.isPrivate === 1) {
+        showPrivateProfile.value = true;
+    }
+}
+
+function handleFollow() {
+    showPrivateProfile.value = false;
+}
+
+onMounted(getData);
 </script>
 
 <template>
-    <header>
+    <div class="facebook-layout">
         <TopNavigation />
-    </header>
 
-    <div class="app-body">
-        <SideNavigation />
+        <div class="page-layout">
+            <SideNavigation />
 
-        <main>
-            <ProfileHeader />
-            <ProfileTabs />
+            <main class="profile-page">
+                <div v-if="loading">
+                    Loading profile...
+                </div>
 
-            <div class="profile-content">
-                <ProfileAbout />
-                <ProfileFollowers />
-            </div>
-        </main>
+                <template v-else>
+                    <ProfileHeader
+                        :first-name="profileData.userInfo.firstName"
+                        :last-name="profileData.userInfo.lastName"
+                        :username="profileData.userInfo.userName"
+                        :bio="profileData.about.bio"
+                        :avatar-path="`/uploads/${profileData.userInfo.avatar}`"
+                        :num-of-posts="profileData.numOfPosts"
+                        :num-of-following="profileData.numOfFollowing"
+                        :num-of-followers="profileData.numOfFollowers"
+                        :add-edit="false"
+                        :is-following="profileData.isFollowing"
+                        @unfollow="handleUnfollow"
+                        @follow="handleFollow"
+                    />
+
+                    <template v-if="!showPrivateProfile">
+                        <section class="profile-content">
+                            <ProfileTabs
+                                v-if="profileData.show"
+                                @change-tab="activeTab = $event"
+                            />
+
+                            <AboutTab
+                                v-if="profileData.show && activeTab === 'about'"
+                                :about="profileData.about"
+                            />
+
+                            <FollowersTab
+                                v-if="profileData.show && activeTab === 'followers'"
+                                :followers="profileData.followers"
+                            />
+
+                            <FollowersTab
+                                v-if="profileData.show && activeTab === 'following'"
+                                :followers="profileData.following"
+                            />
+                            
+                            <PrivateProfileIcon
+                                v-else-if="!profileData.show"
+                            />
+                        </section>
+                    </template>
+
+                    <section
+                        v-else
+                        class="profile-content"
+                    >
+                        <PrivateProfileIcon />
+                    </section>
+                </template>
+            </main>
+        </div>
     </div>
 </template>
 
 <style scoped>
-.app-body {
-    display: flex;
-    align-items: flex-start;
+.facebook-layout {
+    min-height: 100vh;
+    background: var(--color-background);
 }
 
-main {
-    flex: 1;
-    min-width: 0;
-    padding: 24px 32px;
-    max-width: 1240px;
+.page-layout {
+    display: flex;
+    padding-top: 64px;
+}
+
+.profile-page {
+    width: 100%;
+    max-width: var(--content-max-width);
     margin: 0 auto;
-    box-sizing: border-box;
+    padding: var(--space-6) var(--space-6) var(--space-7);
 }
 
 .profile-content {
-    display: grid;
-    grid-template-columns: 320px 1fr;
-    gap: 24px;
-    margin-top: 24px;
+    width: 100%;
+}
+
+@media (max-width: 800px) {
+    .page-layout {
+        display: block;
+    }
+
+    .profile-page {
+        padding: var(--space-5) var(--space-4) var(--space-6);
+    }
 }
 </style>

@@ -1,7 +1,9 @@
 package helpers
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 )
@@ -17,6 +19,10 @@ func NormalizeSQLError(err error) (int, string) {
 		return http.StatusOK, ""
 	}
 
+	if errors.Is(err, sql.ErrNoRows) {
+		return http.StatusNotFound, "The requested information could not be found."
+	}
+
 	message := err.Error()
 
 	switch {
@@ -26,14 +32,17 @@ func NormalizeSQLError(err error) (int, string) {
 	case strings.Contains(message, "UNIQUE constraint failed: user.username"):
 		return http.StatusConflict, "This username is already taken."
 
-	case strings.Contains(message, "UNIQUE constraint failed"):
-		return http.StatusConflict, "This information already exists."
+	case strings.Contains(message, "UNIQUE constraint failed: profile.user_id"):
+		return http.StatusConflict, "A profile already exists for this user."
 
 	case strings.Contains(message, "FOREIGN KEY constraint failed"):
 		return http.StatusBadRequest, "The requested data could not be found."
 
 	case strings.Contains(message, "NOT NULL constraint failed"):
 		return http.StatusBadRequest, "Required information is missing."
+
+	case strings.Contains(message, "CHECK constraint failed"):
+		return http.StatusBadRequest, "Some of the provided information is invalid."
 
 	default:
 		return http.StatusInternalServerError, "Something went wrong. Please try again."

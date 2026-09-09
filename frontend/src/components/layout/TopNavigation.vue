@@ -1,5 +1,18 @@
 <script setup>
-  import OrbitLogo from './OrbitLogo.vue'
+import { onMounted, ref } from 'vue'
+import OrbitLogo from './OrbitLogo.vue'
+import { getNotifications } from '@/api/notifications.js'
+
+const notificationUnreadCount = ref(0)
+
+onMounted(async () => {
+  try {
+    const result = await getNotifications('all')
+    notificationUnreadCount.value = result?.unreadCount || 0
+  } catch {
+    notificationUnreadCount.value = 0
+  }
+})
 </script>
 
 <template>
@@ -22,7 +35,7 @@
       </a>
       <a class="icon-link orbit-touch-target" href="/notifications" aria-label="Notifications">
         <span aria-hidden="true">♢</span>
-        <span class="badge badge--notification">3</span>
+        <span v-if="notificationUnreadCount" class="badge badge--notification">{{ notificationUnreadCount }}</span>
       </a>
       <a class="avatar orbit-touch-target" href="/profile" aria-label="My profile">N</a>
     </nav>
