@@ -38,18 +38,18 @@ func Create(db *sql.DB, userID int, request models.CreateNotificationRequest) (m
 }
 
 func List(db *sql.DB, userID int, category string) ([]models.Notification, error) {
-	query := notificationSelect + ` WHERE user_id = ?`
+	query := notificationSelect + ` WHERE n.user_id = ?`
 	args := []any{userID}
 
 	if category != "" && category != "all" {
 		if !IsCategory(category) {
 			return nil, ErrInvalidCategory
 		}
-		query += ` AND category = ?`
+		query += ` AND n.category = ?`
 		args = append(args, category)
 	}
 
-	query += ` ORDER BY created_at DESC, id DESC LIMIT 100`
+	query += ` ORDER BY n.created_at DESC, n.id DESC LIMIT 100`
 	rows, err := db.Query(query, args...)
 	if err != nil {
 		return nil, err
@@ -97,7 +97,13 @@ func MarkAllRead(db *sql.DB, userID int) error {
 }
 
 func GetByID(db *sql.DB, userID int, notificationID int64) (models.Notification, error) {
-	return scanNotification(db.QueryRow(notificationSelect+` WHERE user_id = ? AND id = ?`, userID, notificationID))
+	return scanNotification(
+		db.QueryRow(
+			notificationSelect+` WHERE n.user_id = ? AND n.id = ?`,
+			userID,
+			notificationID,
+		),
+	)
 }
 
 func IsCategory(category string) bool {
@@ -110,8 +116,33 @@ func IsCategory(category string) bool {
 }
 
 const notificationSelect = `
-	SELECT id, user_id, actor_id, category, type, message, related_id, is_read, created_at
-	FROM notifications
+	SELECT
+		n.id,
+		n.user_id,
+		n.actor_id,
+		n.category,
+		n.type,
+		n.message,
+		n.related_id,
+		n.is_read,
+		n.created_at,
+
+		gjr.status AS request_status,
+		gi.status AS invitation_status
+
+	FROM notifications n
+
+	LEFT JOIN group_join_requests gjr
+		ON n.category = 'groups'
+		AND n.type = 'join_request'
+		AND gjr.group_id = n.related_id
+		AND gjr.user_id = n.actor_id
+
+	LEFT JOIN group_invitations gi
+		ON n.category = 'groups'
+		AND n.type = 'invitation'
+		AND gi.group_id = n.related_id
+		AND gi.user_id = n.user_id
 `
 
 type rowScanner interface {
@@ -131,6 +162,8 @@ func scanNotification(row rowScanner) (models.Notification, error) {
 		&notification.RelatedID,
 		&isRead,
 		&notification.CreatedAt,
+		&notification.RequestStatus,
+		&notification.InvitationStatus,
 	); err != nil {
 		return models.Notification{}, err
 	}
