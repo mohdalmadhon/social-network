@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"social/internal/helpers"
 	"strings"
 )
 
@@ -424,13 +425,34 @@ func (app App) JoinRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = app.DB.Exec(`
+	tx, err := app.DB.Begin()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "failed to send join request",
+		})
+		return
+	}
+	defer tx.Rollback()
+
+	result, err := tx.Exec(`
 		INSERT INTO group_join_requests (group_id, user_id, status)
 		VALUES (?, ?, 'pending')
-		ON CONFLICT(group_id, user_id)
-		DO UPDATE SET status = 'pending'
 	`, groupID, userID)
 
+	if err != nil {
+		status, message := helpers.NormalizeSQLError(err)
+		if status == http.StatusConflict {
+			message = "join request is already pending"
+		}
+		writeJSON(w, status, map[string]any{
+			"status":  false,
+			"message": message,
+		})
+		return
+	}
+
+	requestID, err := result.LastInsertId()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
@@ -440,14 +462,21 @@ func (app App) JoinRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var creatorID int
-	
-	err = app.DB.QueryRow(`
+
+	err = tx.QueryRow(`
     SELECT creator_id
     FROM groups
     WHERE id = ?
 	`, groupID).Scan(&creatorID)
-	
-	_, err = app.DB.Exec(`
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "failed to notify group creator",
+		})
+		return
+	}
+
+	_, err = tx.Exec(`
 	INSERT INTO notifications (
 		user_id,
 		actor_id,
@@ -464,8 +493,23 @@ func (app App) JoinRequest(w http.ResponseWriter, r *http.Request) {
 		"groups",
 		"join_request",
 		"requested to join your group",
-		groupID,
+		requestID,
 	)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "failed to notify group creator",
+		})
+		return
+	}
+
+	if err = tx.Commit(); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "failed to send join request",
+		})
+		return
+	}
 
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"status":  true,
@@ -485,14 +529,76 @@ func (app App) UndoJoinRequest(w http.ResponseWriter, r *http.Request) {
 
 	groupID := r.PathValue("id")
 
-	_, err = app.DB.Exec(`
-		DELETE FROM group_join_requests
+	tx, err := app.DB.Begin()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "failed to undo join request",
+		})
+		return
+	}
+	defer tx.Rollback()
+
+	var requestID int64
+	err = tx.QueryRow(`
+		SELECT id
+		FROM group_join_requests
 		WHERE group_id = ?
 		  AND user_id = ?
 		  AND status = 'pending'
-	`, groupID, userID)
+	`, groupID, userID).Scan(&requestID)
+	if err == sql.ErrNoRows {
+		if err = tx.Commit(); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]any{
+				"status":  false,
+				"message": "failed to undo join request",
+			})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"status": true,
+		})
+		return
+	}
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "failed to undo join request",
+		})
+		return
+	}
+
+	_, err = tx.Exec(`
+		DELETE FROM notifications
+		WHERE category = 'groups'
+		  AND type = 'join_request'
+		  AND related_id = ?
+	`, requestID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "failed to undo join request",
+		})
+		return
+	}
+
+	_, err = tx.Exec(`
+		DELETE FROM group_join_requests
+		WHERE id = ?
+		  AND group_id = ?
+		  AND user_id = ?
+		  AND status = 'pending'
+	`, requestID, groupID, userID)
 
 	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "failed to undo join request",
+		})
+		return
+	}
+
+	if err = tx.Commit(); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
 			"message": "failed to undo join request",

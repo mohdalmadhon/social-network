@@ -266,13 +266,25 @@ func (app App) applyNotificationAction(userID int, notification models.Notificat
 				return errors.New("join request is missing requester")
 			}
 
+			var groupID int64
+			err := app.DB.QueryRow(`
+				SELECT group_id
+				FROM group_join_requests
+				WHERE id = ?
+				  AND user_id = ?
+				  AND status = 'pending'
+			`, *notification.RelatedID, *notification.ActorID).Scan(&groupID)
+			if err != nil {
+				return err
+			}
+
 			switch action {
 			case "accept":
 				return groups.AcceptJoinRequest(
 					app.DB,
 					userID,
 					*notification.ActorID,
-					*notification.RelatedID,
+					groupID,
 				)
 
 			case "reject":
@@ -280,7 +292,7 @@ func (app App) applyNotificationAction(userID int, notification models.Notificat
 					app.DB,
 					userID,
 					*notification.ActorID,
-					*notification.RelatedID,
+					groupID,
 				)
 
 			default:

@@ -149,6 +149,140 @@ func TestGroupMigrationsUpDownUp(t *testing.T) {
 	assertColumn(t, db, "groups", "creator_id", true)
 }
 
+func TestGroupJoinRequestHistoryMigrationPreservesData(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.SetMaxOpenConns(1)
+	defer db.Close()
+
+	runMigrationFile(t, db, "001_init_users.up.sql")
+	runMigrationFile(t, db, "003_init_chats.up.sql")
+	runMigrationFile(t, db, "006_notifications.up.sql")
+	runMigrationFile(t, db, "009_add_creator_id_to_groups.up.sql")
+	runMigrationFile(t, db, "011_create_group_join_requests.up.sql")
+
+	_, err = db.Exec(`
+		INSERT INTO user (id, email, username, first_name, last_name, dob, password)
+		VALUES
+			(1, 'owner@orbit.test', 'owner', 'Group', 'Owner', '2000-01-01', 'password'),
+			(2, 'requester@orbit.test', 'requester', 'Group', 'Requester', '2000-01-01', 'password');
+		INSERT INTO groups (id, title, description, creator_id)
+		VALUES (7, 'Orbit hikers', 'Walks', 1);
+		INSERT INTO group_join_requests (group_id, user_id, status)
+		VALUES (7, 2, 'rejected');
+		INSERT INTO notifications (id, user_id, actor_id, category, type, message, related_id)
+		VALUES (20, 1, 2, 'groups', 'join_request', 'requested to join your group', 7);
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runMigrationFile(t, db, "014_group_join_request_history.up.sql")
+
+	assertColumn(t, db, "group_join_requests", "id", true)
+
+	var requestID int64
+	var status string
+	err = db.QueryRow(`
+		SELECT id, status
+		FROM group_join_requests
+		WHERE group_id = 7 AND user_id = 2
+	`).Scan(&requestID, &status)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status != "rejected" {
+		t.Fatalf("status = %q, expected rejected", status)
+	}
+
+	var relatedID int64
+	err = db.QueryRow("SELECT related_id FROM notifications WHERE id = 20").Scan(&relatedID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if relatedID != requestID {
+		t.Fatalf("notification related_id = %d, expected request id %d", relatedID, requestID)
+	}
+
+	_, err = db.Exec(`
+		INSERT INTO group_join_requests (group_id, user_id, status)
+		VALUES (7, 2, 'pending')
+	`)
+	if err != nil {
+		t.Fatalf("new pending request after rejection failed: %v", err)
+	}
+
+	_, err = db.Exec(`
+		INSERT INTO group_join_requests (group_id, user_id, status)
+		VALUES (7, 2, 'pending')
+	`)
+	if err == nil {
+		t.Fatal("duplicate pending request succeeded")
+	}
+}
+
+func TestGroupDeletionCleansUpJoinRequestNotifications(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.SetMaxOpenConns(1)
+	defer db.Close()
+
+	if _, err = db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		t.Fatal(err)
+	}
+
+	runMigrationFile(t, db, "001_init_users.up.sql")
+	runMigrationFile(t, db, "003_init_chats.up.sql")
+	runMigrationFile(t, db, "006_notifications.up.sql")
+	runMigrationFile(t, db, "009_add_creator_id_to_groups.up.sql")
+	runMigrationFile(t, db, "011_create_group_join_requests.up.sql")
+	runMigrationFile(t, db, "013_add_notification_cleanup_triggers.up.sql")
+	runMigrationFile(t, db, "014_group_join_request_history.up.sql")
+	runMigrationFile(t, db, "015_fix_group_notification_cleanup.up.sql")
+
+	_, err = db.Exec(`
+		INSERT INTO user (id, email, username, first_name, last_name, dob, password)
+		VALUES
+			(1, 'owner@orbit.test', 'owner', 'Group', 'Owner', '2000-01-01', 'password'),
+			(2, 'requester@orbit.test', 'requester', 'Group', 'Requester', '2000-01-01', 'password'),
+			(3, 'other@orbit.test', 'other', 'Other', 'Owner', '2000-01-01', 'password');
+		INSERT INTO groups (id, title, description, creator_id)
+		VALUES
+			(7, 'Orbit hikers', 'Walks', 1),
+			(8, 'Orbit readers', 'Books', 3);
+		INSERT INTO group_join_requests (id, group_id, user_id, status)
+		VALUES
+			(10, 7, 2, 'rejected'),
+			(11, 7, 2, 'pending'),
+			(7, 8, 2, 'rejected');
+		INSERT INTO notifications (id, user_id, actor_id, category, type, message, related_id)
+		VALUES
+			(20, 1, 2, 'groups', 'join_request', 'old request', 10),
+			(21, 1, 2, 'groups', 'join_request', 'pending request', 11),
+			(22, 2, 1, 'groups', 'group_invitation', 'group invitation', 7),
+			(23, 3, 2, 'groups', 'join_request', 'unrelated request', 7),
+			(24, 2, 1, 'requests', 'follow_request', 'unrelated notification', 7);
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = db.Exec("DELETE FROM groups WHERE id = 7"); err != nil {
+		t.Fatal(err)
+	}
+
+	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM group_join_requests WHERE group_id = 7", 0)
+	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM notifications WHERE id IN (20, 21, 22)", 0)
+	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM notifications WHERE id IN (23, 24)", 2)
+
+	runMigrationFile(t, db, "015_fix_group_notification_cleanup.down.sql")
+	runMigrationFile(t, db, "015_fix_group_notification_cleanup.up.sql")
+}
+
 func insertLegacyPostData(t *testing.T, db *sql.DB) {
 	t.Helper()
 
@@ -275,5 +409,17 @@ func assertTable(t *testing.T, db *sql.DB, table string, expected bool) {
 
 	if (count == 1) != expected {
 		t.Fatalf("table %s found=%v, expected %v", table, count == 1, expected)
+	}
+}
+
+func assertMigrationRowCount(t *testing.T, db *sql.DB, query string, expected int) {
+	t.Helper()
+
+	var count int
+	if err := db.QueryRow(query).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != expected {
+		t.Fatalf("row count = %d, expected %d for %q", count, expected, query)
 	}
 }

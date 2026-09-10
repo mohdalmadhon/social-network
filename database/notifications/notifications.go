@@ -135,7 +135,7 @@ const notificationSelect = `
 	LEFT JOIN group_join_requests gjr
 		ON n.category = 'groups'
 		AND n.type = 'join_request'
-		AND gjr.group_id = n.related_id
+		AND gjr.id = n.related_id
 		AND gjr.user_id = n.actor_id
 
 	LEFT JOIN group_invitations gi

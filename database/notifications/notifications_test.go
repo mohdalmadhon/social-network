@@ -62,6 +62,41 @@ func TestNotificationRejectsInvalidCategory(t *testing.T) {
 	}
 }
 
+func TestJoinRequestNotificationUsesSpecificRequest(t *testing.T) {
+	db := newNotificationTestDatabase(t)
+
+	rejected := "rejected"
+	pending := "pending"
+
+	_, err := db.Exec(`
+		INSERT INTO user (id) VALUES (2);
+		INSERT INTO group_join_requests (id, group_id, user_id, status)
+		VALUES (10, 7, 2, 'rejected'), (11, 7, 2, 'pending');
+		INSERT INTO notifications (id, user_id, actor_id, category, type, message, related_id)
+		VALUES
+			(20, 1, 2, 'groups', 'join_request', 'first request', 10),
+			(21, 1, 2, 'groups', 'join_request', 'second request', 11);
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	items, err := List(db, 1, "groups")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(items) != 2 {
+		t.Fatalf("notification count = %d, expected 2", len(items))
+	}
+	if items[0].ID != 21 || items[0].RequestStatus == nil || *items[0].RequestStatus != pending {
+		t.Fatalf("new notification status = %+v, expected pending", items[0])
+	}
+	if items[1].ID != 20 || items[1].RequestStatus == nil || *items[1].RequestStatus != rejected {
+		t.Fatalf("old notification status = %+v, expected rejected", items[1])
+	}
+}
+
 func newNotificationTestDatabase(t *testing.T) *sql.DB {
 	t.Helper()
 
@@ -85,6 +120,20 @@ func newNotificationTestDatabase(t *testing.T) *sql.DB {
 			is_read INTEGER NOT NULL DEFAULT 0,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			FOREIGN KEY (user_id) REFERENCES user(id)
+		);
+		CREATE TABLE group_join_requests (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			group_id INTEGER NOT NULL,
+			user_id INTEGER NOT NULL,
+			status TEXT NOT NULL DEFAULT 'pending'
+		);
+		CREATE UNIQUE INDEX group_join_requests_one_pending
+		ON group_join_requests (group_id, user_id)
+		WHERE status = 'pending';
+		CREATE TABLE group_invitations (
+			group_id INTEGER NOT NULL,
+			user_id INTEGER NOT NULL,
+			status TEXT NOT NULL DEFAULT 'pending'
 		);
 		INSERT INTO user (id) VALUES (1);
 	`)
