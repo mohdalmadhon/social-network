@@ -6,13 +6,6 @@ import (
 	"social/internal/models"
 )
 
-// SendFollowRequest creates, updates, or deletes a follow relationship.
-//
-// requestCode:
-// -1 = delete request / remove follow
-//
-//	1 = follow user
-//	0 = request to follow private profile
 func SendFollowRequest(db *sql.DB, targetID, followerID, requestCode int) error {
 	if targetID == followerID {
 		return fmt.Errorf("user cannot follow themselves")
@@ -22,7 +15,6 @@ func SendFollowRequest(db *sql.DB, targetID, followerID, requestCode int) error 
 		return fmt.Errorf("invalid follow request code: %d", requestCode)
 	}
 
-	// -1 always means remove the relationship.
 	if requestCode == -1 {
 		_, err := db.Exec(`
 			DELETE FROM user_followers
@@ -32,8 +24,7 @@ func SendFollowRequest(db *sql.DB, targetID, followerID, requestCode int) error 
 		return err
 	}
 
-	// Check whether a relationship already exists.
-	var status int
+	var status sql.NullInt64
 
 	err := db.QueryRow(`
 		SELECT status
@@ -42,7 +33,6 @@ func SendFollowRequest(db *sql.DB, targetID, followerID, requestCode int) error 
 	`, targetID, followerID).Scan(&status)
 
 	if err == sql.ErrNoRows {
-		// No relationship exists, so create one.
 		_, err = db.Exec(`
 			INSERT INTO user_followers (
 				target_id,
@@ -59,7 +49,6 @@ func SendFollowRequest(db *sql.DB, targetID, followerID, requestCode int) error 
 		return err
 	}
 
-	// Relationship already exists, so update it.
 	_, err = db.Exec(`
 		UPDATE user_followers
 		SET status = ?
@@ -69,7 +58,7 @@ func SendFollowRequest(db *sql.DB, targetID, followerID, requestCode int) error 
 	return err
 }
 
-func GetFollowers(db *sql.DB, targetID, count int) (map[int]models.UserRegistration, error) {
+func GetFollowers(db *sql.DB, targetID, count, offset int) (map[int]models.UserRegistration, error) {
 	rows, err := db.Query(`
 		SELECT
 			u.id,
@@ -82,8 +71,10 @@ func GetFollowers(db *sql.DB, targetID, count int) (map[int]models.UserRegistrat
 		LEFT JOIN profile p
 			ON p.user_id = u.id
 		WHERE uf.target_id = ?
+		ORDER BY u.id
 		LIMIT ?
-	`, targetID, count)
+		OFFSET ?
+	`, targetID, count, offset)
 
 	if err != nil {
 		return nil, err
@@ -95,16 +86,36 @@ func GetFollowers(db *sql.DB, targetID, count int) (map[int]models.UserRegistrat
 	for rows.Next() {
 		var id int
 		var follower models.UserRegistration
+		var firstName sql.NullString
+		var lastName sql.NullString
+		var avatar sql.NullString
 
 		err := rows.Scan(
 			&id,
-			&follower.FirstName,
-			&follower.LastName,
-			&follower.Avatar,
+			&firstName,
+			&lastName,
+			&avatar,
 		)
-
 		if err != nil {
 			return nil, err
+		}
+
+		if firstName.Valid {
+			follower.FirstName = firstName.String
+		} else {
+			follower.FirstName = ""
+		}
+
+		if lastName.Valid {
+			follower.LastName = lastName.String
+		} else {
+			follower.LastName = ""
+		}
+
+		if avatar.Valid {
+			follower.Avatar = avatar.String
+		} else {
+			follower.Avatar = ""
 		}
 
 		followers[id] = follower
@@ -143,16 +154,36 @@ func GetFollowing(db *sql.DB, followerID, count int) (map[int]models.UserRegistr
 	for rows.Next() {
 		var id int
 		var user models.UserRegistration
+		var firstName sql.NullString
+		var lastName sql.NullString
+		var avatar sql.NullString
 
 		err := rows.Scan(
 			&id,
-			&user.FirstName,
-			&user.LastName,
-			&user.Avatar,
+			&firstName,
+			&lastName,
+			&avatar,
 		)
-
 		if err != nil {
 			return nil, err
+		}
+
+		if firstName.Valid {
+			user.FirstName = firstName.String
+		} else {
+			user.FirstName = ""
+		}
+
+		if lastName.Valid {
+			user.LastName = lastName.String
+		} else {
+			user.LastName = ""
+		}
+
+		if avatar.Valid {
+			user.Avatar = avatar.String
+		} else {
+			user.Avatar = ""
 		}
 
 		following[id] = user
@@ -163,4 +194,108 @@ func GetFollowing(db *sql.DB, followerID, count int) (map[int]models.UserRegistr
 	}
 
 	return following, nil
+}
+
+func SearchFollows(db *sql.DB, userID int, searchValue string) ([]models.UserRegistration, error) {
+    searchPattern := "%" + searchValue + "%"
+
+    rows, err := db.Query(`
+        SELECT u.id, u.first_name, u.last_name, p.avatar_path
+        FROM user u
+        LEFT JOIN profile p
+            ON p.user_id = u.id
+        WHERE EXISTS (
+            SELECT 1
+            FROM user_followers uf
+            WHERE uf.target_id = u.id
+            AND uf.follower_id = ?
+        )
+        AND (
+            u.first_name LIKE ?
+            OR u.last_name LIKE ?
+        )
+        LIMIT 100
+    `, userID, searchPattern, searchPattern)
+
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    follows := make([]models.UserRegistration, 0)
+
+    for rows.Next() {
+        var user models.UserRegistration
+
+        err := rows.Scan(
+            &user.ID,
+            &user.FirstName,
+            &user.LastName,
+            &user.Avatar,
+        )
+
+        if err != nil {
+            return nil, err
+        }
+
+        follows = append(follows, user)
+    }
+
+    if err := rows.Err(); err != nil {
+        return nil, err
+    }
+
+    return follows, nil
+}
+
+func SearchFollowing(db *sql.DB, userID int, searchValue string) ([]models.UserRegistration, error) {
+    searchPattern := "%" + searchValue + "%"
+
+    rows, err := db.Query(`
+        SELECT u.id, u.first_name, u.last_name, p.avatar_path
+        FROM user u
+        LEFT JOIN profile p
+            ON p.user_id = u.id
+        WHERE EXISTS (
+            SELECT 1
+            FROM user_followers uf
+            WHERE uf.follower_id = u.id
+            AND uf.target_id = ?
+        )
+        AND (
+            u.first_name LIKE ?
+            OR u.last_name LIKE ?
+        )
+        LIMIT 100
+    `, userID, searchPattern, searchPattern)
+
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    following := make([]models.UserRegistration, 0)
+
+    for rows.Next() {
+        var user models.UserRegistration
+
+        err := rows.Scan(
+            &user.ID,
+            &user.FirstName,
+            &user.LastName,
+            &user.Avatar,
+        )
+
+        if err != nil {
+            return nil, err
+        }
+
+        following = append(following, user)
+    }
+
+    if err := rows.Err(); err != nil {
+        return nil, err
+    }
+
+    return following, nil
 }

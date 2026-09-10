@@ -57,7 +57,7 @@
 
 <style scoped>
 .profile-section {
-    scroll-margin-top: 6.25rem;
+    scroll-margin-top: 100px;
     margin-bottom: var(--space-6);
 }
 
@@ -70,44 +70,49 @@
 
 .eyebrow {
     margin: 0 0 var(--space-1);
-    color: var(--color-violet);
+    color: var(--color-orange);
     font-family: var(--font-meta);
-    font-size: 0.625rem;
+    font-size: 9px;
     font-weight: 600;
-    letter-spacing: 0.15em;
+    letter-spacing: 2px;
+    text-transform: uppercase;
 }
 
 h2 {
     margin: 0;
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.8125rem;
     color: var(--color-text);
+    font-family: var(--font-display);
+    font-size: 29px;
 }
 
 .primary-button {
     padding: var(--space-3) var(--space-4);
-    border: none;
-    border-radius: 1.5625rem;
-    background: var(--gradient-action);
+    border: 1px solid transparent;
+    border-radius: var(--radius-small);
+    background: var(--gradient-sunset);
     color: var(--color-text);
-    font-family: var(--font-body);
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-family: var(--font-meta);
+    font-size: 10px;
+    font-weight: 600;
     cursor: pointer;
-    transition: transform 0.15s ease, filter 0.15s ease;
+    box-shadow: var(--shadow-raised);
+    transition: transform 0.1s;
 }
 
 .primary-button:hover {
-    filter: brightness(1.08);
     transform: translateY(-1px);
 }
 
+.primary-button:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
 .post-card {
-    margin-bottom: var(--space-4);
+    margin-bottom: var(--space-5);
     padding: var(--space-5);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-large);
+    border-radius: var(--radius-medium);
     background: var(--color-surface);
     box-shadow: var(--shadow-raised);
 }
@@ -119,39 +124,41 @@ h2 {
 }
 
 .small-avatar {
-    width: 2.625rem;
-    height: 2.625rem;
+    width: 42px;
+    height: 42px;
     display: flex;
     align-items: center;
     justify-content: center;
+    border: 1px solid var(--color-border);
     border-radius: 50%;
-    background: var(--gradient-action);
+    background: var(--gradient-cyber);
     color: var(--color-text);
     font-family: var(--font-display);
-    font-size: 1.125rem;
+    font-size: 18px;
 }
 
 .post-header strong,
 .post-header span {
     display: block;
-    color: var(--color-text);
 }
 
 .post-header strong {
-    font-size: 0.75rem;
+    color: var(--color-text);
+    font-size: 12px;
 }
 
 .post-header span {
-    margin-top: 0.1875rem;
+    margin-top: var(--space-1);
     color: var(--color-text-muted);
     font-family: var(--font-meta);
-    font-size: 0.5625rem;
+    font-size: 9px;
 }
 
 .post-text {
     margin: var(--space-5) 0;
     color: var(--color-text-soft);
-    font-size: 0.875rem;
+    font-family: var(--font-body);
+    font-size: 14px;
     line-height: 1.7;
 }
 
@@ -167,11 +174,25 @@ h2 {
     background: transparent;
     color: var(--color-text-muted);
     font-family: var(--font-meta);
-    font-size: 0.5625rem;
+    font-size: 9px;
     cursor: pointer;
+    transition: color 0.15s;
 }
 
-.post-actions button:hover {
-    color: var(--color-violet);
+.post-actions button:nth-child(1):hover {
+    color: var(--color-coral);
+}
+
+.post-actions button:nth-child(2):hover {
+    color: var(--color-cyan);
+}
+
+.post-actions button:nth-child(3):hover {
+    color: var(--color-lime);
+}
+
+.post-actions button:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
 }
 </style>

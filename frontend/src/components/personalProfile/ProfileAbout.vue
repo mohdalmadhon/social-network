@@ -41,72 +41,69 @@
 
 <style scoped>
 .profile-section {
-    scroll-margin-top: 6.25rem;
+    scroll-margin-top: 100px;
 }
 
 .section-heading {
-    margin-bottom: var(--space-5);
+    margin-bottom: 20px;
 }
 
 .eyebrow {
-    margin: 0 0 var(--space-1);
-    color: var(--color-violet);
-    font-family: var(--font-meta);
-    font-size: 0.625rem;
-    letter-spacing: 0.15em;
+    margin: 0 0 5px;
+    color: var(--input-focus);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
 }
 
 h2 {
     margin: 0;
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.8125rem;
-    color: var(--color-text);
+    font-family: "Liter", serif;
+    font-size: 29px;
 }
 
 .about-card {
-    padding: 0.625rem var(--space-5);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-large);
-    background: var(--color-surface);
-    box-shadow: var(--shadow-raised);
+    padding: 10px 25px;
+    border: 2px solid var(--main-color);
+    border-radius: 7px;
+    background: var(--bg-color);
+    box-shadow: 5px 5px var(--main-color);
 }
 
 .about-row {
     display: grid;
-    grid-template-columns: 11.25rem 1fr;
-    gap: var(--space-5);
-    padding: var(--space-4) 0;
-    border-bottom: 1px solid var(--color-border);
+    grid-template-columns: 180px 1fr;
+    gap: 20px;
+    padding: 20px 0;
+    border-bottom: 2px solid var(--page-background);
 }
 
 .label {
-    color: var(--color-text-muted);
-    font-family: var(--font-meta);
-    font-size: 0.625rem;
+    color: var(--font-color-sub);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9px;
     font-weight: 600;
 }
 
 .about-row strong {
-    color: var(--color-text);
-    font-size: 0.75rem;
+    font-size: 12px;
 }
 
 .about-description {
-    padding: var(--space-4) 0;
+    padding: 20px 0;
 }
 
 .about-description p {
-    margin: var(--space-3) 0 0;
-    color: var(--color-text-soft);
-    font-size: 0.8125rem;
+    margin: 12px 0 0;
+    color: var(--font-color);
+    font-size: 13px;
     line-height: 1.7;
 }
 
-@media (max-width: 34.375rem) {
+@media (max-width: 550px) {
     .about-row {
         grid-template-columns: 1fr;
-        gap: var(--space-2);
+        gap: 7px;
     }
 }
 </style>

@@ -1,42 +1,55 @@
-/*
- * Orbit design tokens
- *
- * These variables give every page the same visual language. Components should
- * use these names instead of repeating color, spacing, and sizing values.
- */
-
 :root {
-  /* Typography from the approved Orbit UI/UX design. */
   --font-display: "Hedvig Letters Sans", "Segoe UI", sans-serif;
   --font-body: "Liter", "Segoe UI", sans-serif;
   --font-meta: "JetBrains Mono", Consolas, monospace;
 
-  /* Main backgrounds and surfaces. */
-  --color-background: #0b0d17;
-  --color-sidebar: #0f1222;
-  --color-surface: #161a2b;
-  --color-surface-raised: #1f2440;
-  --color-input: #222741;
-  --color-border: #303754;
+  --color-background: #0b0d1f;
+  --color-sidebar: #12132b;
+  --color-surface: #1a1a38;
+  --color-surface-raised: #262149;
+  --color-input: #292350;
+  --color-border: #3d3868;
 
-  /* Text hierarchy. */
-  --color-text: #f5f5ff;
-  --color-text-soft: #d8d7e9;
-  --color-text-muted: #9da4bd;
-  --color-text-faint: #69749a;
+  --color-surface-violet: #201a45;
+  --color-surface-teal: #102a3a;
+  --color-surface-coral: #2e1730;
+  --color-surface-amber: #2c2214;
 
-  /* Orbit status and action colors. */
-  --color-violet: #7c5cff;
-  --color-coral: #ff6b8a;
-  --color-mint: #3ee6b0;
-  --color-amber: #ffb84d;
-  --color-blue: #42bff5;
+  --color-text: #f7f5ff;
+  --color-text-soft: #ded9f5;
+  --color-text-muted: #a8a4d4;
+  --color-text-faint: #726ea0;
 
-  /* Reusable gradients and focus treatment. */
-  --gradient-action: linear-gradient(90deg, var(--color-violet), var(--color-coral));
-  --focus-ring: 0 0 0 3px rgb(124 92 255 / 24%);
+  --color-violet: #8b5cf6;
+  --color-violet-soft: #b79bff;
+  --color-coral: #ff5c8a;
+  --color-coral-soft: #ff8fae;
+  --color-mint: #2eebb5;
+  --color-mint-soft: #7bf5d1;
+  --color-amber: #ffb020;
+  --color-amber-soft: #ffcb6b;
+  --color-blue: #38b6ff;
+  --color-blue-soft: #7ecfff;
+  --color-cyan: #22e5e5;
+  --color-cyan-soft: #7ff2f2;
+  --color-magenta: #ff3fd8;
+  --color-magenta-soft: #ff8ce8;
+  --color-lime: #b6ff3f;
+  --color-lime-soft: #d6ff9c;
+  --color-orange: #ff7a38;
+  --color-orange-soft: #ffab7e;
 
-  /* A small spacing scale keeps components aligned. */
+  --color-success: var(--color-mint);
+  --color-warning: var(--color-amber);
+  --color-danger: var(--color-coral);
+  --color-info: var(--color-blue);
+
+  --gradient-action: linear-gradient(90deg, var(--color-violet), var(--color-coral) 60%, var(--color-amber));
+  --gradient-cyber: linear-gradient(90deg, var(--color-cyan), var(--color-violet) 50%, var(--color-magenta));
+  --gradient-sunset: linear-gradient(90deg, var(--color-coral), var(--color-orange) 55%, var(--color-amber));
+  --gradient-aurora: linear-gradient(135deg, var(--color-mint), var(--color-blue) 50%, var(--color-violet));
+  --focus-ring: 0 0 0 3px rgb(139 92 246 / 30%);
+
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -45,13 +58,10 @@
   --space-6: 2rem;
   --space-7: 3rem;
 
-  /* Shared shape and layout values. */
   --radius-small: 0.5rem;
   --radius-medium: 0.875rem;
   --radius-large: 1.5rem;
   --touch-target: 2.75rem;
   --content-max-width: 90rem;
-  --shadow-raised: 0 1.25rem 3.125rem rgb(0 0 0 / 25%);
-
-  /* Use 48rem, 64rem, and 90rem as the shared CSS breakpoints. */
+  --shadow-raised: 0 1.25rem 3.125rem rgb(20 5 50 / 30%);
 }

@@ -12,12 +12,13 @@ export async function updateUserInfo(userData) {
         router.replace("/login");
         return;
     }
-    
-    if (!resp.ok) {
-        throw new Error("could not update user data")
-    }
 
     const result = await resp.json();
+
+    if (!resp.ok) {
+        throw new Error(result.message || 'error happened')
+    }
+
     return result;
 }
 

@@ -6,11 +6,12 @@ import { profileData } from '@/data/usersData';
 
 import SideNavigation from '@/components/layout/SideNavigation.vue';
 import TopNavigation from '@/components/layout/TopNavigation.vue';
-import ProfileHeader from '@/components/profile/personalProfile/ProfileHeader.vue';
-import ProfileTabs from '@/components/profile/personalProfile/ProfileTabs.vue';
-import AboutTab from '@/components/profile/profile/AboutTab.vue';
-import FollowersTab from '@/components/profile/profile/FollowersTab.vue';
 
+import ProfileHeader from '@/components/personalProfile/ProfileHeader.vue';
+import ProfileTabs from '@/components/personalProfile/ProfileTabs.vue';
+import { addNotification } from '@/data/notifications';
+import FollowersTab from '@/components/Profile/FollowersTab.vue';
+import AboutTab from '@/components/Profile/AboutTab.vue';
 
 const activeTab = ref('personal');
 const loading = ref(true);
@@ -18,9 +19,9 @@ const loading = ref(true);
 async function getData() {
     try {
         await getUserData();
-        console.log(profileData)
+        console.log(profileData.value);
     } catch (err) {
-        addNotification('could not get user data', 'error')
+        addNotification('Could not get user data', 'error');
         console.error(err);
     } finally {
         loading.value = false;
@@ -31,69 +32,71 @@ onMounted(getData);
 </script>
 
 <template>
-    <div class="page-shell">
+    <div class="facebook-layout">
         <TopNavigation />
 
-        <div class="page-body">
-            <SideNavigation active-page="profile" />
+        <div class="page-layout">
+            <SideNavigation />
 
-            <main class="page-content">
-
-                <div v-if="loading" class="loading-state">
+            <main class="profile-page">
+                <div v-if="loading">
                     Loading profile...
                 </div>
 
                 <template v-else>
-                    <ProfileHeader :first-name="profileData.userInfo.firstName" :last-name="profileData.userInfo.lastName"
-                        :username="profileData.userInfo.userName" :add-edit="true" :bio="profileData.userInfo.about" :avatar-path="`/uploads/${profileData.userInfo.avatar}`"
-                        :num-of-posts="profileData.numOfPosts" :num-of-following="profileData.numOfFollowing"
-                        :num-of-followers="profileData.numOfFollowers" />
+                    <ProfileHeader :first-name="profileData.userInfo.firstName"
+                        :last-name="profileData.userInfo.lastName" :username="profileData.userInfo.userName"
+                        :add-edit="true" :bio="profileData.userInfo.about"
+                        :avatar-path="`/uploads/${profileData.userInfo.avatar}`" :num-of-posts="profileData.numOfPosts"
+                        :num-of-following="profileData.numOfFollowing" :num-of-followers="profileData.numOfFollowers" />
 
-                    <ProfileTabs @change-tab="activeTab = $event" />
+                    <ProfileTabs type="personal" @change-tab="activeTab = $event" />
+
                     <AboutTab v-if="activeTab === 'about'" :about="profileData.about" />
 
-                    <FollowersTab v-if="activeTab === 'followers'" :followers="profileData.followers" />
-                    <FollowersTab v-if="activeTab === 'following'" :followers="profileData.following" />
-                </template>
+                    <FollowersTab v-if="activeTab === 'followers'" type="followers" :target-id="profileData.userInfo.id"
+                        :follower-list="profileData.followers" />
 
+                    <FollowersTab v-if="activeTab === 'following'" type="following" :target-id="profileData.userInfo.id"
+                        :follower-list="profileData.following" />
+
+                    <FollowersTab v-if="activeTab === 'friends'" type="friends" :target-id="profileData.userInfo.id"
+                        :follower-list="profileData.friends" />
+
+                </template>
             </main>
         </div>
     </div>
 </template>
 
 <style scoped>
-.page-shell {
+.facebook-layout {
     min-height: 100vh;
-    background: var(--color-background);
-    color: var(--color-text);
-    font-family: var(--font-body);
 }
 
-.page-body {
+.page-layout {
     display: flex;
-    align-items: flex-start;
+    padding-top: 64px;
 }
 
-.page-content {
-    flex: 1;
-    min-width: 0;
+.profile-page {
     width: 100%;
-    max-width: 68.75rem;
+    max-width: 1100px;
     margin: 0 auto;
-    padding: var(--space-6) var(--space-5) calc(4.25rem + var(--space-6));
+    padding: 25px 30px 60px;
 }
 
-.loading-state {
-    padding: var(--space-6);
-    color: var(--color-text-muted);
-    font-family: var(--font-meta);
-    font-size: 0.8125rem;
-    text-align: center;
+.profile-content {
+    width: 100%;
 }
 
-@media (min-width: 64rem) {
-    .page-content {
-        padding-bottom: var(--space-7);
+@media (max-width: 800px) {
+    .page-layout {
+        display: block;
+    }
+
+    .profile-page {
+        padding: 20px 15px 50px;
     }
 }
 </style>

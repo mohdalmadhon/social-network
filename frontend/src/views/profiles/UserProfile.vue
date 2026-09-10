@@ -3,16 +3,17 @@ import { onMounted, ref } from 'vue';
 
 import SideNavigation from '@/components/layout/SideNavigation.vue';
 import TopNavigation from '@/components/layout/TopNavigation.vue';
+import ProfileHeader from '@/components/personalProfile/ProfileHeader.vue';
+import ProfileTabs from '@/components/personalProfile/ProfileTabs.vue';
+import PrivateProfileIcon from '@/components/ProfileEdit/PrivateProfileIcon.vue';
 
 import { getProfileData } from '@/api/users/profiles';
 import { profileData } from '@/data/usersData';
 
 import { useRoute } from 'vue-router';
 import { addNotification } from '@/data/notifications';
-import ProfileHeader from '@/components/profile/personalProfile/ProfileHeader.vue';
-import ProfileTabs from '@/components/profile/personalProfile/ProfileTabs.vue';
-import AboutTab from '@/components/profile/profile/AboutTab.vue';
-import FollowersTab from '@/components/profile/profile/FollowersTab.vue';
+import AboutTab from '@/components/Profile/AboutTab.vue';
+import FollowersTab from '@/components/Profile/FollowersTab.vue';
 
 const route = useRoute();
 
@@ -48,14 +49,14 @@ onMounted(getData);
 </script>
 
 <template>
-    <div class="page-shell">
+    <div class="facebook-layout">
         <TopNavigation />
 
-        <div class="page-body">
-            <SideNavigation active-page="profile" />
+        <div class="page-layout">
+            <SideNavigation />
 
-            <main class="page-content">
-                <div v-if="loading" class="loading-state">
+            <main class="profile-page">
+                <div v-if="loading">
                     Loading profile...
                 </div>
 
@@ -116,42 +117,34 @@ onMounted(getData);
 </template>
 
 <style scoped>
-.page-shell {
+.facebook-layout {
     min-height: 100vh;
     background: var(--color-background);
-    color: var(--color-text);
-    font-family: var(--font-body);
 }
 
-.page-body {
+.page-layout {
     display: flex;
-    align-items: flex-start;
+    padding-top: 64px;
 }
 
-.page-content {
-    flex: 1;
-    min-width: 0;
+.profile-page {
     width: 100%;
-    max-width: 68.75rem;
+    max-width: var(--content-max-width);
     margin: 0 auto;
-    padding: var(--space-6) var(--space-5) calc(4.25rem + var(--space-6));
-}
-
-.loading-state {
-    padding: var(--space-6);
-    color: var(--color-text-muted);
-    font-family: var(--font-meta);
-    font-size: 0.8125rem;
-    text-align: center;
+    padding: var(--space-6) var(--space-6) var(--space-7);
 }
 
 .profile-content {
     width: 100%;
 }
 
-@media (min-width: 64rem) {
-    .page-content {
-        padding-bottom: var(--space-7);
+@media (max-width: 800px) {
+    .page-layout {
+        display: block;
+    }
+
+    .profile-page {
+        padding: var(--space-5) var(--space-4) var(--space-6);
     }
 }
 </style>

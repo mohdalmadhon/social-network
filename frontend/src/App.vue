@@ -6,7 +6,6 @@ import NotificationContainer from './components/layout/NotificationContainer.vue
 
 <template>    
     <RouterView/>
-
     <NotificationContainer/>
 </template>
 

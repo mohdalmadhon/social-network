@@ -183,78 +183,76 @@ const tabs = [
 <style scoped>
 .about-section {
     width: 100%;
-    scroll-margin-top: 6.25rem;
+    scroll-margin-top: 100px;
 }
 
 .section-heading {
-    margin-bottom: var(--space-4);
+    margin-bottom: clamp(14px, 2.5vw, 20px);
 }
 
 .eyebrow {
-    margin: 0 0 var(--space-1);
-    color: var(--color-violet);
-    font-family: var(--font-meta);
-    font-size: 0.625rem;
-    font-weight: 600;
-    letter-spacing: 0.15em;
+    margin: 0 0 5px;
+    color: var(--input-focus);
+    font-family: "JetBrains Mono", monospace;
+    font-size: clamp(8px, 1.2vw, 9px);
+    letter-spacing: 2px;
 }
 
 h2 {
     margin: 0;
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.8125rem;
-    color: var(--color-text);
+    font-family: "Liter", serif;
+    font-size: clamp(20px, 4vw, 29px);
 }
 
 .about-card {
     display: grid;
-    grid-template-columns: minmax(9.375rem, 12.5rem) 1fr;
-    min-height: 22.5rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-large);
-    background: var(--color-surface);
-    box-shadow: var(--shadow-raised);
+    grid-template-columns: minmax(150px, 200px) 1fr;
+    min-height: 360px;
+    border: 2px solid var(--main-color);
+    border-radius: 7px;
+    background: var(--bg-color);
+    box-shadow: 5px 5px var(--main-color);
     overflow: hidden;
 }
 
 .about-navigation {
     display: flex;
     flex-direction: column;
-    gap: var(--space-1);
-    padding: var(--space-4);
-    border-right: 1px solid var(--color-border);
-    background: var(--color-sidebar);
+    gap: 5px;
+    padding: clamp(12px, 2vw, 18px);
+    border-right: 2px solid var(--main-color);
 }
 
 .about-navigation button {
     width: 100%;
-    padding: var(--space-3) var(--space-3);
-    border: none;
-    border-radius: var(--radius-medium);
+    padding: 12px 10px;
+    border: 2px solid transparent;
+    border-radius: 5px;
     background: transparent;
-    color: var(--color-text-muted);
-    font-family: var(--font-body);
-    font-size: 0.75rem;
+    color: var(--font-color-sub);
+    font-family: "JetBrains Mono", monospace;
+    font-size: clamp(9px, 1.4vw, 11px);
     font-weight: 600;
     text-align: left;
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: 0.15s ease;
 }
 
 .about-navigation button:hover {
-    background: var(--color-surface-raised);
-    color: var(--color-text-soft);
+    border-color: var(--main-color);
+    color: var(--font-color);
 }
 
 .about-navigation button.active {
-    background: var(--gradient-action);
-    color: var(--color-text);
+    border-color: var(--main-color);
+    background: var(--input-focus);
+    color: white;
+    box-shadow: 3px 3px var(--main-color);
 }
 
 .about-content {
     min-width: 0;
-    padding: var(--space-6);
+    padding: clamp(18px, 3vw, 28px);
 }
 
 .content-section {
@@ -262,38 +260,38 @@ h2 {
 }
 
 .content-heading {
-    margin-bottom: var(--space-5);
+    margin-bottom: clamp(18px, 3vw, 25px);
 }
 
 .info-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-4);
+    gap: 14px;
 }
 
 .info-item {
     display: grid;
-    grid-template-columns: minmax(5.625rem, 8.125rem) 1fr;
-    gap: var(--space-5);
-    padding-bottom: var(--space-4);
-    border-bottom: 1px solid var(--color-border);
+    grid-template-columns: minmax(90px, 130px) 1fr;
+    gap: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--main-color);
 }
 
 .info-item span,
 .link-item span {
-    color: var(--color-text-muted);
-    font-family: var(--font-meta);
-    font-size: 0.625rem;
+    color: var(--font-color-sub);
+    font-family: "JetBrains Mono", monospace;
+    font-size: clamp(8px, 1.2vw, 10px);
     font-weight: 600;
-    letter-spacing: 0.06em;
+    letter-spacing: 1px;
     text-transform: uppercase;
 }
 
 .info-item p {
     margin: 0;
-    color: var(--color-text-soft);
-    font-family: var(--font-body);
-    font-size: 0.875rem;
+    color: var(--font-color);
+    font-family: "Hedvig Letters Sans", sans-serif;
+    font-size: clamp(12px, 1.8vw, 14px);
     line-height: 1.5;
     word-break: break-word;
 }
@@ -301,43 +299,43 @@ h2 {
 .links-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: 12px;
 }
 
 .link-item {
     display: grid;
-    grid-template-columns: minmax(5.625rem, 8.125rem) 1fr;
-    gap: var(--space-5);
-    padding: var(--space-4);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-medium);
-    background: var(--color-surface-raised);
-    color: var(--color-text-soft);
+    grid-template-columns: minmax(90px, 130px) 1fr;
+    gap: 20px;
+    padding: 14px;
+    border: 2px solid var(--main-color);
+    border-radius: 5px;
+    background: var(--bg-color);
+    color: var(--font-color);
     text-decoration: none;
-    transition: border-color 0.15s ease, transform 0.15s ease;
+    transition: 0.15s ease;
 }
 
 .link-item:hover {
-    transform: translateY(-1px);
-    border-color: var(--color-violet);
+    transform: translate(-2px, -2px);
+    box-shadow: 3px 3px var(--main-color);
 }
 
 .link-item p {
     margin: 0;
-    color: var(--color-text-soft);
-    font-family: var(--font-body);
-    font-size: 0.8125rem;
+    color: var(--font-color);
+    font-family: "Hedvig Letters Sans", sans-serif;
+    font-size: clamp(11px, 1.7vw, 13px);
     word-break: break-all;
 }
 
 .empty {
     margin: 0;
-    color: var(--color-text-faint);
-    font-family: var(--font-meta);
-    font-size: 0.625rem;
+    color: var(--font-color-sub);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
 }
 
-@media (max-width: 37.5rem) {
+@media (max-width: 600px) {
     .about-card {
         grid-template-columns: 1fr;
     }
@@ -345,7 +343,7 @@ h2 {
     .about-navigation {
         flex-direction: row;
         border-right: none;
-        border-bottom: 1px solid var(--color-border);
+        border-bottom: 2px solid var(--main-color);
         overflow-x: auto;
     }
 
@@ -356,11 +354,12 @@ h2 {
     }
 }
 
-@media (max-width: 31.25rem) {
+@media (max-width: 500px) {
     .info-item,
     .link-item {
         grid-template-columns: 1fr;
-        gap: var(--space-2);
+        gap: 6px;
     }
 }
 </style>
+
