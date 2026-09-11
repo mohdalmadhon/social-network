@@ -25,15 +25,15 @@ CREATE TABLE IF NOT EXISTS comments (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
-    FOREIGN KEY (reply_to) REFERENCES user(id) ON DELETE CASCADE
+    FOREIGN KEY (reply_to) REFERENCES comments(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS comment_votes (
     user_id INTEGER NOT NULL,
-    post_id INTEGER NOT NULL,
+    comment_id INTEGER NOT NULL,
     count INTEGER NOT NULL CHECK (count IN (1, -1)),
-    PRIMARY KEY (post_id, user_id),
-    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    PRIMARY KEY (comment_id, user_id),
+    FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
 );
 

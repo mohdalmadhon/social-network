@@ -1,7 +1,5 @@
 package models
 
-import "time"
-
 // group id == 0 (PUBLIC)
 // group id == -1 (PRIVATE)
 type RegsiterPost struct {
@@ -45,13 +43,14 @@ type Post struct {
 }
 
 type Comment struct {
-	ID        int
-	Content   string
-	Votes     int
-	PostID    int
-	User      UserRegistration
-	RepltTo   UserRegistration
-	CreatedAt time.Time
+	ID        int              `json:"id"`
+	Content   string           `json:"content"`
+	User      UserRegistration `json:"user"`
+	PostID    int              `json:"postId"`
+	RepltTo   *int             `json:"replyTo"`
+	Votes     int              `json:"votes"`
+	CreatedAt string           `json:"createdAt"`
+	Replies   int              `json:"replies"`
 }
 
 type Reaction struct {

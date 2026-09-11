@@ -61,7 +61,7 @@ onMounted(() => {
                     <HomeSearch />
 
                     <section class="posts">
-                        <HomePosts v-for="post in posts" :key="post.id" :post-id="post.id" :likes="post.likeCount" :dislikes="post.disLikeCount" :reaction="post.ReactionValue" v-bind="post" />
+                        <HomePosts  v-for="post in posts" :current-user-id="currentUserId" :key="post.id" :post-id="post.id" :likes="post.likeCount" :dislikes="post.disLikeCount" :reaction="post.ReactionValue" v-bind="post" />
                     </section>
                 </div>
             </main>

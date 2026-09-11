@@ -9,6 +9,10 @@ import LocationDialouge from './LocationDialouge.vue';
 import TaggedPeopleDialoug from './TaggedPeopleDialoug.vue';
 
 const props = defineProps({
+    currentUserId: {
+        type: [Number, String],
+        default: null
+    },
     reaction: {
         type: Number,
         required: true
@@ -249,10 +253,12 @@ onMounted(() => {
         <HomePostReaction :likes="likes" :dislikes="dislikes" :comments-count="comments.length"
             @toggle-comments="toggleComments" />
 
-        <HomePostAction :reaction="props.reaction" :user-reaction="userReaction" :post-id="postId" :likes="props.likes" :dislikes="props.dislikes" @like="handleLike" @dislike="handleDislike"
-            @toggle-comments="toggleComments" />
+        <HomePostAction :reaction="props.reaction" :user-reaction="userReaction" :post-id="postId" :likes="props.likes"
+            :dislikes="props.dislikes" @like="handleLike" @dislike="handleDislike" @toggle-comments="toggleComments" />
 
-        <HomePostComments v-if="showComments" :comments="comments" @submit-comment="handleSubmitComment" />
+        <HomePostComments :show="showComments" :post-id="postId" :current-user-id="currentUserId"
+            :first-name="firstName" :last-name="lastName" :avatar-path="avatarPath" :created-at="createdAt"
+            :content="content" :image-path="imagePath" @close="showComments = false" />
 
         <LocationDialouge :show="showLocationDialog" :display="locationParts?.display" :embed-url="mapEmbedUrl"
             :external-url="mapExternalUrl" @close="closeLocationDialog" />
