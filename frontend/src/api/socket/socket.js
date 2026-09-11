@@ -1,3 +1,5 @@
+import { handleIncomingNotification } from '@/data/notificationCount';
+
 let ws = null;
 
 export function connectToWS() {
@@ -19,6 +21,7 @@ export function connectToWS() {
         switch (payload.type) {
             case "notification":
                 console.log("Notification:", payload.data);
+                handleIncomingNotification(payload.data);
                 break;
 
             case "message":

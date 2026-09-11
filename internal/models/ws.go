@@ -15,6 +15,7 @@ type NewNotification struct {
 	UserID                    int
 	MessageUserID             *int
 	PostIDTag                 *int
+	CommentIDTag              *int
 	CommentReplyUserID        *int
 	FollowRequestUserID       *int
 	FollowRequestAcceptUserID *int

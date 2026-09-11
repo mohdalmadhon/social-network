@@ -1,27 +1,44 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 
-import { getNotifications, acceptFollowRequest } from '@/api/common/notifications';
+import { getNotifications, acceptFollowRequest, markNotificationsRead } from '@/api/common/notifications';
 
 import { addNotification } from '@/data/notifications';
+import { clearUnreadNotificationCount } from '@/data/notificationCount';
+import SideNavigation from '@/components/layout/SideNavigation.vue';
+import TopNavigation from '@/components/layout/TopNavigation.vue';
 
 const notifications = ref([]);
 const loading = ref(true);
 const loadingMore = ref(false);
 const hasMore = ref(true);
 const offset = ref(0);
-const limit = 20;
+const limit = 15;
 
 onMounted(async () => {
     await loadNotifications();
     window.addEventListener('scroll', handleScroll);
+    markAsRead();
 });
+
+async function markAsRead() {
+    try {
+        await markNotificationsRead();
+        clearUnreadNotificationCount();
+    } catch (err) {
+        console.error(err);
+    }
+}
 
 async function loadNotifications() {
     try {
-        const result = await getNotifications(offset.value);
+        const result = await getNotifications(offset.value, limit);
 
-        const newNotifications = result.notifications || result || [];
+        const newNotifications = Array.isArray(result.notifications)
+            ? result.notifications
+            : Array.isArray(result)
+                ? result
+                : [];
 
         notifications.value.push(...newNotifications);
 
@@ -44,9 +61,13 @@ async function loadMore() {
     loadingMore.value = true;
 
     try {
-        const result = await getNotifications(offset.value);
+        const result = await getNotifications(offset.value, limit);
 
-        const newNotifications = result.notifications || result || [];
+        const newNotifications = Array.isArray(result.notifications)
+            ? result.notifications
+            : Array.isArray(result)
+                ? result
+                : [];
 
         notifications.value.push(...newNotifications);
 
@@ -106,7 +127,7 @@ function openProfile(userID) {
         return;
     }
 
-    window.location.href = `/profile/${userID}`;
+    window.location.href = `/user?id=${userID}`;
 }
 
 function openPost(postID) {
@@ -192,119 +213,144 @@ async function acceptRequest(notification) {
 </script>
 
 <template>
-    <main class="notifications-page">
-        <div class="page-header">
-            <span>ACTIVITY</span>
-            <h1>Notifications</h1>
-        </div>
+    <div class="notifications-page-wrap">
+        <TopNavigation />
 
-        <section class="notifications-card">
-            <div v-if="loading" class="empty-state">
-                Loading notifications...
-            </div>
+        <div class="page-layout">
+            <SideNavigation />
 
-            <div
-                v-else-if="notifications.length === 0"
-                class="empty-state"
-            >
-                No notifications yet
-            </div>
-
-            <div
-                v-else
-                v-for="notification in notifications"
-                :key="notification.id"
-                class="notification"
-            >
-                <div
-                    class="notification-avatar"
-                    @click="openProfile(getActorID(notification))"
-                >
-                    <img
-                        v-if="getActor(notification).avatarPath"
-                        :src="`/uploads/${getActor(notification).avatarPath}`"
-                        alt=""
-                    >
-
-                    <span v-else>
-                        {{ getActorName(notification).charAt(0).toUpperCase() }}
-                    </span>
+            <main class="notifications-page">
+                <div class="page-header">
+                    <span>ACTIVITY</span>
+                    <h1>Notifications</h1>
                 </div>
 
-                <div class="notification-content">
-                    <div class="notification-top">
-                        <button
-                            class="actor-name"
+                <section class="notifications-card">
+                    <div v-if="loading" class="empty-state">
+                        Loading notifications...
+                    </div>
+
+                    <div
+                        v-else-if="notifications.length === 0"
+                        class="empty-state"
+                    >
+                        No notifications yet
+                    </div>
+
+                    <div
+                        v-else
+                        v-for="notification in notifications"
+                        :key="notification.id"
+                        class="notification"
+                    >
+                        <div
+                            class="notification-avatar"
                             @click="openProfile(getActorID(notification))"
                         >
-                            {{ getActorName(notification) }}
-                        </button>
+                            <img
+                                v-if="getActor(notification).avatarPath"
+                                :src="`/uploads/${getActor(notification).avatarPath}`"
+                                alt=""
+                            >
 
-                        <span class="notification-time">
-                            {{ notification.created_at }}
-                        </span>
-                    </div>
-
-                    <p class="notification-message">
-                        {{ getMessage(notification) }}
-                    </p>
-
-                    <div
-                        v-if="isComment(notification) && notification.comment"
-                        class="comment-preview"
-                        @click="openPost(notification.post?.id)"
-                    >
-                        <p>{{ notification.comment }}</p>
-                    </div>
-
-                    <div
-                        v-if="isFollowRequest(notification)"
-                        class="notification-actions"
-                    >
-                        <button
-                            class="accept-button"
-                            @click="acceptRequest(notification)"
-                        >
-                            Accept
-                        </button>
-                    </div>
-
-                    <div
-                        v-if="isPostNotification(notification) && notification.post"
-                        class="post-preview"
-                        @click="openPost(notification.post.id)"
-                    >
-                        <div class="post-preview-text">
-                            <span>POST</span>
-
-                            <p>
-                                {{ notification.post.content }}
-                            </p>
+                            <span v-else>
+                                {{ getActorName(notification).charAt(0).toUpperCase() }}
+                            </span>
                         </div>
 
-                        <img
-                            v-if="getPostImage(notification)"
-                            :src="getPostImage(notification)"
-                            alt=""
-                            class="post-image"
-                        >
-                    </div>
-                </div>
-            </div>
+                        <div class="notification-content">
+                            <div class="notification-top">
+                                <button
+                                    class="actor-name"
+                                    @click="openProfile(getActorID(notification))"
+                                >
+                                    {{ getActorName(notification) }}
+                                </button>
 
-            <div
-                v-if="loadingMore"
-                class="loading-more"
-            >
-                Loading more...
-            </div>
-        </section>
-    </main>
+                                <span class="notification-time">
+                                    {{ notification.created_at }}
+                                </span>
+                            </div>
+
+                            <p class="notification-message">
+                                {{ getMessage(notification) }}
+                            </p>
+
+                            <div
+                                v-if="isComment(notification) && notification.comment"
+                                class="comment-preview"
+                                @click="openPost(notification.post?.id)"
+                            >
+                                <p>{{ notification.comment }}</p>
+
+                                <span class="comment-likes">
+                                    ♥ {{ notification.comment_likes || 0 }}
+                                </span>
+                            </div>
+
+                            <div
+                                v-if="isFollowRequest(notification)"
+                                class="notification-actions"
+                            >
+                                <button
+                                    class="accept-button"
+                                    @click="acceptRequest(notification)"
+                                >
+                                    Accept
+                                </button>
+                            </div>
+
+                            <div
+                                v-if="isPostNotification(notification) && notification.post"
+                                class="post-preview"
+                                @click="openPost(notification.post.id)"
+                            >
+                                <div class="post-preview-text">
+                                    <span>POST</span>
+
+                                    <p>
+                                        {{ notification.post.content }}
+                                    </p>
+                                </div>
+
+                                <img
+                                    v-if="getPostImage(notification)"
+                                    :src="getPostImage(notification)"
+                                    alt=""
+                                    class="post-image"
+                                >
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        v-if="loadingMore"
+                        class="loading-more"
+                    >
+                        Loading more...
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
 </template>
 
 <style scoped>
+.notifications-page-wrap {
+    min-height: 100vh;
+    padding-top: 64px;
+}
+
+.page-layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+    min-height: calc(100vh - 64px);
+}
+
 .notifications-page {
     width: min(900px, calc(100% - 48px));
+    flex: 1;
     margin: 0 auto;
     padding: 32px 0 60px;
 }
@@ -471,6 +517,10 @@ async function acceptRequest(notification) {
 }
 
 .comment-preview {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
     margin-top: 12px;
     padding: 11px 14px;
     border-left: 4px solid #2f8ff0;
@@ -485,6 +535,13 @@ async function acceptRequest(notification) {
     line-height: 1.5;
 }
 
+.comment-likes {
+    flex-shrink: 0;
+    color: #d9534f;
+    font-size: 11px;
+    font-weight: 700;
+}
+
 .loading-more {
     padding: 18px;
     color: #777;
@@ -497,6 +554,12 @@ async function acceptRequest(notification) {
     color: #777;
     text-align: center;
     font-size: 12px;
+}
+
+@media (max-width: 800px) {
+    .page-layout {
+        display: block;
+    }
 }
 
 @media (max-width: 650px) {

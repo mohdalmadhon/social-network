@@ -74,5 +74,7 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	//ws
 	mux.Handle("/api/ws", websocket.Handler(app.HandleWS))
 	mux.HandleFunc("/api/notifications", app.AuthMiddleware(app.GetNotification))
+	mux.HandleFunc("GET /api/notifications/unread", app.AuthMiddleware(app.GetUnreadNotificationCount))
+	mux.HandleFunc("POST /api/notifications/read", app.AuthMiddleware(app.MarkNotificationsRead))
 	return mux
 }

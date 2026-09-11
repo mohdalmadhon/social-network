@@ -26,6 +26,7 @@ func InsertNotification(db *sql.DB, n models.NewNotification) error {
 			notifications_id,
 			message_user_id,
 			post_id_tag,
+			comment_id_tag,
 			comment_reply_user_id,
 			follow_request_user_id,
 			follow_request_accept_user_id,
@@ -41,11 +42,12 @@ func InsertNotification(db *sql.DB, n models.NewNotification) error {
 			event_invite_user_id,
 			event_response_user_id
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`,
 		notificationID,
 		n.MessageUserID,
 		n.PostIDTag,
+		n.CommentIDTag,
 		n.CommentReplyUserID,
 		n.FollowRequestUserID,
 		n.FollowRequestAcceptUserID,
@@ -61,6 +63,39 @@ func InsertNotification(db *sql.DB, n models.NewNotification) error {
 		n.EventInviteUserID,
 		n.EventResponseUserID,
 	)
+
+	return err
+}
+
+const excludedTypesClause = `
+	nt.message_user_id IS NULL
+	AND nt.group_invite_user_id IS NULL
+	AND nt.group_join_user_id IS NULL
+	AND nt.group_accept_user_id IS NULL
+`
+
+func GetUnreadCount(db *sql.DB, userID int) (int, error) {
+	var count int
+
+	err := db.QueryRow(`
+		SELECT COUNT(*)
+		FROM notifications n
+		LEFT JOIN notifications_types nt
+			ON nt.notifications_id = n.id
+		WHERE n.user_id = ?
+			AND n.is_read = 0
+			AND `+excludedTypesClause+`
+	`, userID).Scan(&count)
+
+	return count, err
+}
+
+func MarkAllRead(db *sql.DB, userID int) error {
+	_, err := db.Exec(`
+		UPDATE notifications
+		SET is_read = 1
+		WHERE user_id = ?
+	`, userID)
 
 	return err
 }

@@ -1,9 +1,15 @@
 <script setup>
+import { onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { logout } from '@/api/auth/auth';
 import { addNotification } from '@/data/notifications';
+import { unreadNotificationCount, refreshUnreadNotificationCount } from '@/data/notificationCount';
 
 const route = useRoute();
+
+onMounted(() => {
+    refreshUnreadNotificationCount();
+});
 
 async function logoutHandler() {
     try {
@@ -36,6 +42,10 @@ async function logoutHandler() {
             <a href="/notifications" :class="{ active: route.path === '/notifications' }">
                 <span class="icon">♢</span>
                 <span class="label">notifications</span>
+
+                <span v-if="unreadNotificationCount > 0" class="badge">
+                    {{ unreadNotificationCount > 99 ? '99+' : unreadNotificationCount }}
+                </span>
             </a>
 
 
@@ -79,6 +89,7 @@ async function logoutHandler() {
 }
 
 .side-navigation a {
+    position: relative;
     min-height: 44px;
     display: flex;
     align-items: center;
@@ -92,6 +103,33 @@ async function logoutHandler() {
     font-weight: 600;
     overflow: hidden;
     text-decoration: none;
+}
+
+.badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    margin-left: auto;
+    border: 2px solid var(--main-color);
+    border-radius: 999px;
+    background: #d9534f;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+@media (max-width: 1000px) {
+    .badge {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        margin-left: 0;
+    }
 }
 
 .side-navigation a:hover {

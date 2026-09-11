@@ -6,6 +6,23 @@ export async function getNotifications(offset = 0) {
     return await response.json();
 }
 
+export async function getUnreadNotificationCount() {
+    const response = await fetch('/api/notifications/unread', {
+        credentials: 'include'
+    });
+
+    return await response.json();
+}
+
+export async function markNotificationsRead() {
+    const response = await fetch('/api/notifications/read', {
+        method: 'POST',
+        credentials: 'include'
+    });
+
+    return await response.json();
+}
+
 export async function acceptFollowRequest(userID) {
     const response = await fetch(
         `/api/follow/accept?targetid=${userID}`,
