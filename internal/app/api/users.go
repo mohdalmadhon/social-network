@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"social/database/profiles"
 	"social/database/users"
 	"social/internal/helpers"
@@ -101,9 +102,8 @@ func (app *App) UpdateUserInfo(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
+	log.Println(userData.IsPrivate)
 	if err := validation.ValidateUpdateInfo(&userData); err != nil {
-		log.Println(err)
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "invalid data:" + err.Error(),
@@ -124,11 +124,8 @@ func (app *App) UpdateUserInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := users.UpdateUserInfo(app.DB, userID, &userData); err != nil {
-		log.Println(err)
-
-		status, message := helpers.NormalizeSQLError(err)
-
-		helpers.WriteJson(w, status, map[string]any{
+		_, message := helpers.NormalizeSQLError(err)
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
 			"message": message,
 		})
@@ -153,6 +150,7 @@ func (app *App) UpdateUserAvatar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	file, header, err := r.FormFile("avatar")
+
 	if err != nil {
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
@@ -160,6 +158,7 @@ func (app *App) UpdateUserAvatar(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+
 	defer file.Close()
 
 	if header.Size > 5*1024*1024 {
@@ -172,27 +171,36 @@ func (app *App) UpdateUserAvatar(w http.ResponseWriter, r *http.Request) {
 
 	contentType := header.Header.Get("Content-Type")
 
-	if contentType != "image/jpeg" && contentType != "image/png" && contentType != "image/gif" {
+	if contentType != "image/jpeg" &&
+		contentType != "image/png" &&
+		contentType != "image/gif" {
+
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
-			"message": "avatar must be JPG or PNG",
+			"message": "avatar must be JPG, PNG or GIF",
 		})
 		return
 	}
 
 	avatarPath, err := helpers.SaveUploads(file, header, "avatar")
+
 	if err != nil {
 		log.Println(err)
+
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
 			"message": "could not save avatar",
 		})
 		return
 	}
-	
+
 	err = users.UpdateUserAvatar(app.DB, userID, avatarPath)
+
 	if err != nil {
 		log.Println(err)
+
+		os.Remove("./uploads/" + avatarPath)
+
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
 			"message": "could not update avatar",
@@ -250,8 +258,7 @@ func (app *App) UpdateUserAbout(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
-	log.Println(userAbout.Intrests)
+	log.Println(userAbout.Instgram)
 	if err := profiles.UpdateUserAbout(app.DB, userID, &userAbout); err != nil {
 		log.Println(err)
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{

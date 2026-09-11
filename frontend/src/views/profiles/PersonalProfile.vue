@@ -2,24 +2,24 @@
 import { onMounted, ref } from 'vue';
 
 import { getUserData } from '@/api/users/personalProfile';
-import { profileData } from '@/data/usersData';
 
 import SideNavigation from '@/components/layout/SideNavigation.vue';
 import TopNavigation from '@/components/layout/TopNavigation.vue';
 
 import ProfileHeader from '@/components/personalProfile/ProfileHeader.vue';
 import ProfileTabs from '@/components/personalProfile/ProfileTabs.vue';
+import AboutTab from '@/components/profile/AboutTab.vue';
+import FollowersTab from '@/components/profile/FollowersTab.vue';
+import GroupTab from '@/components/personalProfile/group/GroupTab.vue';
 import { addNotification } from '@/data/notifications';
-import FollowersTab from '@/components/Profile/FollowersTab.vue';
-import AboutTab from '@/components/Profile/AboutTab.vue';
 
 const activeTab = ref('personal');
 const loading = ref(true);
+const user = ref(null);
 
 async function getData() {
     try {
-        await getUserData();
-        console.log(profileData.value);
+        user.value = await getUserData();
     } catch (err) {
         addNotification('Could not get user data', 'error');
         console.error(err);
@@ -43,26 +43,27 @@ onMounted(getData);
                     Loading profile...
                 </div>
 
-                <template v-else>
-                    <ProfileHeader :first-name="profileData.userInfo.firstName"
-                        :last-name="profileData.userInfo.lastName" :username="profileData.userInfo.userName"
-                        :add-edit="true" :bio="profileData.userInfo.about"
-                        :avatar-path="`/uploads/${profileData.userInfo.avatar}`" :num-of-posts="profileData.numOfPosts"
-                        :num-of-following="profileData.numOfFollowing" :num-of-followers="profileData.numOfFollowers" />
+                <template v-else-if="user">
+                    <ProfileHeader :first-name="user.firstName"
+                        :last-name="user.lastName" :username="user.username"
+                        :add-edit="true" :bio="user.Profile.About?.bio"
+                        :avatar-path="`/uploads/${user.Profile.avatar}`" :num-of-posts="user.Profile.numOfPosts"
+                        :num-of-following="user.Profile.numOfFollowing" :num-of-followers="user.Profile.numOfFollowers" />
 
                     <ProfileTabs type="personal" @change-tab="activeTab = $event" />
 
-                    <AboutTab v-if="activeTab === 'about'" :about="profileData.about" />
+                    <AboutTab v-if="activeTab === 'about'" :about="user.Profile.About" />
 
-                    <FollowersTab v-if="activeTab === 'followers'" type="followers" :target-id="profileData.userInfo.id"
-                        :follower-list="profileData.followers" />
+                    <FollowersTab v-if="activeTab === 'followers'" type="followers" :target-id="user.ID"
+                        :follower-list="user.Profile.followers" />
 
-                    <FollowersTab v-if="activeTab === 'following'" type="following" :target-id="profileData.userInfo.id"
-                        :follower-list="profileData.following" />
+                    <FollowersTab v-if="activeTab === 'following'" type="following" :target-id="user.ID"
+                        :follower-list="user.Profile.following" />
 
-                    <FollowersTab v-if="activeTab === 'friends'" type="friends" :target-id="profileData.userInfo.id"
-                        :follower-list="profileData.friends" />
+                    <FollowersTab v-if="activeTab === 'friends'" type="friends" :target-id="user.ID"
+                        :follower-list="user.Profile.friends" />
 
+                    <GroupTab v-if="activeTab === 'groups'" />
                 </template>
             </main>
         </div>

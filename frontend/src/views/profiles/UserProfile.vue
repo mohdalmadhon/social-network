@@ -6,27 +6,30 @@ import TopNavigation from '@/components/layout/TopNavigation.vue';
 import ProfileHeader from '@/components/personalProfile/ProfileHeader.vue';
 import ProfileTabs from '@/components/personalProfile/ProfileTabs.vue';
 import PrivateProfileIcon from '@/components/ProfileEdit/PrivateProfileIcon.vue';
+import AboutTab from '@/components/profile/AboutTab.vue';
 
 import { getProfileData } from '@/api/users/profiles';
-import { profileData } from '@/data/usersData';
 
 import { useRoute } from 'vue-router';
+import FollowersTab from '@/components/profile/FollowersTab.vue';
 import { addNotification } from '@/data/notifications';
-import AboutTab from '@/components/Profile/AboutTab.vue';
-import FollowersTab from '@/components/Profile/FollowersTab.vue';
+import { getFriends } from '@/api/common/friends';
 
 const route = useRoute();
 
 const activeTab = ref('about');
 const loading = ref(true);
 const showPrivateProfile = ref(false);
+const user = ref(null);
 
 async function getData() {
     const id = route.query.id;
     const count = 10;
     try {
-        await getProfileData(id, count);
-        showPrivateProfile.value = !profileData.show;
+        user.value = await getProfileData(id, count);
+        showPrivateProfile.value = !user.value.show;
+        const result = await getFriends("", id)
+        user.value.Profile.friends = result.data;
     } catch (err) {
         addNotification('could not get user data', 'error')
         console.error(err);
@@ -36,7 +39,7 @@ async function getData() {
 }
 
 function handleUnfollow() {
-    if (profileData.userInfo.isPrivate === 1) {
+    if (user.value.isPrivate === 1) {
         showPrivateProfile.value = true;
     }
 }
@@ -44,6 +47,12 @@ function handleUnfollow() {
 function handleFollow() {
     showPrivateProfile.value = false;
 }
+
+let id = route.query.id;
+if (!id) {
+    id = ""
+}
+
 
 onMounted(getData);
 </script>
@@ -60,54 +69,34 @@ onMounted(getData);
                     Loading profile...
                 </div>
 
-                <template v-else>
-                    <ProfileHeader
-                        :first-name="profileData.userInfo.firstName"
-                        :last-name="profileData.userInfo.lastName"
-                        :username="profileData.userInfo.userName"
-                        :bio="profileData.about.bio"
-                        :avatar-path="`/uploads/${profileData.userInfo.avatar}`"
-                        :num-of-posts="profileData.numOfPosts"
-                        :num-of-following="profileData.numOfFollowing"
-                        :num-of-followers="profileData.numOfFollowers"
-                        :add-edit="false"
-                        :is-following="profileData.isFollowing"
-                        @unfollow="handleUnfollow"
-                        @follow="handleFollow"
-                    />
+                <template v-else-if="user">
+                    <ProfileHeader :first-name="user.firstName"
+                        :last-name="user.lastName" :username="user.username"
+                        :bio="user.Profile.About?.bio" :avatar-path="`/uploads/${user.Profile.avatar}`"
+                        :num-of-posts="user.Profile.numOfPosts" :num-of-following="user.Profile.numOfFollowing"
+                        :num-of-followers="user.Profile.numOfFollowers" :add-edit="false"
+                        :is-following="user.isFollowing" @unfollow="handleUnfollow" @follow="handleFollow" />
 
                     <template v-if="!showPrivateProfile">
                         <section class="profile-content">
-                            <ProfileTabs
-                                v-if="profileData.show"
-                                @change-tab="activeTab = $event"
-                            />
+                            <ProfileTabs v-if="user.show" type="user" @change-tab="activeTab = $event" />
 
-                            <AboutTab
-                                v-if="profileData.show && activeTab === 'about'"
-                                :about="profileData.about"
-                            />
+                            <AboutTab v-if="user.show && activeTab === 'about'" :about="user.Profile.About" />
 
-                            <FollowersTab
-                                v-if="profileData.show && activeTab === 'followers'"
-                                :followers="profileData.followers"
-                            />
+                            <FollowersTab :target-id="id" v-if="user.show && activeTab === 'followers'"
+                                :follower-list="user.Profile.followers" />
 
-                            <FollowersTab
-                                v-if="profileData.show && activeTab === 'following'"
-                                :followers="profileData.following"
-                            />
-                            
-                            <PrivateProfileIcon
-                                v-else-if="!profileData.show"
-                            />
+                            <FollowersTab :target-id="id" v-if="user.show && activeTab === 'following'"
+                                :follower-list="user.Profile.following" />
+
+                            <FollowersTab :target-id="id" v-if="user.show && activeTab === 'friends'"
+                                :follower-list="user.Profile.friends" />
+
+                            <PrivateProfileIcon v-else-if="!user.show" />
                         </section>
                     </template>
 
-                    <section
-                        v-else
-                        class="profile-content"
-                    >
+                    <section v-else class="profile-content">
                         <PrivateProfileIcon />
                     </section>
                 </template>
@@ -119,7 +108,6 @@ onMounted(getData);
 <style scoped>
 .facebook-layout {
     min-height: 100vh;
-    background: var(--color-background);
 }
 
 .page-layout {
@@ -129,9 +117,9 @@ onMounted(getData);
 
 .profile-page {
     width: 100%;
-    max-width: var(--content-max-width);
+    max-width: 1100px;
     margin: 0 auto;
-    padding: var(--space-6) var(--space-6) var(--space-7);
+    padding: 25px 30px 60px;
 }
 
 .profile-content {
@@ -144,7 +132,7 @@ onMounted(getData);
     }
 
     .profile-page {
-        padding: var(--space-5) var(--space-4) var(--space-6);
+        padding: 20px 15px 50px;
     }
 }
 </style>

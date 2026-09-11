@@ -1,41 +1,32 @@
 <template>
     <div class="private-container">
-        <p><span class="icon">🔒</span>This account is private</p>
+        <p>This account is private</p>
     </div>
 </template>
 
 <style scoped>
-@import '../../styles/global.css';
-@import '../../styles/variables.css';
-
 .private-container {
     display: flex;
     margin-top: 100px;
     flex-direction: column;
     align-items: center;
-    gap: var(--space-3);
+    gap: 12px;
     padding: clamp(24px, 5vw, 40px) clamp(16px, 4vw, 24px);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-medium);
-    background: var(--color-surface-coral);
-    box-shadow: var(--shadow-raised);
-    border-top: 3px solid transparent;
-    border-image: var(--gradient-sunset) 1;
+    border: 2px solid var(--main-color);
+    border-radius: 7px;
+    background: var(--bg-color);
+    box-shadow: 5px 5px var(--main-color);
     text-align: center;
 }
 
 .icon {
-    margin-right: var(--space-2);
-    color: var(--color-amber);
-    font-size: clamp(14px, 2vw, 16px);
+    font-size: clamp(24px, 4vw, 32px);
 }
 
 .private-container p {
     margin: 0;
-    display: flex;
-    align-items: center;
-    color: var(--color-text);
-    font-family: var(--font-meta);
+    color: var(--font-color);
+    font-family: "JetBrains Mono", monospace;
     font-size: clamp(11px, 1.6vw, 13px);
     font-weight: 600;
 }

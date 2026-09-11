@@ -2,6 +2,7 @@ package users
 
 import (
 	"database/sql"
+	"os"
 
 	"social/internal/models"
 )
@@ -157,6 +158,10 @@ func UpdateUserInfo(db *sql.DB, userID int, userData *models.UserRegistration) e
 }
 
 func UpdateUserAvatar(db *sql.DB, userID int, avatar_path string) error {
+	if err := DeleteOldAvatar(db, userID); err != nil {
+		return err
+	}
+
 	_, err := db.Exec(`
 		UPDATE profile
 		SET avatar_path = ?
@@ -165,6 +170,33 @@ func UpdateUserAvatar(db *sql.DB, userID int, avatar_path string) error {
 
 	return err
 }
+
+func DeleteOldAvatar(db *sql.DB, userID int) error {
+	var avatarPath string
+
+	err := db.QueryRow(`
+		SELECT avatar_path
+		FROM profile
+		WHERE user_id = ?
+	`, userID).Scan(&avatarPath)
+
+	if err != nil {
+		return err
+	}
+
+	if avatarPath == "" || avatarPath == "avatars/default.png" {
+		return nil
+	}
+
+	err = os.Remove("./uploads/" + avatarPath)
+
+	if os.IsNotExist(err) {
+		return nil
+	}
+
+	return err
+}
+
 
 func UserExists(db *sql.DB, userID int) error {
 	var id int

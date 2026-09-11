@@ -1,6 +1,8 @@
+```vue
 <script setup>
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import FollowersDialog from '../personalProfile/group/FollowersDialog.vue';
 
 const router = useRouter();
 

@@ -1,6 +1,7 @@
-import { profileData } from "@/data/usersData";
 import { checkSessionResponse } from "@/helpers/auth/auth";
+import { About, Users, Profile } from "@/models/users";
 import { router } from "@/router/router";
+import { sendWS } from "../socket/socket";
 
 export async function getProfileData(id, count) {
     const resp = await fetch(`/api/profile?id=${id}`, {
@@ -23,62 +24,72 @@ export async function getProfileData(id, count) {
         throw new Error("network error, could not connet to server")
     }
 
-    profileData.show = result.showProfile;
-    profileData.isFollowing = result.followStatus;
-    if (profileData.show) {
-        profileData.userInfo.firstName = result.data.UserInfo.FirstName
-        profileData.userInfo.lastName = result.data.UserInfo.LastName
-        profileData.userInfo.userName = result.data.UserInfo.UserName
-        profileData.userInfo.email = result.data.UserInfo.Email
-        profileData.userInfo.dob = result.data.UserInfo.DOB
-        profileData.userInfo.avatar = result.data.UserInfo.Avatar
-        profileData.userInfo.isPrivate = result.data.UserInfo.IsPrivate
+    const data = result.data;
+    const userInfo = data.UserInfo;
 
-        profileData.numOfFollowers = result.data.NumOfFollowers;
-        profileData.NumOfPosts = result.data.NumOfPosts;
-        profileData.NumOfFollowing = result.data.NumOfFollowing;
+    const about = new About(
+        data.About?.Bio,
+        data.About?.Work,
+        data.About?.Education,
+        data.About?.Travel,
+        data.About?.interests,
+        data.About?.Hobbies,
+        data.About?.Website,
+        data.About?.Linkedin,
+        data.About?.instagram,
+        data.About?.Twitter
+    );
 
-        profileData.about.bio = result.data.About.Bio
-        profileData.about.work = result.data.About.Work
-        profileData.about.education = result.data.About.Education
-        profileData.about.travel = result.data.About.Travel
-        profileData.about.intrests = result.data.About.Intrests
-        profileData.about.hobbies = result.data.About.Hobbies
-        profileData.about.website = result.data.About.Website
-        profileData.about.linkedin = result.data.About.Linkedin
-        profileData.about.instgram = result.data.About.Instgram
-        profileData.about.twitter = result.data.About.Twitter
-    } else {
-        profileData.userInfo.firstName = result.data.UserInfo.FirstName
-        profileData.userInfo.lastName = result.data.UserInfo.LastName
-        profileData.userInfo.avatar = result.data.UserInfo.Avatar
-        profileData.userInfo.isPrivate = result.data.UserInfo.IsPrivate
-        profileData.about.bio = result.data.About.Bio
-        profileData.numOfFollowers = result.data.NumOfFollowers;
-        profileData.NumOfPosts = result.data.NumOfPosts;
-        profileData.NumOfFollowing = result.data.NumOfFollowing;
-    }
+    const profile = new Profile(
+        data.NumOfFollowing,
+        data.NumOfFollowers,
+        data.NumOfPosts,
+        userInfo.avatar,
+        about,
+        data.Following,
+        data.Followers,
+        data.Friends
+    );
 
-    // get followers
-    try {
-        const result = await getFollowers(id, count, 0)
-        if (!result.status) {
-            throw new Error("could not get user data")
+    profile.show = result.showProfile;
+
+    const user = new Users(
+        userInfo.ID,
+        userInfo.firstName,
+        userInfo.lastName,
+        userInfo.username,
+        userInfo.email,
+        userInfo.DOB,
+        userInfo.isPrivate,
+        profile
+    );
+
+    user.show = result.showProfile;
+    user.isFollowing = result.followStatus;
+
+    if (result.showProfile) {
+        try {
+            const followersResult = await getFollowers(id, count, 0);
+            if (!followersResult.status) {
+                throw new Error("could not get user data");
+            }
+            user.Profile.followers = followersResult.data;
+        } catch (err) {
+            throw new Error("network error, could not connet to server");
         }
-        profileData.followers = result.data;
-    } catch (err) {
-        throw new Error("network error, could not connet to server")
-    }
-    try {
-        const result = await getFollowing(id, count, 0)
-        if (!result.status) {
-            throw new Error("could not get user data")
+
+        try {
+            const followingResult = await getFollowing(id, count, 0);
+            if (!followingResult.status) {
+                throw new Error("could not get user data");
+            }
+            user.Profile.following = followingResult.data;
+        } catch (err) {
+            throw new Error("network error, could not connet to server");
         }
-        profileData.following = result.data;
-    } catch (err) {
-        throw new Error("network error, could not connet to server")
     }
-    console.log(profileData)
+
+    return user;
 }
 
 export async function requestFollow(id, method) {
@@ -175,6 +186,7 @@ export async function searchFollowing(searchValue = "", targetId) {
     const result = await resp.json();
     return result;
 }
+
 
 
 export function getMyFollowing(count = 100) {

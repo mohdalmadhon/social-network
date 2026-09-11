@@ -157,9 +157,6 @@ async function onFileChange(event) {
 </template>
 
 <style scoped>
-@import '../../styles/global.css';
-@import '../../styles/variables.css';
-
 .avatar-uploader {
     display: flex;
     flex-wrap: wrap;
@@ -175,16 +172,11 @@ async function onFileChange(event) {
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    border: 3px solid var(--color-surface);
-    outline: 2px solid var(--color-cyan);
+    border: 3px solid var(--bg-color);
+    outline: 2px solid var(--main-color);
     border-radius: 50%;
-    background: var(--gradient-cyber);
-    box-shadow: var(--shadow-raised);
-    transition: outline-color 0.15s;
-}
-
-.avatar-preview:hover {
-    outline-color: var(--color-magenta);
+    background: var(--main-color);
+    box-shadow: 4px 4px var(--main-color);
 }
 
 .avatar-preview img {
@@ -196,32 +188,26 @@ async function onFileChange(event) {
 .avatar-actions {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: 8px;
     min-width: 0;
 }
 
 .upload-button {
     padding: clamp(8px, 1.5vw, 10px) clamp(12px, 2vw, 16px);
-    border: 1px solid transparent;
-    border-radius: var(--radius-small);
-    background: var(--gradient-aurora);
-    box-shadow: var(--shadow-raised);
-    color: var(--color-text);
-    font-family: var(--font-meta);
+    border: 2px solid var(--main-color);
+    border-radius: 5px;
+    background: var(--input-focus);
+    box-shadow: 3px 3px var(--main-color);
+    color: white;
+    font-family: "JetBrains Mono", monospace;
     font-size: clamp(8px, 1.4vw, 9px);
     font-weight: 600;
     white-space: nowrap;
     cursor: pointer;
-    transition: transform 0.1s;
 }
 
 .upload-button:hover:not(:disabled) {
-    transform: translateY(-1px);
-}
-
-.upload-button:focus-visible {
-    outline: none;
-    box-shadow: var(--focus-ring);
+    transform: translate(-1px, -1px);
 }
 
 .upload-button:disabled {
@@ -230,14 +216,14 @@ async function onFileChange(event) {
 }
 
 .hint {
-    color: var(--color-blue-soft);
-    font-family: var(--font-meta);
+    color: var(--font-color-sub);
+    font-family: "JetBrains Mono", monospace;
     font-size: clamp(7px, 1.2vw, 8px);
 }
 
 .error {
-    color: var(--color-coral);
-    font-family: var(--font-meta);
+    color: #d9534f;
+    font-family: "JetBrains Mono", monospace;
     font-size: clamp(7px, 1.2vw, 8px);
 }
 

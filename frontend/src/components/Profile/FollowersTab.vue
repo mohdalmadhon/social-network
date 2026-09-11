@@ -158,10 +158,10 @@ async function fetchPage() {
 
         const page = Object.entries(body.data || {}).map(([key, value]) => ({
             ID: Number(key),
-            FirstName: value.FirstName,
-            LastName: value.LastName,
-            UserName: value.UserName,
-            Avatar: value.Avatar
+            firstName: value.firstName,
+            lastName: value.lastName,
+            username: value.username,
+            avatar: value.avatar
         }));
 
         list.value.push(...page);
@@ -267,7 +267,6 @@ async function goToProfile(id) {
 
 onMounted(() => {
     window.addEventListener('keydown', handleKeydown);
-    console.log(props.followerList)
 });
 
 onUnmounted(() => {
@@ -308,18 +307,18 @@ onUnmounted(() => {
                 >
                     <img
                         :src="
-                            follower.Avatar
-                                ? `/uploads/${follower.Avatar}`
+                            follower.avatar
+                                ? `/uploads/${follower.avatar}`
                                 : '/default-avatar.png'
                         "
-                        :alt="`${follower.FirstName} ${follower.LastName}`"
+                        :alt="`${follower.firstName} ${follower.lastName}`"
                         class="follower-avatar"
                     >
 
                     <div class="follower-info">
                         <p class="follower-name">
-                            {{ follower.FirstName }}
-                            {{ follower.LastName }}
+                            {{ follower.firstName }}
+                            {{ follower.lastName }}
                         </p>
                     </div>
                 </article>
@@ -389,19 +388,19 @@ onUnmounted(() => {
                             <div class="row-avatar-wrap">
                                 <img
                                     :src="
-                                        user.Avatar
-                                            ? `/uploads/${user.Avatar}`
+                                        user.avatar
+                                            ? `/uploads/${user.avatar}`
                                             : '/default-avatar.png'
                                     "
-                                    :alt="`${user.FirstName} ${user.LastName}`"
+                                    :alt="`${user.firstName} ${user.lastName}`"
                                     class="follower-avatar"
                                 >
                             </div>
 
                             <div class="row-info">
                                 <p class="follower-name">
-                                    {{ user.FirstName }}
-                                    {{ user.LastName }}
+                                    {{ user.firstName }}
+                                    {{ user.lastName }}
                                 </p>
 
                                 <span class="row-label">
@@ -440,19 +439,19 @@ onUnmounted(() => {
                             <div class="row-avatar-wrap">
                                 <img
                                     :src="
-                                        follower.Avatar
-                                            ? `/uploads/${follower.Avatar}`
+                                        follower.avatar
+                                            ? `/uploads/${follower.avatar}`
                                             : '/default-avatar.png'
                                     "
-                                    :alt="`${follower.FirstName} ${follower.LastName}`"
+                                    :alt="`${follower.firstName} ${follower.lastName}`"
                                     class="follower-avatar"
                                 >
                             </div>
 
                             <div class="row-info">
                                 <p class="follower-name">
-                                    {{ follower.FirstName }}
-                                    {{ follower.LastName }}
+                                    {{ follower.firstName }}
+                                    {{ follower.lastName }}
                                 </p>
 
                                 <span class="row-label">

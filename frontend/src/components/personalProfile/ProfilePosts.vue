@@ -58,69 +58,56 @@
 <style scoped>
 .profile-section {
     scroll-margin-top: 100px;
-    margin-bottom: var(--space-6);
+    margin-bottom: 35px;
 }
 
 .section-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: var(--space-4);
+    margin-bottom: 18px;
 }
 
 .eyebrow {
-    margin: 0 0 var(--space-1);
-    color: var(--color-orange);
-    font-family: var(--font-meta);
+    margin: 0 0 5px;
+    color: var(--input-focus);
+    font-family: "JetBrains Mono", monospace;
     font-size: 9px;
     font-weight: 600;
     letter-spacing: 2px;
-    text-transform: uppercase;
 }
 
 h2 {
     margin: 0;
-    color: var(--color-text);
-    font-family: var(--font-display);
+    font-family: "Liter", serif;
     font-size: 29px;
 }
 
 .primary-button {
-    padding: var(--space-3) var(--space-4);
-    border: 1px solid transparent;
-    border-radius: var(--radius-small);
-    background: var(--gradient-sunset);
-    color: var(--color-text);
-    font-family: var(--font-meta);
+    padding: 10px 15px;
+    border: 2px solid var(--main-color);
+    border-radius: 5px;
+    background: var(--input-focus);
+    box-shadow: 4px 4px var(--main-color);
+    color: white;
+    font-family: "JetBrains Mono", monospace;
     font-size: 10px;
     font-weight: 600;
-    cursor: pointer;
-    box-shadow: var(--shadow-raised);
-    transition: transform 0.1s;
-}
-
-.primary-button:hover {
-    transform: translateY(-1px);
-}
-
-.primary-button:focus-visible {
-    outline: none;
-    box-shadow: var(--focus-ring);
 }
 
 .post-card {
-    margin-bottom: var(--space-5);
-    padding: var(--space-5);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-medium);
-    background: var(--color-surface);
-    box-shadow: var(--shadow-raised);
+    margin-bottom: 20px;
+    padding: 25px;
+    border: 2px solid var(--main-color);
+    border-radius: 7px;
+    background: var(--bg-color);
+    box-shadow: 5px 5px var(--main-color);
 }
 
 .post-header {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
+    gap: 12px;
 }
 
 .small-avatar {
@@ -129,11 +116,11 @@ h2 {
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--color-border);
+    border: 2px solid var(--main-color);
     border-radius: 50%;
-    background: var(--gradient-cyber);
-    color: var(--color-text);
-    font-family: var(--font-display);
+    background: var(--input-focus);
+    color: white;
+    font-family: "Liter", serif;
     font-size: 18px;
 }
 
@@ -143,56 +130,39 @@ h2 {
 }
 
 .post-header strong {
-    color: var(--color-text);
     font-size: 12px;
 }
 
 .post-header span {
-    margin-top: var(--space-1);
-    color: var(--color-text-muted);
-    font-family: var(--font-meta);
+    margin-top: 3px;
+    color: var(--font-color-sub);
+    font-family: "JetBrains Mono", monospace;
     font-size: 9px;
 }
 
 .post-text {
-    margin: var(--space-5) 0;
-    color: var(--color-text-soft);
-    font-family: var(--font-body);
+    margin: 22px 0;
+    color: var(--font-color);
     font-size: 14px;
     line-height: 1.7;
 }
 
 .post-actions {
     display: flex;
-    gap: var(--space-3);
-    padding-top: var(--space-4);
-    border-top: 1px solid var(--color-border);
+    gap: 10px;
+    padding-top: 15px;
+    border-top: 2px solid var(--page-background);
 }
 
 .post-actions button {
     border: 0;
     background: transparent;
-    color: var(--color-text-muted);
-    font-family: var(--font-meta);
+    color: var(--font-color-sub);
+    font-family: "JetBrains Mono", monospace;
     font-size: 9px;
-    cursor: pointer;
-    transition: color 0.15s;
 }
 
-.post-actions button:nth-child(1):hover {
-    color: var(--color-coral);
-}
-
-.post-actions button:nth-child(2):hover {
-    color: var(--color-cyan);
-}
-
-.post-actions button:nth-child(3):hover {
-    color: var(--color-lime);
-}
-
-.post-actions button:focus-visible {
-    outline: none;
-    box-shadow: var(--focus-ring);
+.post-actions button:hover {
+    color: var(--input-focus);
 }
 </style>

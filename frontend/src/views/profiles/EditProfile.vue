@@ -4,28 +4,24 @@ import TopNavigation from '@/components/layout/TopNavigation.vue';
 import EditProfileTabs from '@/components/ProfileEdit/EditProfileTabs.vue';
 import EditPersonalInfo from '@/components/ProfileEdit/EditPersonalInfo.vue';
 import EditAdditionalInfo from '@/components/ProfileEdit/EditAdditionalInfo.vue';
-import '@/styles/variables.css';
-import '@/styles/global.css';
+
 import { onMounted, ref } from 'vue';
 import { getUserData } from '@/api/users/personalProfile';
-import { profileData } from '@/data/usersData';
+import { addNotification } from '@/data/notifications';
 
 const activeTab = ref('personal');
 const loading = ref(true);
+const user = ref(null);
 
 async function getData() {
     try {
-        await getUserData();
+        user.value = await getUserData();
     } catch (err) {
-        addNotification('could not get user data', err)
+        addNotification('could not get user data', 'error')
         console.error(err);
     } finally {
         loading.value = false;
     }
-}
-
-function onAvatarChange(avatar) {
-    profileData.userInfo.avatar = avatar;
 }
 
 onMounted(getData);
@@ -48,11 +44,14 @@ onMounted(getData);
                 <EditProfileTabs v-model:activeTab="activeTab" />
 
                 <section class="profile-content">
-                    <EditPersonalInfo v-if="!loading && activeTab === 'personal'" :first-name="profileData.userInfo.firstName"
-                        :last-name="profileData.userInfo.lastName" :username="profileData.userInfo.userName" :email="profileData.userInfo.email"
-                        :bio="profileData.userInfo.about" :avatar_path="`/uploads/${profileData.userInfo.avatar}`" />
+                    <template v-if="!loading && user">
+                        <EditPersonalInfo v-if="activeTab === 'personal'" :first-name="user.firstName"
+                            :last-name="user.lastName" :username="user.username" :email="user.email"
+                            :bio="user.Profile.About?.bio" :avatar_path="`/uploads/${user.Profile.avatar}`"
+                            :is-private="user.isPrivate" />
 
-                    <EditAdditionalInfo v-else-if="activeTab === 'additional'" />
+                        <EditAdditionalInfo v-else-if="activeTab === 'additional'" :about="user.Profile.About" />
+                    </template>
                 </section>
             </main>
         </div>
@@ -60,11 +59,8 @@ onMounted(getData);
 </template>
 
 <style scoped>
-@import '../../styles/global.css';
-@import '../../styles/variables.css';
 .facebook-layout {
     min-height: 100vh;
-    background: var(--color-background);
 }
 
 .page-layout {
@@ -81,16 +77,15 @@ onMounted(getData);
 
 .page-heading .eyebrow {
     margin: 0 0 5px;
-    color: var(--color-cyan);
-    font-family: var(--font-meta);
+    color: var(--input-focus);
+    font-family: "JetBrains Mono", monospace;
     font-size: 9px;
     letter-spacing: 2px;
 }
 
 .page-heading h1 {
     margin: 0;
-    color: var(--color-text);
-    font-family: var(--font-body);
+    font-family: "Liter", serif;
     font-size: 36px;
 }
 

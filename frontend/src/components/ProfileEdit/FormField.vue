@@ -37,18 +37,16 @@ defineEmits(['update:modelValue'])
 </template>
 
 <style scoped>
-@import '../../styles/global.css';
-@import '../../styles/variables.css';
 .form-field {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: 8px;
     min-width: 0;
 }
 
 label {
-    color: var(--color-text-muted);
-    font-family: var(--font-meta);
+    color: var(--font-color-sub);
+    font-family: "JetBrains Mono", monospace;
     font-size: clamp(8px, 1.2vw, 9px);
     font-weight: 600;
     letter-spacing: 1px;
@@ -58,19 +56,13 @@ input,
 textarea {
     width: 100%;
     padding: clamp(10px, 1.8vw, 12px) clamp(10px, 2vw, 14px);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-small);
-    background: var(--color-input);
-    color: var(--color-text);
-    font-family: var(--font-display);
+    border: 2px solid var(--main-color);
+    border-radius: 5px;
+    background: var(--bg-color);
+    color: var(--font-color);
+    font-family: "Hedvig Letters Sans", sans-serif;
     font-size: clamp(12px, 1.8vw, 13px);
     box-sizing: border-box;
-    transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-input::placeholder,
-textarea::placeholder {
-    color: var(--color-text-faint);
 }
 
 textarea {
@@ -81,26 +73,14 @@ textarea {
 input:focus,
 textarea:focus {
     outline: none;
-    border-color: var(--color-cyan);
-    box-shadow: 0 0 0 3px rgb(34 229 229 / 24%);
+    border-color: var(--input-focus);
+    box-shadow: 3px 3px var(--input-focus);
 }
 
-textarea:focus {
-    border-color: var(--color-mint);
-    box-shadow: 0 0 0 3px rgb(46 235 181 / 24%);
-}
-
-input[type="password"]:focus {
-    border-color: var(--color-magenta);
-    box-shadow: 0 0 0 3px rgb(255 63 216 / 24%);
-}
-
-input[type="email"]:focus {
-    border-color: var(--color-blue);
-    box-shadow: 0 0 0 3px rgb(56 182 255 / 24%);
-}
-
-.form-field:focus-within label {
-    color: var(--color-text-soft);
+@media (max-width: 550px) {
+    input:focus,
+    textarea:focus {
+        box-shadow: 2px 2px var(--input-focus);
+    }
 }
 </style>
