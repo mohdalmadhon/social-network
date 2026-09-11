@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import HomePostHeader from './HomePostHeader.vue';
 import HomePostImage from './HomePostImage.vue';
 import HomePostReaction from './HomePostReaction.vue';
@@ -8,12 +8,19 @@ import HomePostComments from './HomePostComments.vue';
 import LocationDialouge from './LocationDialouge.vue';
 import TaggedPeopleDialoug from './TaggedPeopleDialoug.vue';
 
-
-
 const props = defineProps({
+    reaction: {
+        type: Number,
+        required: true
+    },
     userId: {
         type: [Number, String],
         default: null
+    },
+
+    postId: {
+        type: Number,
+        required: true
     },
 
     groupId: {
@@ -220,68 +227,37 @@ function openLocationDialog() {
 function closeLocationDialog() {
     showLocationDialog.value = false;
 }
+
+onMounted(() => {
+    console.log(props.likes)
+})
 </script>
 
 <template>
     <article class="post-card">
-        <HomePostHeader
-            :user-id="userId"
-            :group-id="groupId"
-            :first-name="firstName"
-            :last-name="lastName"
-            :avatar-path="avatarPath"
-            :relationship="relationship"
-            :tagged-people="taggedPeople"
-            :formatted-date="formattedDate"
-            :location-display="locationParts?.display"
-            :has-location="!!location"
-            @open-tags="openTaggedPeople"
-            @open-location="openLocationDialog"
-        />
+        <HomePostHeader :user-id="userId" :group-id="groupId" :first-name="firstName" :last-name="lastName"
+            :avatar-path="avatarPath" :relationship="relationship" :tagged-people="taggedPeople"
+            :formatted-date="formattedDate" :location-display="locationParts?.display" :has-location="!!location"
+            @open-tags="openTaggedPeople" @open-location="openLocationDialog" />
 
         <div v-if="content" class="post-content">
             {{ content }}
         </div>
 
-        <HomePostImage
-            :image-path="imagePath"
-            :tagged-people="taggedPeople"
-            @open-tags="openTaggedPeople"
-        />
+        <HomePostImage :image-path="imagePath" :tagged-people="taggedPeople" @open-tags="openTaggedPeople" />
 
-        <HomePostReaction
-            :likes="likes"
-            :dislikes="dislikes"
-            :comments-count="comments.length"
-            @toggle-comments="toggleComments"
-        />
+        <HomePostReaction :likes="likes" :dislikes="dislikes" :comments-count="comments.length"
+            @toggle-comments="toggleComments" />
 
-        <HomePostAction
-            :user-reaction="userReaction"
-            @like="handleLike"
-            @dislike="handleDislike"
-            @toggle-comments="toggleComments"
-        />
+        <HomePostAction :reaction="props.reaction" :user-reaction="userReaction" :post-id="postId" :likes="props.likes" :dislikes="props.dislikes" @like="handleLike" @dislike="handleDislike"
+            @toggle-comments="toggleComments" />
 
-        <HomePostComments
-            v-if="showComments"
-            :comments="comments"
-            @submit-comment="handleSubmitComment"
-        />
+        <HomePostComments v-if="showComments" :comments="comments" @submit-comment="handleSubmitComment" />
 
-        <LocationDialouge
-            :show="showLocationDialog"
-            :display="locationParts?.display"
-            :embed-url="mapEmbedUrl"
-            :external-url="mapExternalUrl"
-            @close="closeLocationDialog"
-        />
+        <LocationDialouge :show="showLocationDialog" :display="locationParts?.display" :embed-url="mapEmbedUrl"
+            :external-url="mapExternalUrl" @close="closeLocationDialog" />
 
-        <TaggedPeopleDialoug
-            :show="showTaggedDialog"
-            :people="taggedPeople"
-            @close="closeTaggedDialog"
-        />
+        <TaggedPeopleDialoug :show="showTaggedDialog" :people="taggedPeople" @close="closeTaggedDialog" />
     </article>
 </template>
 

@@ -154,3 +154,45 @@ func (app *App) GetHomePosts(w http.ResponseWriter, r *http.Request) {
 		"posts":  posts,
 	})
 }
+
+func (app *App) PostReaction(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
+			"status":  false,
+			"message": "could not authorize user",
+		})
+		return
+	}
+
+	var rect models.Reaction
+	if err := json.NewDecoder(r.Body).Decode(&rect); err != nil {
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid reaction ",
+		})
+		return
+	}
+
+	if rect.Value != 1 && rect.Value != -1 {
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid reaction",
+		})
+		return
+	}
+
+	rect.UserID = userID
+	if err := posts.InsertReaction(app.DB, rect); err != nil {
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not insert reaction",
+		})
+		return
+	}
+
+	helpers.WriteJson(w, http.StatusOK, map[string]any{
+		"status":  true,
+		"message": "reaction inserted!",
+	})
+}

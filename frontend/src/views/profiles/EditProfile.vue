@@ -7,17 +7,17 @@ import EditAdditionalInfo from '@/components/ProfileEdit/EditAdditionalInfo.vue'
 
 import { onMounted, ref } from 'vue';
 import { getUserData } from '@/api/users/personalProfile';
-import { profileData } from '@/data/usersData';
+import { addNotification } from '@/data/notifications';
 
 const activeTab = ref('personal');
 const loading = ref(true);
+const user = ref(null);
 
 async function getData() {
     try {
-        await getUserData();
-        console.log(profileData)
+        user.value = await getUserData();
     } catch (err) {
-        addNotification('could not get user data', err)
+        addNotification('could not get user data', 'error')
         console.error(err);
     } finally {
         loading.value = false;
@@ -44,11 +44,14 @@ onMounted(getData);
                 <EditProfileTabs v-model:activeTab="activeTab" />
 
                 <section class="profile-content">
-                    <EditPersonalInfo v-if="!loading && activeTab === 'personal'" :first-name="profileData.userInfo.firstName"
-                        :last-name="profileData.userInfo.lastName" :username="profileData.userInfo.userName" :email="profileData.userInfo.email"
-                        :bio="profileData.userInfo.about" :avatar_path="`/uploads/${profileData.userInfo.avatar}`" />
+                    <template v-if="!loading && user">
+                        <EditPersonalInfo v-if="activeTab === 'personal'" :first-name="user.firstName"
+                            :last-name="user.lastName" :username="user.username" :email="user.email"
+                            :bio="user.Profile.About?.bio" :avatar_path="`/uploads/${user.Profile.avatar}`"
+                            :is-private="user.isPrivate" />
 
-                    <EditAdditionalInfo v-else-if="activeTab === 'additional'" />
+                        <EditAdditionalInfo v-else-if="activeTab === 'additional'" :about="user.Profile.About" />
+                    </template>
                 </section>
             </main>
         </div>

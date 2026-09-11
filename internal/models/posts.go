@@ -38,12 +38,24 @@ type Post struct {
 	Visibility     string         `json:"visibility"`
 	VisibilityUser string         `json:"visibilityUser"`
 	TaggedPeople   []TaggedPerson `json:"taggedPeople"`
+	LikeCount      int            `json:"likeCount"`
+	DisLikeCount   int            `json:"disLikeCount"`
+	CommentCount   int            `json:"commentCount"`
+	ReactionValue  int
 }
 
 type Comment struct {
-	ID                      int
-	Content                 string
-	LikeCount, DisLikeCount int
-	User                    UserRegistration
-	CreatedAt               time.Time
+	ID        int
+	Content   string
+	Votes     int
+	PostID    int
+	User      UserRegistration
+	RepltTo   UserRegistration
+	CreatedAt time.Time
+}
+
+type Reaction struct {
+	UserID int `json:"userID"`
+	PostID int `json:"postID"`
+	Value  int `json:"value"`
 }

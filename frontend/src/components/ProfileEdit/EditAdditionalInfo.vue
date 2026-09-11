@@ -1,20 +1,26 @@
 <script setup>
 import { updateAbout } from '@/api/users/editProfile';
 import { addNotification } from '@/data/notifications';
-import { profileData } from '@/data/usersData';
 import { validateAboutField } from '@/helpers/validators/editProfile.js';
 import { reactive } from 'vue';
 
+const props = defineProps({
+    about: {
+        type: Object,
+        default: () => ({})
+    }
+});
+
 const form = reactive({
-    work: profileData.about.work || '',
-    education: profileData.about.education || '',
-    hobbies: profileData.about.hobbies || '',
-    interests: profileData.about.intrests || '',
-    travel: profileData.about.travel || '',
-    website: profileData.about.website || '',
-    linkedin: profileData.about.linkedin || '',
-    twitter: profileData.about.twitter || '',
-    instagram: profileData.about.instgram || ''
+    work: props.about?.work || '',
+    education: props.about?.education || '',
+    hobbies: props.about?.hobbies || '',
+    interests: props.about?.interests || '',
+    travel: props.about?.travel || '',
+    website: props.about?.website || '',
+    linkedin: props.about?.linkedin || '',
+    twitter: props.about?.twitter || '',
+    instagram: props.about?.instagram || ''
 });
 
 const errors = reactive({
@@ -45,17 +51,14 @@ async function confirmChanges() {
 
     try {
         const result = await updateAbout(form);
-        if(!result.status) {
+        if (!result.status) {
             addNotification(result.message, 'error')
             return;
         }
         addNotification(result.message, 'success')
-    } catch(err) {
+    } catch (err) {
         addNotification(err.message, 'error')
     }
-    
-
-    console.log(result);
 }
 </script>
 

@@ -1,7 +1,9 @@
 package helpers
 
 import (
+	"fmt"
 	"io"
+	"log"
 	"mime/multipart"
 	"os"
 	"path/filepath"
@@ -9,35 +11,46 @@ import (
 	"github.com/google/uuid"
 )
 
-const AVATAR_PATH = "uploads/posts"
-const POSTS_PATH = "uploads/avatars"
+const AVATAR_PATH = "uploads/avatars"
+const POSTS_PATH = "uploads/posts"
 
 func SaveUploads(file multipart.File, header *multipart.FileHeader, Type string) (string, error) {
-	if err := os.MkdirAll(AVATAR_PATH, 0755); err != nil {
-		return "", err
-	}
-
 	var path string
+
 	if Type == "post" {
 		path = POSTS_PATH
 	} else if Type == "avatar" {
 		path = AVATAR_PATH
+	} else {
+		return "", fmt.Errorf("invalid upload type")
 	}
-	
+
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return "", err
+	}
+
 	extension := filepath.Ext(header.Filename)
 	filename := uuid.New().String() + extension
-
 	filePath := filepath.Join(path, filename)
+
+	log.Println("Saving upload to:", filePath)
 
 	dst, err := os.Create(filePath)
 	if err != nil {
 		return "", err
 	}
+
 	defer dst.Close()
 
-	if _, err := io.Copy(dst, file); err != nil {
+	_, err = io.Copy(dst, file)
+
+	if err != nil {
 		return "", err
 	}
 
-	return "avatars/" + filename, nil
+	if Type == "avatar" {
+		return "avatars/" + filename, nil
+	}
+
+	return "posts/" + filename, nil
 }

@@ -17,7 +17,7 @@ async function logoutHandler() {
 <template>
     <aside class="side-navigation">
         <nav>
-            <a href="/" :class="{ active: route.path === '/' }">
+            <a href="/home" :class="{ active: route.path === '/' }">
                 <span class="icon">⌂</span>
                 <span class="label">Home</span>
             </a>

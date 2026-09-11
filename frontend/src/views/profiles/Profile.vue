@@ -9,7 +9,6 @@ import PrivateProfileIcon from '@/components/ProfileEdit/PrivateProfileIcon.vue'
 import AboutTab from '@/components/profile/AboutTab.vue';
 
 import { getProfileData } from '@/api/users/profiles';
-import { profileData } from '@/data/usersData';
 
 import { useRoute } from 'vue-router';
 import FollowersTab from '@/components/profile/FollowersTab.vue';
@@ -21,15 +20,16 @@ const route = useRoute();
 const activeTab = ref('about');
 const loading = ref(true);
 const showPrivateProfile = ref(false);
+const user = ref(null);
 
 async function getData() {
     const id = route.query.id;
     const count = 10;
     try {
-        await getProfileData(id, count);
-        showPrivateProfile.value = !profileData.show;
+        user.value = await getProfileData(id, count);
+        showPrivateProfile.value = !user.value.show;
         const result = await getFriends("", id)
-        profileData.friends = result.data;
+        user.value.Profile.friends = result.data;
     } catch (err) {
         addNotification('could not get user data', 'error')
         console.error(err);
@@ -39,7 +39,7 @@ async function getData() {
 }
 
 function handleUnfollow() {
-    if (profileData.userInfo.isPrivate === 1) {
+    if (user.value.isPrivate === 1) {
         showPrivateProfile.value = true;
     }
 }
@@ -69,30 +69,30 @@ onMounted(getData);
                     Loading profile...
                 </div>
 
-                <template v-else>
-                    <ProfileHeader :first-name="profileData.userInfo.firstName"
-                        :last-name="profileData.userInfo.lastName" :username="profileData.userInfo.userName"
-                        :bio="profileData.about.bio" :avatar-path="`/uploads/${profileData.userInfo.avatar}`"
-                        :num-of-posts="profileData.numOfPosts" :num-of-following="profileData.numOfFollowing"
-                        :num-of-followers="profileData.numOfFollowers" :add-edit="false"
-                        :is-following="profileData.isFollowing" @unfollow="handleUnfollow" @follow="handleFollow" />
+                <template v-else-if="user">
+                    <ProfileHeader :first-name="user.firstName"
+                        :last-name="user.lastName" :username="user.username"
+                        :bio="user.Profile.About?.bio" :avatar-path="`/uploads/${user.Profile.avatar}`"
+                        :num-of-posts="user.Profile.numOfPosts" :num-of-following="user.Profile.numOfFollowing"
+                        :num-of-followers="user.Profile.numOfFollowers" :add-edit="false"
+                        :is-following="user.isFollowing" @unfollow="handleUnfollow" @follow="handleFollow" />
 
                     <template v-if="!showPrivateProfile">
                         <section class="profile-content">
-                            <ProfileTabs v-if="profileData.show" type="user" @change-tab="activeTab = $event" />
+                            <ProfileTabs v-if="user.show" type="user" @change-tab="activeTab = $event" />
 
-                            <AboutTab v-if="profileData.show && activeTab === 'about'" :about="profileData.about" />
+                            <AboutTab v-if="user.show && activeTab === 'about'" :about="user.Profile.About" />
 
-                            <FollowersTab :target-id="id" v-if="profileData.show && activeTab === 'followers'"
-                                :follower-list="profileData.followers" />
+                            <FollowersTab :target-id="id" v-if="user.show && activeTab === 'followers'"
+                                :follower-list="user.Profile.followers" />
 
-                            <FollowersTab :target-id="id" v-if="profileData.show && activeTab === 'following'"
-                                :follower-list="profileData.following" />
+                            <FollowersTab :target-id="id" v-if="user.show && activeTab === 'following'"
+                                :follower-list="user.Profile.following" />
 
-                            <FollowersTab :target-id="id" v-if="profileData.show && activeTab === 'friends'"
-                                :follower-list="profileData.friends" />
+                            <FollowersTab :target-id="id" v-if="user.show && activeTab === 'friends'"
+                                :follower-list="user.Profile.friends" />
 
-                            <PrivateProfileIcon v-else-if="!profileData.show" />
+                            <PrivateProfileIcon v-else-if="!user.show" />
                         </section>
                     </template>
 

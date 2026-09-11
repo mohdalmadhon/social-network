@@ -104,9 +104,7 @@ function handleUsername(e) {
 
 function handleEmail(e) {
     const value = handleEmailInput(e.target.value)
-
     e.target.value = value
-
     validateField('email', value)
 }
 

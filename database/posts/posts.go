@@ -35,11 +35,13 @@ func GroupExists(db *sql.DB, groupID, userID int) error {
 
 func GetHomePosts(db *sql.DB, userID, offset int) ([]models.Post, error) {
 	var posts []models.Post
+
 	seen := make(map[int]bool)
 	tagsByPostIndex := make(map[int]string)
 
 	appendPosts := func(rows *sql.Rows) error {
 		defer rows.Close()
+
 		for rows.Next() {
 			var p models.Post
 			var username sql.NullString
@@ -60,6 +62,10 @@ func GetHomePosts(db *sql.DB, userID, offset int) ([]models.Post, error) {
 				&p.CreatedAt,
 				&p.GroupId,
 				&tags,
+				&p.ReactionValue,
+				&p.LikeCount,
+				&p.DisLikeCount,
+				&p.CommentCount,
 			); err != nil {
 				return err
 			}
@@ -67,6 +73,7 @@ func GetHomePosts(db *sql.DB, userID, offset int) ([]models.Post, error) {
 			if username.Valid {
 				p.Username = &username.String
 			}
+
 			if avatarPath.Valid {
 				p.AvatarPath = avatarPath.String
 			}
@@ -74,11 +81,13 @@ func GetHomePosts(db *sql.DB, userID, offset int) ([]models.Post, error) {
 			if !seen[p.Id] {
 				seen[p.Id] = true
 				posts = append(posts, p)
+
 				if tags.Valid {
 					tagsByPostIndex[len(posts)-1] = tags.String
 				}
 			}
 		}
+
 		return rows.Err()
 	}
 
@@ -86,12 +95,15 @@ func GetHomePosts(db *sql.DB, userID, offset int) ([]models.Post, error) {
 		if len(posts) == 0 {
 			return "", nil
 		}
+
 		placeholders := make([]string, len(posts))
 		args := make([]interface{}, len(posts))
+
 		for i, p := range posts {
 			placeholders[i] = "?"
 			args[i] = p.Id
 		}
+
 		return " AND p.id NOT IN (" + strings.Join(placeholders, ",") + ")", args
 	}
 
@@ -99,12 +111,15 @@ func GetHomePosts(db *sql.DB, userID, offset int) ([]models.Post, error) {
 		if len(ids) == 0 {
 			return "", nil
 		}
+
 		placeholders := make([]string, len(ids))
 		args := make([]interface{}, len(ids))
+
 		for i, id := range ids {
 			placeholders[i] = "?"
 			args[i] = id
 		}
+
 		return strings.Join(placeholders, ","), args
 	}
 
@@ -112,78 +127,141 @@ func GetHomePosts(db *sql.DB, userID, offset int) ([]models.Post, error) {
 		rows, err := db.Query(`
 			SELECT uf1.target_id
 			FROM user_followers uf1
-			JOIN user_followers uf2 ON uf1.target_id = uf2.follower_id AND uf1.follower_id = uf2.target_id
-			WHERE uf1.follower_id = ? AND uf1.status = 1 AND uf2.status = 1
+			JOIN user_followers uf2
+				ON uf1.target_id = uf2.follower_id
+				AND uf1.follower_id = uf2.target_id
+			WHERE uf1.follower_id = ?
+				AND uf1.status = 1
+				AND uf2.status = 1
 		`, userID)
+
 		if err != nil {
 			return nil, err
 		}
+
 		defer rows.Close()
+
 		var ids []int
+
 		for rows.Next() {
 			var id int
+
 			if err := rows.Scan(&id); err != nil {
 				return nil, err
 			}
+
 			ids = append(ids, id)
 		}
+
 		return ids, rows.Err()
 	}
 
 	getFollowingIDs := func(excludeIDs []int) ([]int, error) {
 		exClause := "0"
 		args := []interface{}{userID}
+
 		if len(excludeIDs) > 0 {
 			ph, exArgs := idsToPlaceholders(excludeIDs)
 			exClause = ph
 			args = append(args, exArgs...)
 		}
+
 		rows, err := db.Query(`
-			SELECT target_id FROM user_followers
-			WHERE follower_id = ? AND status = 1 AND target_id NOT IN (`+exClause+`)
+			SELECT target_id
+			FROM user_followers
+			WHERE follower_id = ?
+				AND status = 1
+				AND target_id NOT IN (`+exClause+`)
 		`, args...)
+
 		if err != nil {
 			return nil, err
 		}
+
 		defer rows.Close()
+
 		var ids []int
+
 		for rows.Next() {
 			var id int
+
 			if err := rows.Scan(&id); err != nil {
 				return nil, err
 			}
+
 			ids = append(ids, id)
 		}
+
 		return ids, rows.Err()
 	}
 
 	runGroupsQuery := func(unviewedOnly bool, limit int) error {
 		exClause, exArgs := excludeClause()
+
 		viewClause := ""
+
 		if unviewedOnly {
-			viewClause = " AND NOT EXISTS (SELECT 1 FROM post_views pv WHERE pv.post_id = p.id AND pv.user_id = ?)"
+			viewClause = `
+				AND NOT EXISTS (
+					SELECT 1
+					FROM post_views pv
+					WHERE pv.post_id = p.id
+						AND pv.user_id = ?
+				)`
 		}
+
 		query := `
-			SELECT p.id, p.user_id, u.first_name, u.last_name, u.username, pr.avatar_path,
-				p.content, p.image_path, p.allow_comments, p.location, p.created_at, p.group_id, p.tags
+			SELECT
+				p.id,
+				p.user_id,
+				u.first_name,
+				u.last_name,
+				u.username,
+				pr.avatar_path,
+				p.content,
+				p.image_path,
+				p.allow_comments,
+				p.location,
+				p.created_at,
+				p.group_id,
+				p.tags,
+				COALESCE(prx.value, 0),
+				p.like_count,
+				p.dislike_count,
+				p.comment_count
 			FROM posts p
-			JOIN user_posts_groups g ON p.group_id = g.id
-			JOIN user u ON u.id = p.user_id
-			LEFT JOIN profile pr ON pr.user_id = p.user_id
-			WHERE (':' || g.users || ':') LIKE ('%:' || ? || ':%')` + exClause + viewClause + `
+			JOIN user_posts_groups g
+				ON p.group_id = g.id
+			JOIN user u
+				ON u.id = p.user_id
+			LEFT JOIN profile pr
+				ON pr.user_id = p.user_id
+			LEFT JOIN post_reactions prx
+				ON prx.post_id = p.id
+				AND prx.user_id = ?
+			WHERE (':' || g.users || ':') LIKE ('%:' || ? || ':%')` +
+			exClause +
+			viewClause + `
 			ORDER BY p.created_at DESC
 			LIMIT ?
 		`
-		args := []interface{}{userID}
+
+		args := []interface{}{userID, userID}
+
 		args = append(args, exArgs...)
+
 		if unviewedOnly {
 			args = append(args, userID)
 		}
+
 		args = append(args, limit)
+
 		rows, err := db.Query(query, args...)
+
 		if err != nil {
 			return err
 		}
+
 		return appendPosts(rows)
 	}
 
@@ -191,36 +269,77 @@ func GetHomePosts(db *sql.DB, userID, offset int) ([]models.Post, error) {
 		if len(userIDs) == 0 || limit <= 0 {
 			return nil
 		}
+
 		userPh, userArgs := idsToPlaceholders(userIDs)
 		groupPh, groupArgs := idsToPlaceholders(groupIDs)
 		exClause, exArgs := excludeClause()
+
 		viewClause := ""
+
 		if unviewedOnly {
-			viewClause = " AND NOT EXISTS (SELECT 1 FROM post_views pv WHERE pv.post_id = p.id AND pv.user_id = ?)"
+			viewClause = `
+				AND NOT EXISTS (
+					SELECT 1
+					FROM post_views pv
+					WHERE pv.post_id = p.id
+						AND pv.user_id = ?
+				)`
 		}
+
 		query := `
-			SELECT p.id, p.user_id, u.first_name, u.last_name, u.username, pr.avatar_path,
-				p.content, p.image_path, p.allow_comments, p.location, p.created_at, p.group_id, p.tags
+			SELECT
+				p.id,
+				p.user_id,
+				u.first_name,
+				u.last_name,
+				u.username,
+				pr.avatar_path,
+				p.content,
+				p.image_path,
+				p.allow_comments,
+				p.location,
+				p.created_at,
+				p.group_id,
+				p.tags,
+				COALESCE(prx.value, 0),
+				p.like_count,
+				p.dislike_count,
+				p.comment_count
 			FROM posts p
-			JOIN user u ON u.id = p.user_id
-			LEFT JOIN profile pr ON pr.user_id = p.user_id
+			JOIN user u
+				ON u.id = p.user_id
+			LEFT JOIN profile pr
+				ON pr.user_id = p.user_id
+			LEFT JOIN post_reactions prx
+				ON prx.post_id = p.id
+				AND prx.user_id = ?
 			WHERE p.user_id IN (` + userPh + `)
-			AND p.group_id IN (` + groupPh + `)` + exClause + viewClause + `
+				AND p.group_id IN (` + groupPh + `)` +
+			exClause +
+			viewClause + `
 			ORDER BY p.created_at DESC
 			LIMIT ?
 		`
+
 		var args []interface{}
+
+		args = append(args, userID)
 		args = append(args, userArgs...)
 		args = append(args, groupArgs...)
 		args = append(args, exArgs...)
+
 		if unviewedOnly {
 			args = append(args, userID)
 		}
+
 		args = append(args, limit)
+
 		rows, err := db.Query(query, args...)
+
 		if err != nil {
 			return err
 		}
+
 		return appendPosts(rows)
 	}
 
@@ -228,54 +347,105 @@ func GetHomePosts(db *sql.DB, userID, offset int) ([]models.Post, error) {
 		if limit <= 0 {
 			return nil
 		}
+
 		exClause, exArgs := excludeClause()
+
 		excludeUserClause := ""
 		var excludeUserArgs []interface{}
+
 		if len(excludeUserIDs) > 0 {
 			ph, uargs := idsToPlaceholders(excludeUserIDs)
+
 			excludeUserClause = " AND p.user_id NOT IN (" + ph + ")"
 			excludeUserArgs = uargs
 		}
+
 		viewClause := ""
+
 		if unviewedOnly {
-			viewClause = " AND NOT EXISTS (SELECT 1 FROM post_views pv WHERE pv.post_id = p.id AND pv.user_id = ?)"
+			viewClause = `
+				AND NOT EXISTS (
+					SELECT 1
+					FROM post_views pv
+					WHERE pv.post_id = p.id
+						AND pv.user_id = ?
+				)`
 		}
+
 		offsetClause := ""
+
 		if withOffset {
 			offsetClause = " OFFSET ?"
 		}
+
 		query := `
-			SELECT p.id, p.user_id, u.first_name, u.last_name, u.username, pr.avatar_path,
-				p.content, p.image_path, p.allow_comments, p.location, p.created_at, p.group_id, p.tags
+			SELECT
+				p.id,
+				p.user_id,
+				u.first_name,
+				u.last_name,
+				u.username,
+				pr.avatar_path,
+				p.content,
+				p.image_path,
+				p.allow_comments,
+				p.location,
+				p.created_at,
+				p.group_id,
+				p.tags,
+				COALESCE(prx.value, 0),
+				p.like_count,
+				p.dislike_count,
+				p.comment_count
 			FROM posts p
-			JOIN user u ON u.id = p.user_id
-			LEFT JOIN profile pr ON pr.user_id = p.user_id
+			JOIN user u
+				ON u.id = p.user_id
+			LEFT JOIN profile pr
+				ON pr.user_id = p.user_id
+			LEFT JOIN post_reactions prx
+				ON prx.post_id = p.id
+				AND prx.user_id = ?
 			WHERE p.group_id = 0
-			AND p.user_id != ?` + excludeUserClause + exClause + viewClause + `
+				AND p.user_id != ?` +
+			excludeUserClause +
+			exClause +
+			viewClause + `
 			ORDER BY p.created_at DESC
-			LIMIT ?` + offsetClause
-		args := []interface{}{userID}
+			LIMIT ?` +
+			offsetClause
+
+		args := []interface{}{userID, userID}
+
 		args = append(args, excludeUserArgs...)
 		args = append(args, exArgs...)
+
 		if unviewedOnly {
 			args = append(args, userID)
 		}
+
 		args = append(args, limit)
+
 		if withOffset {
 			args = append(args, offset)
 		}
+
 		rows, err := db.Query(query, args...)
+
 		if err != nil {
 			return err
 		}
+
 		return appendPosts(rows)
 	}
 
 	friendIDs, err := getFriendIDs()
+
 	if err != nil {
 		return nil, err
 	}
+
 	followingIDs, err := getFollowingIDs(friendIDs)
+
 	if err != nil {
 		return nil, err
 	}
@@ -283,9 +453,11 @@ func GetHomePosts(db *sql.DB, userID, offset int) ([]models.Post, error) {
 	if err := runGroupsQuery(true, 5); err != nil {
 		return nil, err
 	}
+
 	if err := runUserPostsQuery(friendIDs, []int{0, -1}, true, 4); err != nil {
 		return nil, err
 	}
+
 	if err := runUserPostsQuery(followingIDs, []int{-1}, true, 3); err != nil {
 		return nil, err
 	}
@@ -294,32 +466,43 @@ func GetHomePosts(db *sql.DB, userID, offset int) ([]models.Post, error) {
 		if err := runGroupsQuery(false, 5); err != nil {
 			return nil, err
 		}
+
 		if err := runUserPostsQuery(friendIDs, []int{0, -1}, false, 4); err != nil {
 			return nil, err
 		}
+
 		if err := runUserPostsQuery(followingIDs, []int{-1}, false, 3); err != nil {
 			return nil, err
 		}
 	}
 
 	if len(posts) == 0 {
-		excluded := append(append([]int{}, friendIDs...), followingIDs...)
+		excluded := append(
+			append([]int{}, friendIDs...),
+			followingIDs...,
+		)
+
 		if err := runRandomQuery(excluded, true, 13, true); err != nil {
 			return nil, err
 		}
+
 		if err := attachGroupOwnerNames(db, posts); err != nil {
 			return nil, err
 		}
+
 		if err := attachTaggedPeople(db, posts, tagsByPostIndex); err != nil {
 			return nil, err
 		}
+
 		return posts, nil
 	}
 
 	randomLimit := 13 - len(posts)
+
 	if randomLimit < 1 {
 		randomLimit = 1
 	}
+
 	if err := runRandomQuery(nil, true, randomLimit, false); err != nil {
 		return nil, err
 	}
@@ -327,6 +510,7 @@ func GetHomePosts(db *sql.DB, userID, offset int) ([]models.Post, error) {
 	if err := attachGroupOwnerNames(db, posts); err != nil {
 		return nil, err
 	}
+
 	if err := attachTaggedPeople(db, posts, tagsByPostIndex); err != nil {
 		return nil, err
 	}
