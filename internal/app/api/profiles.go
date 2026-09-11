@@ -2,10 +2,13 @@ package api
 
 import (
 	"database/sql"
+	"encoding/json"
 	"log"
 	"net/http"
+	"social/database/notifications"
 	"social/database/profiles"
 	"social/internal/helpers"
+	"social/internal/models"
 	"strconv"
 )
 
@@ -137,6 +140,7 @@ func (app *App) GetUserProfile(w http.ResponseWriter, r *http.Request) {
 
 func (app *App) RequestFollow(w http.ResponseWriter, r *http.Request) {
 	followerID, ok := r.Context().Value("userID").(int)
+
 	if !ok {
 		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
 			"status":  false,
@@ -146,9 +150,10 @@ func (app *App) RequestFollow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	queryID := r.URL.Query().Get("targetid")
+
 	targetID, err := strconv.Atoi(queryID)
+
 	if err != nil || targetID == followerID {
-		log.Println(err)
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "invalid target ID",
@@ -157,6 +162,7 @@ func (app *App) RequestFollow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	isPrivate, err := profiles.IsPrivate(app.DB, targetID)
+
 	if err != nil {
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
@@ -166,6 +172,7 @@ func (app *App) RequestFollow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var requestCode int
+
 	if isPrivate {
 		requestCode = 0
 	} else {
@@ -178,6 +185,39 @@ func (app *App) RequestFollow(w http.ResponseWriter, r *http.Request) {
 			"message": "request to follow failed",
 		})
 		return
+	}
+
+	var notification models.NewNotification
+
+	if requestCode == 1 {
+		notification = models.NewNotification{
+			UserID:       targetID,
+			Message:      "You have a new follower",
+			FollowUserID: &followerID,
+		}
+	} else {
+		notification = models.NewNotification{
+			UserID:              targetID,
+			Message:             "You have a new follow request",
+			FollowRequestUserID: &followerID,
+		}
+	}
+
+	if err := notifications.InsertNotification(app.DB, notification); err != nil {
+		log.Println("failed to create notification:", err)
+	}
+
+	notificationData, err := json.Marshal(notification)
+
+	if err == nil {
+		wsMessage, err := json.Marshal(models.WSPayload{
+			Type: "notification",
+			Data: notificationData,
+		})
+
+		if err == nil {
+			app.SendToUser(targetID, wsMessage)
+		}
 	}
 
 	helpers.WriteJson(w, http.StatusOK, map[string]any{
@@ -344,5 +384,69 @@ func (app *App) GetFollowing(w http.ResponseWriter, r *http.Request) {
 	helpers.WriteJson(w, http.StatusOK, map[string]any{
 		"status": true,
 		"data":   following,
+	})
+}
+
+func (app *App) AcceptFollowRequest(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+
+	if !ok {
+		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
+			"status":  false,
+			"message": "could not authorize user",
+		})
+		return
+	}
+
+	queryID := r.URL.Query().Get("targetid")
+
+	requesterID, err := strconv.Atoi(queryID)
+
+	if err != nil || requesterID == userID {
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid target ID",
+		})
+		return
+	}
+
+	err = profiles.AcceptFollowRequest(app.DB, requesterID, userID)
+
+	if err != nil {
+		log.Println(err)
+
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not accept follow request",
+		})
+		return
+	}
+
+	notification := models.NewNotification{
+		UserID:                    requesterID,
+		Message:                   "Your follow request was accepted",
+		FollowRequestAcceptUserID: &userID,
+	}
+
+	if err := notifications.InsertNotification(app.DB, notification); err != nil {
+		log.Println("failed to create notification:", err)
+	}
+
+	notificationData, err := json.Marshal(notification)
+
+	if err == nil {
+		wsMessage, err := json.Marshal(models.WSPayload{
+			Type: "notification",
+			Data: notificationData,
+		})
+
+		if err == nil {
+			app.SendToUser(requesterID, wsMessage)
+		}
+	}
+
+	helpers.WriteJson(w, http.StatusOK, map[string]any{
+		"status":  true,
+		"message": "follow request accepted",
 	})
 }

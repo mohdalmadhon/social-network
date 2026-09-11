@@ -5,6 +5,7 @@ import EditProfile from '@/views/profiles/EditProfile.vue'
 import Profile from '@/views/profiles/Profile.vue'
 import AddPostPage from '@/views/posts/AddPostPage.vue'
 import HomePage from '@/views/home/HomePage.vue'
+import Notifications from '@/views/Notifications.vue'
 
 const routes = [
     {
@@ -30,6 +31,10 @@ const routes = [
     {
         path: '/home',
         component: HomePage
+    },
+    {
+        path: `/notifications`,
+        component: Notifications
     }
 ]
 

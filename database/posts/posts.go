@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func AddPost(db *sql.DB, post models.RegsiterPost) error {
+func AddPost(db *sql.DB, post models.RegsiterPost) (int, error) {
 	tags := func() string {
 		tags := make([]string, len(post.PeopleTagged))
 		for i, v := range post.PeopleTagged {
@@ -16,11 +16,17 @@ func AddPost(db *sql.DB, post models.RegsiterPost) error {
 		return strings.Join(tags, ":")
 	}
 
-	_, err := db.Exec(`
+	result, err := db.Exec(`
 		INSERT INTO posts (user_id, content, image_path, allow_comments, location, group_id, tags)
 		VALUES (?,?,?,?,?,?,?)
 	`, post.UserID, post.Content, post.Image_path, post.AllowComments, post.Location, post.GroupID, tags())
-	return err
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+
+	return int(id), nil
 }
 
 func GroupExists(db *sql.DB, groupID, userID int) error {

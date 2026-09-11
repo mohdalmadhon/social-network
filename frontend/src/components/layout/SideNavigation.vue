@@ -17,7 +17,7 @@ async function logoutHandler() {
 <template>
     <aside class="side-navigation">
         <nav>
-            <a href="/home" :class="{ active: route.path === '/' }">
+            <a href="/home" :class="{ active: route.path === '/home' }">
                 <span class="icon">⌂</span>
                 <span class="label">Home</span>
             </a>
@@ -31,6 +31,11 @@ async function logoutHandler() {
             <a href="/groups" :class="{ active: route.path === '/groups' }">
                 <span class="icon">▦</span>
                 <span class="label">Groups</span>
+            </a>
+
+            <a href="/notifications" :class="{ active: route.path === '/notifications' }">
+                <span class="icon">♢</span>
+                <span class="label">notifications</span>
             </a>
 
 
@@ -152,4 +157,3 @@ async function logoutHandler() {
     }
 }
 </style>
-

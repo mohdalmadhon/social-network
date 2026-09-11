@@ -29,8 +29,7 @@ function handleSearchFriends() {
 
         try {
             const result = await getFriends(value);
-            console.log(result)
-            friends.value = Object.entries(result[0])
+            friends.value = Object.entries(result.data)
                 .map(([id, person]) => ({
                     id: Number(id),
                     ...person
@@ -101,10 +100,10 @@ function removePerson(id) {
                         <img v-if="person.avatar" :src="person.avatar" alt="">
 
                         <div class="friend-info">
-                            <img v-if="person.Avatar" :src="`/uploads/${person.Avatar}`" alt="" class="friend-avatar">
+                            <img v-if="person.avatar" :src="`/uploads/${person.avatar}`" alt="" class="friend-avatar">
 
                             <span>
-                                {{ person.FirstName }} {{ person.LastName }}
+                                {{ person.firstName }} {{ person.lastName }}
                             </span>
                         </div>
                     </button>
@@ -115,10 +114,10 @@ function removePerson(id) {
         <div v-if="modelValue.length" class="tag-list">
             <span v-for="person in modelValue" :key="person.id" class="tag-chip">
                 <div class="friend-info">
-                    <img v-if="person.Avatar" :src="`/uploads/${person.Avatar}`" alt="" class="friend-avatar">
-
+                    <img v-if="person.avatar" :src="`/uploads/${person.avatar}`" alt="" class="friend-avatar">
+                    
                     <span>
-                        {{ person.FirstName }} {{ person.LastName }}
+                        {{ person.firstName }} {{ person.lastName }}
                     </span>
                 </div>
 

@@ -197,9 +197,9 @@ func GetFollowing(db *sql.DB, followerID, count, offset int) (map[int]models.Use
 }
 
 func SearchFollows(db *sql.DB, userID int, searchValue string) ([]models.UserRegistration, error) {
-    searchPattern := "%" + searchValue + "%"
+	searchPattern := "%" + searchValue + "%"
 
-    rows, err := db.Query(`
+	rows, err := db.Query(`
         SELECT u.id, u.first_name, u.last_name, p.avatar_path
         FROM user u
         LEFT JOIN profile p
@@ -217,41 +217,41 @@ func SearchFollows(db *sql.DB, userID int, searchValue string) ([]models.UserReg
         LIMIT 100
     `, userID, searchPattern, searchPattern)
 
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-    follows := make([]models.UserRegistration, 0)
+	follows := make([]models.UserRegistration, 0)
 
-    for rows.Next() {
-        var user models.UserRegistration
+	for rows.Next() {
+		var user models.UserRegistration
 
-        err := rows.Scan(
-            &user.ID,
-            &user.FirstName,
-            &user.LastName,
-            &user.Avatar,
-        )
+		err := rows.Scan(
+			&user.ID,
+			&user.FirstName,
+			&user.LastName,
+			&user.Avatar,
+		)
 
-        if err != nil {
-            return nil, err
-        }
+		if err != nil {
+			return nil, err
+		}
 
-        follows = append(follows, user)
-    }
+		follows = append(follows, user)
+	}
 
-    if err := rows.Err(); err != nil {
-        return nil, err
-    }
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
-    return follows, nil
+	return follows, nil
 }
 
 func SearchFollowing(db *sql.DB, userID int, searchValue string) ([]models.UserRegistration, error) {
-    searchPattern := "%" + searchValue + "%"
+	searchPattern := "%" + searchValue + "%"
 
-    rows, err := db.Query(`
+	rows, err := db.Query(`
         SELECT u.id, u.first_name, u.last_name, p.avatar_path
         FROM user u
         LEFT JOIN profile p
@@ -269,33 +269,77 @@ func SearchFollowing(db *sql.DB, userID int, searchValue string) ([]models.UserR
         LIMIT 100
     `, userID, searchPattern, searchPattern)
 
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-    following := make([]models.UserRegistration, 0)
+	following := make([]models.UserRegistration, 0)
 
-    for rows.Next() {
-        var user models.UserRegistration
+	for rows.Next() {
+		var user models.UserRegistration
 
-        err := rows.Scan(
-            &user.ID,
-            &user.FirstName,
-            &user.LastName,
-            &user.Avatar,
-        )
+		err := rows.Scan(
+			&user.ID,
+			&user.FirstName,
+			&user.LastName,
+			&user.Avatar,
+		)
 
-        if err != nil {
-            return nil, err
-        }
+		if err != nil {
+			return nil, err
+		}
 
-        following = append(following, user)
-    }
+		following = append(following, user)
+	}
 
-    if err := rows.Err(); err != nil {
-        return nil, err
-    }
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
-    return following, nil
+	return following, nil
+}
+
+func AcceptFollowRequest(db *sql.DB, requesterID int, targetID int) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+
+	var exists int
+
+	err = tx.QueryRow(`
+		SELECT 1
+		FROM follows_requests
+		WHERE follower_id = ?
+		AND following_id = ?
+		AND request_code = 0
+	`, requesterID, targetID).Scan(&exists)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO follows (follower_id, following_id)
+		VALUES (?, ?)
+	`, requesterID, targetID)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+		DELETE FROM follows_requests
+		WHERE follower_id = ?
+		AND following_id = ?
+	`, requesterID, targetID)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }

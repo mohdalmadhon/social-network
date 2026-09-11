@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"strconv"
 
+	"social/database/notifications"
 	"social/database/posts"
 	"social/internal/helpers"
 	"social/internal/models"
+	"social/internal/validation"
 )
 
 func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
@@ -96,13 +98,62 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	if err := posts.AddPost(app.DB, post); err != nil {
+
+	res := validation.ValidatePost(&post, header)
+	if res.Field != "" {
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "could not upload post",
+		})
+		return
+	}
+
+	postID, err := posts.AddPost(app.DB, post)
+
+	if err != nil {
 		log.Println(err)
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
 			"message": "could not upload post",
 		})
 		return
+	}
+
+	for _, taggedUserID := range taggedPeople {
+		if taggedUserID == userID {
+			continue
+		}
+
+		notification := models.NewNotification{
+			UserID:            taggedUserID,
+			Message:           "You were tagged in a post",
+			PostIDTag:         &postID,
+			PostMentionUserID: &userID,
+		}
+
+		if err := notifications.InsertNotification(app.DB, notification); err != nil {
+			log.Println("failed to create tag notification:", err)
+			continue
+		}
+
+		notificationData, err := json.Marshal(notification)
+
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		wsMessage, err := json.Marshal(models.WSPayload{
+			Type: "notification",
+			Data: notificationData,
+		})
+
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		app.SendToUser(taggedUserID, wsMessage)
 	}
 
 	helpers.WriteJson(w, http.StatusCreated, map[string]any{

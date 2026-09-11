@@ -1,6 +1,7 @@
 import { checkSessionResponse } from "@/helpers/auth/auth";
 import { About, Users, Profile } from "@/models/users";
 import { router } from "@/router/router";
+import { sendWS } from "../socket/socket";
 
 export async function getProfileData(id, count) {
     const resp = await fetch(`/api/profile?id=${id}`, {

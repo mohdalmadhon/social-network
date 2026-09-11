@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"path/filepath"
 	"social/internal/app/api"
+
+	"golang.org/x/net/websocket"
 )
 
 func StartServer(db *sql.DB) *http.ServeMux {
@@ -15,7 +17,10 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	}
 	mux := http.NewServeMux()
 
-	app := api.App{DB: db}
+	app := api.App{
+		DB:    db,
+		Conns: make(map[int]*websocket.Conn),
+	}
 
 	//user
 	mux.HandleFunc("GET /api/user", app.AuthMiddleware(app.GetUserData))
@@ -38,6 +43,7 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("DELETE /api/profile/follow", app.AuthMiddleware(app.CancelRequest))
 	mux.HandleFunc("GET /api/profile/follow", app.AuthMiddleware(app.GetFollowers))
 	mux.HandleFunc("GET /api/profile/following", app.AuthMiddleware(app.GetFollowing))
+	mux.HandleFunc("/api/follow/accept", app.AcceptFollowRequest)
 
 	//folder handlers
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadsDir))))
@@ -64,5 +70,9 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("GET /api/profile/follows/search", app.AuthMiddleware(app.SearchFollows))
 	mux.HandleFunc("GET /api/profile/following/search", app.AuthMiddleware(app.SearchFollowing))
 	mux.HandleFunc("GET /api/location/search", app.SearchLocation)
+
+	//ws
+	mux.Handle("/api/ws", websocket.Handler(app.HandleWS))
+	mux.HandleFunc("/api/notifications", app.AuthMiddleware(app.GetNotification))
 	return mux
 }
