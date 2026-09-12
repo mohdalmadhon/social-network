@@ -67,6 +67,10 @@ function imageUrl(imagePath) {
   return imagePath.startsWith('/') ? imagePath : `/uploads/${imagePath}`
 }
 
+function initials(author) {
+  return author.slice(0, 2).toUpperCase()
+}
+
 onMounted(loadComments)
 </script>
 
@@ -74,7 +78,8 @@ onMounted(loadComments)
   <article class="post-card orbit-surface">
     <header class="post-card__header">
       <div class="post-card__avatar" :style="{ background: post.avatarColor }" aria-hidden="true">
-        {{ post.author.charAt(0) }}
+        <img v-if="post.avatarPath" :src="imageUrl(post.avatarPath)" alt="" />
+        <span v-else>{{ initials(post.author) }}</span>
       </div>
 
       <div class="post-card__author">
@@ -151,6 +156,13 @@ onMounted(loadComments)
   border-radius: 50%;
   color: #0b0d17;
   font-weight: 700;
+}
+
+.post-card__avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
 }
 
 .post-card__author {

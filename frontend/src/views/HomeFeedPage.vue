@@ -39,6 +39,7 @@ function toCardPost(post, index = 0) {
     id: post.id,
     author: post.author || 'Orbit member',
     avatarColor: avatarColors[index % avatarColors.length],
+    avatarPath: post.avatarPath || '',
     time: formatPostTime(post.createdAt),
     privacy: privacyLabel(post.privacy),
     content: post.content,

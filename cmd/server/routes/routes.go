@@ -29,6 +29,7 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("GET /api/friends/", app.AuthMiddleware(app.GetFriends))
 
 	// searches
+	mux.HandleFunc("GET /api/search", app.AuthMiddleware(app.Search))
 	mux.HandleFunc("GET /api/profile/follows/search", app.AuthMiddleware(app.SearchFollows))
 	mux.HandleFunc("GET /api/profile/following/search", app.AuthMiddleware(app.SearchFollowing))
 	mux.HandleFunc("GET /api/location/search", app.SearchLocation)
