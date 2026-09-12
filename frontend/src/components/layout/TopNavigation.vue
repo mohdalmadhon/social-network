@@ -10,7 +10,7 @@ const searchText = ref('')
 
 function submitSearch() {
   const search = searchText.value.trim()
-  router.push(search ? { path: '/groups', query: { search } } : '/groups')
+  router.push(search ? { path: '/search', query: { q: search } } : '/search')
 }
 
 async function signOut() {
