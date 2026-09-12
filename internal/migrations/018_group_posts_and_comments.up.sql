@@ -42,8 +42,6 @@ CREATE TABLE IF NOT EXISTS group_post_comments (
 CREATE INDEX IF NOT EXISTS idx_group_post_comments_post_created
 ON group_post_comments(post_id, created_at ASC, id ASC);
 
--- Keep group-content cleanup reliable even on SQLite connections where foreign
--- key enforcement was not explicitly enabled.
 CREATE TRIGGER IF NOT EXISTS delete_group_post_comments
 AFTER DELETE ON group_posts
 FOR EACH ROW
