@@ -196,3 +196,56 @@ export async function undoGroupInvitation(groupId, invitationId) {
 
   return result;
 }
+
+async function groupContentRequest(url, options = {}) {
+  const response = await fetch(url, {
+    credentials: "include",
+    ...options,
+  });
+
+  if (!checkSessionResponse(response)) {
+    router.replace("/login");
+    return;
+  }
+
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.message || "Could not load group content");
+  }
+
+  return result;
+}
+
+export function getGroupPosts(groupId) {
+  return groupContentRequest(`/api/groups/${groupId}/posts`);
+}
+
+export function createGroupPost(groupId, formData) {
+  return groupContentRequest(`/api/groups/${groupId}/posts`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export function getGroupPostComments(groupId, postId) {
+  return groupContentRequest(`/api/groups/${groupId}/posts/${postId}/comments`);
+}
+
+export function createGroupPostComment(groupId, postId, formData) {
+  return groupContentRequest(`/api/groups/${groupId}/posts/${postId}/comments`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export function deleteGroupPost(groupId, postId) {
+  return groupContentRequest(`/api/groups/${groupId}/posts/${postId}`, {
+    method: "DELETE",
+  });
+}
+
+export function deleteGroupPostComment(groupId, postId, commentId) {
+  return groupContentRequest(`/api/groups/${groupId}/posts/${postId}/comments/${commentId}`, {
+    method: "DELETE",
+  });
+}

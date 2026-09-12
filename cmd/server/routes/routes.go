@@ -66,6 +66,12 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("GET /api/groups/{id}/invite-users", app.AuthMiddleware(app.GetInviteUsers))
 	mux.HandleFunc("POST /api/groups/{id}/invitations", app.AuthMiddleware(app.UserInvite))
 	mux.HandleFunc("DELETE /api/groups/{id}/invitations/{invitationID}", app.AuthMiddleware(app.UndoInvitation))
+	mux.HandleFunc("GET /api/groups/{id}/posts", app.AuthMiddleware(app.GetGroupPosts))
+	mux.HandleFunc("POST /api/groups/{id}/posts", app.AuthMiddleware(app.CreateGroupPost))
+	mux.HandleFunc("DELETE /api/groups/{id}/posts/{postID}", app.AuthMiddleware(app.DeleteGroupPost))
+	mux.HandleFunc("GET /api/groups/{id}/posts/{postID}/comments", app.AuthMiddleware(app.GetGroupPostComments))
+	mux.HandleFunc("POST /api/groups/{id}/posts/{postID}/comments", app.AuthMiddleware(app.CreateGroupPostComment))
+	mux.HandleFunc("DELETE /api/groups/{id}/posts/{postID}/comments/{commentID}", app.AuthMiddleware(app.DeleteGroupPostComment))
 
 	//folder handlers
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadsDir))))

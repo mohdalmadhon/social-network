@@ -2,6 +2,8 @@
 import { computed, ref, onMounted } from 'vue'
 import { router } from '@/router/router.js'
 import { useRoute } from 'vue-router'
+import GroupPostCard from '@/components/groups/GroupPostCard.vue'
+import GroupPostComposer from '@/components/groups/GroupPostComposer.vue'
 
 import {
     getGroup,
@@ -9,6 +11,7 @@ import {
     getInviteUsers,
     inviteUserToGroup,
     undoGroupInvitation,
+    getGroupPosts,
 } from '@/api/groups/Groups.js'
 
 const route = useRoute()
@@ -17,6 +20,7 @@ const groupId = route.params.groupId
 const group = ref(null)
 const inviteUsers = ref([])
 const inviteSearch = ref('')
+const groupPosts = ref([])
 
 const loading = ref(true)
 const error = ref(null)
@@ -55,9 +59,12 @@ onMounted(async () => {
         group.value = groupResult.group
 
         if (group.value.isMember) {
-            const usersResult = await getInviteUsers(groupId)
-
+            const [usersResult, postsResult] = await Promise.all([
+                getInviteUsers(groupId),
+                getGroupPosts(groupId),
+            ])
             inviteUsers.value = usersResult.users
+            groupPosts.value = postsResult.posts
         }
     } catch (err) {
         console.error(err)
@@ -66,6 +73,14 @@ onMounted(async () => {
         loading.value = false
     }
 })
+
+function addGroupPost(post) {
+    groupPosts.value.unshift(post)
+}
+
+function removeGroupPost(postId) {
+    groupPosts.value = groupPosts.value.filter(post => post.id !== postId)
+}
 
 async function deleteGroup() {
     try {
@@ -184,6 +199,21 @@ async function undoInvitation(user) {
                         You are a member of this group.
                     </p>
 
+                </section>
+
+                <section v-if="group.isMember" class="group-feed">
+                    <h2>Group posts</h2>
+                    <GroupPostComposer :group-id="groupId" @post-created="addGroupPost" />
+                    <div v-if="groupPosts.length" class="group-posts">
+                        <GroupPostCard
+                            v-for="post in groupPosts"
+                            :key="post.id"
+                            :group-id="groupId"
+                            :post="post"
+                            @post-deleted="removeGroupPost"
+                        />
+                    </div>
+                    <p v-else class="group-feed__state">No posts yet.</p>
                 </section>
 
                 <!-- Invite Section -->
@@ -460,6 +490,30 @@ async function undoInvitation(user) {
 
     color: var(--color-text-muted);
 
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+}
+
+.group-feed {
+    margin-bottom: var(--space-5);
+}
+
+.group-feed > h2 {
+    margin: 0 0 var(--space-3);
+    color: var(--color-text);
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+}
+
+.group-posts {
+    display: grid;
+    gap: var(--space-4);
+    margin-top: var(--space-4);
+}
+
+.group-feed__state {
+    margin: var(--space-4) 0 0;
+    color: var(--color-text-muted);
     font-family: var(--font-body);
     font-size: 0.9rem;
 }

@@ -1,0 +1,294 @@
+package groupposts
+
+import (
+	"database/sql"
+	"errors"
+	"social/internal/models"
+	"strings"
+)
+
+var (
+	ErrPostNotFound    = errors.New("group post not found")
+	ErrCommentNotFound = errors.New("group post comment not found")
+	ErrNotOwner        = errors.New("group content belongs to another user")
+)
+
+func IsMember(db *sql.DB, groupID int64, userID int) (bool, error) {
+	var isMember bool
+	err := db.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1
+			FROM group_members
+			WHERE group_id = ? AND user_id = ?
+		)
+	`, groupID, userID).Scan(&isMember)
+	return isMember, err
+}
+
+func PostBelongsToGroup(db *sql.DB, groupID, postID int64) (bool, error) {
+	var exists bool
+	err := db.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1
+			FROM group_posts
+			WHERE id = ? AND group_id = ?
+		)
+	`, postID, groupID).Scan(&exists)
+	return exists, err
+}
+
+func CreatePost(db *sql.DB, groupID int64, userID int, content, imagePath string) (models.GroupPost, error) {
+	content = strings.TrimSpace(content)
+	result, err := db.Exec(`
+		INSERT INTO group_posts (group_id, user_id, content, image_path)
+		VALUES (?, ?, ?, ?)
+	`, groupID, userID, content, imagePath)
+	if err != nil {
+		return models.GroupPost{}, err
+	}
+
+	postID, err := result.LastInsertId()
+	if err != nil {
+		return models.GroupPost{}, err
+	}
+	return getPost(db, groupID, postID)
+}
+
+func ListPosts(db *sql.DB, groupID int64) ([]models.GroupPost, error) {
+	rows, err := db.Query(groupPostSelect+`
+		WHERE gp.group_id = ?
+		ORDER BY gp.created_at DESC, gp.id DESC
+	`, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	posts := []models.GroupPost{}
+	for rows.Next() {
+		post, err := scanPost(rows)
+		if err != nil {
+			return nil, err
+		}
+		posts = append(posts, post)
+	}
+	return posts, rows.Err()
+}
+
+func CreateComment(db *sql.DB, postID int64, userID int, content, imagePath string) (models.GroupPostComment, error) {
+	content = strings.TrimSpace(content)
+	result, err := db.Exec(`
+		INSERT INTO group_post_comments (post_id, user_id, content, image_path)
+		VALUES (?, ?, ?, ?)
+	`, postID, userID, content, imagePath)
+	if err != nil {
+		return models.GroupPostComment{}, err
+	}
+
+	commentID, err := result.LastInsertId()
+	if err != nil {
+		return models.GroupPostComment{}, err
+	}
+	return getComment(db, postID, commentID)
+}
+
+func ListComments(db *sql.DB, postID int64) ([]models.GroupPostComment, error) {
+	rows, err := db.Query(groupCommentSelect+`
+		WHERE gc.post_id = ?
+		ORDER BY gc.created_at ASC, gc.id ASC
+	`, postID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	comments := []models.GroupPostComment{}
+	for rows.Next() {
+		comment, err := scanComment(rows)
+		if err != nil {
+			return nil, err
+		}
+		comments = append(comments, comment)
+	}
+	return comments, rows.Err()
+}
+
+func DeletePost(db *sql.DB, groupID, postID int64, userID int) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var ownerID int
+	err = tx.QueryRow(`
+		SELECT user_id
+		FROM group_posts
+		WHERE id = ? AND group_id = ?
+	`, postID, groupID).Scan(&ownerID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrPostNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if ownerID != userID {
+		return ErrNotOwner
+	}
+
+	result, err := tx.Exec(`
+		DELETE FROM group_posts
+		WHERE id = ? AND group_id = ? AND user_id = ?
+	`, postID, groupID, userID)
+	if err != nil {
+		return err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return ErrPostNotFound
+	}
+	return tx.Commit()
+}
+
+func DeleteComment(db *sql.DB, groupID, postID, commentID int64, userID int) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var ownerID int
+	err = tx.QueryRow(`
+		SELECT gc.user_id
+		FROM group_post_comments gc
+		JOIN group_posts gp ON gp.id = gc.post_id
+		WHERE gc.id = ?
+		  AND gc.post_id = ?
+		  AND gp.group_id = ?
+	`, commentID, postID, groupID).Scan(&ownerID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrCommentNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if ownerID != userID {
+		return ErrNotOwner
+	}
+
+	result, err := tx.Exec(`
+		DELETE FROM group_post_comments
+		WHERE id = ?
+		  AND post_id = ?
+		  AND user_id = ?
+		  AND EXISTS (
+			SELECT 1
+			FROM group_posts
+			WHERE id = ? AND group_id = ?
+		  )
+	`, commentID, postID, userID, postID, groupID)
+	if err != nil {
+		return err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return ErrCommentNotFound
+	}
+	return tx.Commit()
+}
+
+const groupPostSelect = `
+	SELECT
+		gp.id,
+		gp.group_id,
+		gp.user_id,
+		COALESCE(u.username, ''),
+		u.first_name,
+		u.last_name,
+		COALESCE(p.avatar_path, ''),
+		gp.content,
+		gp.image_path,
+		gp.created_at,
+		(SELECT COUNT(*) FROM group_post_comments gc WHERE gc.post_id = gp.id)
+	FROM group_posts gp
+	JOIN user u ON u.id = gp.user_id
+	LEFT JOIN profile p ON p.user_id = u.id
+`
+
+func getPost(db *sql.DB, groupID, postID int64) (models.GroupPost, error) {
+	post, err := scanPost(db.QueryRow(groupPostSelect+`
+		WHERE gp.id = ? AND gp.group_id = ?
+	`, postID, groupID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.GroupPost{}, ErrPostNotFound
+	}
+	return post, err
+}
+
+type rowScanner interface {
+	Scan(dest ...any) error
+}
+
+func scanPost(row rowScanner) (models.GroupPost, error) {
+	var post models.GroupPost
+	err := row.Scan(
+		&post.ID,
+		&post.GroupID,
+		&post.UserID,
+		&post.Username,
+		&post.FirstName,
+		&post.LastName,
+		&post.AvatarPath,
+		&post.Content,
+		&post.ImagePath,
+		&post.CreatedAt,
+		&post.CommentCount,
+	)
+	return post, err
+}
+
+const groupCommentSelect = `
+	SELECT
+		gc.id,
+		gc.post_id,
+		gc.user_id,
+		COALESCE(u.username, ''),
+		u.first_name,
+		u.last_name,
+		COALESCE(p.avatar_path, ''),
+		gc.content,
+		gc.image_path,
+		gc.created_at
+	FROM group_post_comments gc
+	JOIN user u ON u.id = gc.user_id
+	LEFT JOIN profile p ON p.user_id = u.id
+`
+
+func getComment(db *sql.DB, postID, commentID int64) (models.GroupPostComment, error) {
+	return scanComment(db.QueryRow(groupCommentSelect+`
+		WHERE gc.id = ? AND gc.post_id = ?
+	`, commentID, postID))
+}
+
+func scanComment(row rowScanner) (models.GroupPostComment, error) {
+	var comment models.GroupPostComment
+	err := row.Scan(
+		&comment.ID,
+		&comment.PostID,
+		&comment.UserID,
+		&comment.Username,
+		&comment.FirstName,
+		&comment.LastName,
+		&comment.AvatarPath,
+		&comment.Content,
+		&comment.ImagePath,
+		&comment.CreatedAt,
+	)
+	return comment, err
+}

@@ -453,6 +453,63 @@ func TestGroupInvitationNotificationCleanup(t *testing.T) {
 	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM notifications WHERE id IN (24, 25, 26)", 3)
 }
 
+func TestGroupPostsAndCommentsMigrationAndCascades(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.SetMaxOpenConns(1)
+	defer db.Close()
+
+	if _, err = db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		t.Fatal(err)
+	}
+	runMigrationFile(t, db, "001_init_users.up.sql")
+	runMigrationFile(t, db, "003_init_chats.up.sql")
+	runMigrationFile(t, db, "009_add_creator_id_to_groups.up.sql")
+	runMigrationFile(t, db, "010_create_group_members.up.sql")
+	runMigrationFile(t, db, "017_group_posts_and_comments.up.sql")
+
+	assertTable(t, db, "group_posts", true)
+	assertTable(t, db, "group_post_comments", true)
+
+	_, err = db.Exec(`
+		INSERT INTO user (id, email, username, first_name, last_name, dob, password)
+		VALUES
+			(1, 'owner@orbit.test', 'owner', 'Group', 'Owner', '2000-01-01', 'password'),
+			(2, 'member@orbit.test', 'member', 'Group', 'Member', '2000-01-01', 'password');
+		INSERT INTO groups (id, title, description, creator_id)
+		VALUES (7, 'Seven', 'Group seven', 1), (8, 'Eight', 'Group eight', 2);
+		INSERT INTO group_posts (id, group_id, user_id, content)
+		VALUES (10, 7, 1, 'delete post'), (11, 7, 2, 'delete group'), (12, 8, 2, 'keep group');
+		INSERT INTO group_post_comments (id, post_id, user_id, content)
+		VALUES (20, 10, 2, 'delete with post'), (21, 11, 1, 'delete with group'), (22, 12, 1, 'keep');
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = db.Exec("DELETE FROM group_posts WHERE id = 10"); err != nil {
+		t.Fatal(err)
+	}
+	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM group_post_comments WHERE id = 20", 0)
+
+	if _, err = db.Exec("DELETE FROM groups WHERE id = 7"); err != nil {
+		t.Fatal(err)
+	}
+	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM group_posts WHERE group_id = 7", 0)
+	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM group_post_comments WHERE id = 21", 0)
+	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM group_posts WHERE id = 12", 1)
+	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM group_post_comments WHERE id = 22", 1)
+
+	runMigrationFile(t, db, "017_group_posts_and_comments.down.sql")
+	assertTable(t, db, "group_post_comments", false)
+	assertTable(t, db, "group_posts", false)
+	runMigrationFile(t, db, "017_group_posts_and_comments.up.sql")
+	assertTable(t, db, "group_posts", true)
+	assertTable(t, db, "group_post_comments", true)
+}
+
 func insertLegacyPostData(t *testing.T, db *sql.DB) {
 	t.Helper()
 
