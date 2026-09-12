@@ -610,3 +610,202 @@ func (app App) UndoJoinRequest(w http.ResponseWriter, r *http.Request) {
 		"status": true,
 	})
 }
+
+func (app App) UserInvite(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]any{
+			"status":  false,
+			"message": "authentication required",
+		})
+		return
+	}
+
+	groupID := r.PathValue("id")
+
+	var input struct {
+		UserID int `json:"userId"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid request body",
+		})
+		return
+	}
+
+	if input.UserID <= 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid user id",
+		})
+		return
+	}
+
+	tx, err := app.DB.Begin()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not send invitation",
+		})
+		return
+	}
+	defer tx.Rollback()
+
+	// Check inviter is a member of the group
+	var isMember bool
+
+	err = tx.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1
+			FROM group_members
+			WHERE group_id = ?
+			  AND user_id = ?
+		)
+	`, groupID, userID).Scan(&isMember)
+
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not verify group membership",
+		})
+		return
+	}
+
+	if !isMember {
+		writeJSON(w, http.StatusForbidden, map[string]any{
+			"status":  false,
+			"message": "only group members can invite users",
+		})
+		return
+	}
+
+	// Check invited user exists
+	var inviteeExists bool
+
+	err = tx.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1
+			FROM user
+			WHERE id = ?
+		)
+	`, input.UserID).Scan(&inviteeExists)
+
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not verify user",
+		})
+		return
+	}
+
+	if !inviteeExists {
+		writeJSON(w, http.StatusNotFound, map[string]any{
+			"status":  false,
+			"message": "user not found",
+		})
+		return
+	}
+
+	// Check invited user is not already a member
+	var alreadyMember bool
+
+	err = tx.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1
+			FROM group_members
+			WHERE group_id = ?
+			  AND user_id = ?
+		)
+	`, groupID, input.UserID).Scan(&alreadyMember)
+
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not verify membership",
+		})
+		return
+	}
+
+	if alreadyMember {
+		writeJSON(w, http.StatusConflict, map[string]any{
+			"status":  false,
+			"message": "user is already a group member",
+		})
+		return
+	}
+
+	// Create invitation
+	result, err := tx.Exec(`
+		INSERT INTO group_invitations (
+			group_id,
+			user_id,
+			inviter_id,
+			status
+		)
+		VALUES (?, ?, ?, 'pending')
+	`, groupID, input.UserID, userID)
+
+	if err != nil {
+		status, message := helpers.NormalizeSQLError(err)
+		if strings.Contains(err.Error(), "UNIQUE constraint failed: group_invitations.group_id, group_invitations.user_id") {
+			status = http.StatusConflict
+			message = "invitation is already pending"
+		}
+		writeJSON(w, status, map[string]any{
+			"status":  false,
+			"message": message,
+		})
+		return
+	}
+
+	invitationID, err := result.LastInsertId()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not create invitation",
+		})
+		return
+	}
+
+	// Create notification for invited user
+	_, err = tx.Exec(`
+		INSERT INTO notifications (
+			user_id,
+			actor_id,
+			category,
+			type,
+			message,
+			related_id,
+			is_read
+		)
+		VALUES (?, ?, 'groups', 'invitation', ?, ?, 0)
+	`,
+		input.UserID,
+		userID,
+		"invited you to join a group",
+		invitationID,
+	)
+
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not create invitation notification",
+		})
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not send invitation",
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"status":  true,
+		"message": "invitation sent",
+	})
+}

@@ -141,7 +141,7 @@ const notificationSelect = `
 	LEFT JOIN group_invitations gi
 		ON n.category = 'groups'
 		AND n.type = 'invitation'
-		AND gi.group_id = n.related_id
+		AND gi.id = n.related_id
 		AND gi.user_id = n.user_id
 `
 

@@ -189,7 +189,7 @@ func (app *App) UpdateUserAvatar(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	
+
 	err = users.UpdateUserAvatar(app.DB, userID, avatarPath)
 	if err != nil {
 		log.Println(err)
@@ -264,5 +264,75 @@ func (app *App) UpdateUserAbout(w http.ResponseWriter, r *http.Request) {
 	helpers.WriteJson(w, http.StatusOK, map[string]any{
 		"status":  false,
 		"message": "user updated!",
+	})
+}
+
+func (app App) GetUsers(w http.ResponseWriter, r *http.Request) {
+	currentUserID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]any{
+			"status":  false,
+			"message": "authentication required",
+		})
+		return
+	}
+
+	rows, err := app.DB.Query(`
+		SELECT id, COALESCE(username, ''), first_name, last_name
+		FROM user
+		WHERE id != ?
+		ORDER BY username ASC
+	`, currentUserID)
+
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not load users",
+		})
+		return
+	}
+	defer rows.Close()
+
+	type User struct {
+		ID        int    `json:"id"`
+		Username  string `json:"username"`
+		FirstName string `json:"firstName"`
+		LastName  string `json:"lastName"`
+	}
+
+	users := []User{}
+
+	for rows.Next() {
+		var user User
+
+		err := rows.Scan(
+			&user.ID,
+			&user.Username,
+			&user.FirstName,
+			&user.LastName,
+		)
+
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]any{
+				"status":  false,
+				"message": "could not read users",
+			})
+			return
+		}
+
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not load users",
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status": true,
+		"users":  users,
 	})
 }

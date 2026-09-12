@@ -9,8 +9,8 @@ var ErrGroupNotFound = errors.New("group not found")
 
 // JoinGroup adds a user to the group's membership table. If the group already
 // has a chat, the same user is added there too.
-func AcceptInvitation(db *sql.DB, userID int, groupID int64) error {
-	if userID <= 0 || groupID <= 0 {
+func AcceptInvitation(db *sql.DB, userID int, invitationID int64) error {
+	if userID <= 0 || invitationID <= 0 {
 		return ErrGroupNotFound
 	}
 
@@ -20,32 +20,44 @@ func AcceptInvitation(db *sql.DB, userID int, groupID int64) error {
 	}
 	defer tx.Rollback()
 
-	// Make sure the group exists
-	var exists int
+	var groupID int64
 
 	err = tx.QueryRow(`
-		SELECT 1
-		FROM groups
+		SELECT group_id
+		FROM group_invitations
 		WHERE id = ?
-	`, groupID).Scan(&exists)
+		  AND user_id = ?
+		  AND status = 'pending'
+	`, invitationID, userID).Scan(&groupID)
 
 	if err == sql.ErrNoRows {
-		return ErrGroupNotFound
+		return errors.New("pending group invitation not found")
 	}
 
 	if err != nil {
 		return err
 	}
 
-	// Accept only an existing pending invitation
+	var groupExists int
+	err = tx.QueryRow(`
+		SELECT 1
+		FROM groups
+		WHERE id = ?
+	`, groupID).Scan(&groupExists)
+	if err == sql.ErrNoRows {
+		return ErrGroupNotFound
+	}
+	if err != nil {
+		return err
+	}
+
 	result, err := tx.Exec(`
 		UPDATE group_invitations
 		SET status = 'accepted'
-		WHERE group_id = ?
+		WHERE id = ?
 		  AND user_id = ?
 		  AND status = 'pending'
-	`, groupID, userID)
-
+	`, invitationID, userID)
 	if err != nil {
 		return err
 	}
@@ -101,18 +113,18 @@ func AcceptInvitation(db *sql.DB, userID int, groupID int64) error {
 	return tx.Commit()
 }
 
-func DeclineInvitation(db *sql.DB, userID int, groupID int64) error {
-	if userID <= 0 || groupID <= 0 {
+func DeclineInvitation(db *sql.DB, userID int, invitationID int64) error {
+	if userID <= 0 || invitationID <= 0 {
 		return ErrGroupNotFound
 	}
 
 	result, err := db.Exec(`
 		UPDATE group_invitations
 		SET status = 'declined'
-		WHERE group_id = ?
+		WHERE id = ?
 		  AND user_id = ?
 		  AND status = 'pending'
-	`, groupID, userID)
+	`, invitationID, userID)
 
 	if err != nil {
 		return err

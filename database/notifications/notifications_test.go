@@ -97,6 +97,37 @@ func TestJoinRequestNotificationUsesSpecificRequest(t *testing.T) {
 	}
 }
 
+func TestInvitationNotificationUsesSpecificInvitation(t *testing.T) {
+	db := newNotificationTestDatabase(t)
+
+	_, err := db.Exec(`
+		INSERT INTO user (id) VALUES (2), (3);
+		INSERT INTO group_invitations (id, group_id, user_id, inviter_id, status)
+		VALUES (10, 7, 2, 3, 'declined'), (11, 7, 2, 3, 'pending');
+		INSERT INTO notifications (id, user_id, actor_id, category, type, message, related_id)
+		VALUES
+			(20, 2, 3, 'groups', 'invitation', 'first invitation', 10),
+			(21, 2, 3, 'groups', 'invitation', 'second invitation', 11);
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	items, err := List(db, 2, "groups")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("notification count = %d, expected 2", len(items))
+	}
+	if items[0].ID != 21 || items[0].InvitationStatus == nil || *items[0].InvitationStatus != "pending" {
+		t.Fatalf("new invitation notification = %+v, expected pending", items[0])
+	}
+	if items[1].ID != 20 || items[1].InvitationStatus == nil || *items[1].InvitationStatus != "declined" {
+		t.Fatalf("old invitation notification = %+v, expected declined", items[1])
+	}
+}
+
 func newNotificationTestDatabase(t *testing.T) *sql.DB {
 	t.Helper()
 
@@ -131,10 +162,15 @@ func newNotificationTestDatabase(t *testing.T) *sql.DB {
 		ON group_join_requests (group_id, user_id)
 		WHERE status = 'pending';
 		CREATE TABLE group_invitations (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			group_id INTEGER NOT NULL,
 			user_id INTEGER NOT NULL,
+			inviter_id INTEGER NOT NULL,
 			status TEXT NOT NULL DEFAULT 'pending'
 		);
+		CREATE UNIQUE INDEX group_invitations_one_pending
+		ON group_invitations (group_id, user_id)
+		WHERE status = 'pending';
 		INSERT INTO user (id) VALUES (1);
 	`)
 	if err != nil {

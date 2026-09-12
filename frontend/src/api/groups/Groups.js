@@ -130,3 +130,29 @@ export async function undoJoinGroup(groupID) {
   const result = await response.json();
   return result;
 }
+
+export async function inviteUserToGroup(groupId, userId) {
+  const response = await fetch(`/api/groups/${groupId}/invitations`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      userId,
+    }),
+  });
+
+  if (!checkSessionResponse(response)) {
+    router.replace("/login");
+    return;
+  }
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || "Could not send invitation");
+  }
+
+  return result;
+}
