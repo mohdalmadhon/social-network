@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"social/internal/app/tokens"
@@ -112,6 +113,12 @@ func TestUserInviteCreatesInvitationAndNotificationForMember(t *testing.T) {
 	if recorder.Code != http.StatusCreated {
 		t.Fatalf("status = %d, expected %d; body = %s", recorder.Code, http.StatusCreated, recorder.Body.String())
 	}
+	var response struct {
+		InvitationID int64 `json:"invitationId"`
+	}
+	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
+		t.Fatal(err)
+	}
 
 	var invitationID int64
 	var inviterID int
@@ -137,6 +144,9 @@ func TestUserInviteCreatesInvitationAndNotificationForMember(t *testing.T) {
 	}
 	if relatedID != invitationID {
 		t.Fatalf("notification related_id = %d, expected invitation id %d", relatedID, invitationID)
+	}
+	if response.InvitationID != invitationID {
+		t.Fatalf("response invitationId = %d, expected %d", response.InvitationID, invitationID)
 	}
 
 	creatorRequest := groupInvitationRequest(http.MethodPost, "/api/groups/7/invitations", "7", 1, 4)
@@ -255,6 +265,172 @@ func TestUserInviteRollsBackWhenNotificationCreationFails(t *testing.T) {
 	assertRowCount(t, db, "SELECT COUNT(*) FROM group_invitations", 0)
 }
 
+func TestGetInviteUsersReturnsOnlyNonMembersWithPendingState(t *testing.T) {
+	db := openInvitationAPITestDB(t, false)
+	_, err := db.Exec(`
+		INSERT INTO group_invitations (id, group_id, user_id, inviter_id, status)
+		VALUES
+			(10, 7, 3, 1, 'declined'),
+			(11, 7, 4, 1, 'accepted'),
+			(12, 7, 5, 2, 'pending');
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	request := inviteUsersRequest("7", 2)
+	recorder := httptest.NewRecorder()
+	App{DB: db}.GetInviteUsers(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, expected %d; body = %s", recorder.Code, http.StatusOK, recorder.Body.String())
+	}
+
+	var response struct {
+		Users []struct {
+			ID           int    `json:"id"`
+			IsInvited    bool   `json:"isInvited"`
+			InvitationID *int64 `json:"invitationId"`
+		} `json:"users"`
+	}
+	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
+		t.Fatal(err)
+	}
+
+	users := make(map[int]struct {
+		isInvited    bool
+		invitationID *int64
+	}, len(response.Users))
+	for _, user := range response.Users {
+		users[user.ID] = struct {
+			isInvited    bool
+			invitationID *int64
+		}{user.IsInvited, user.InvitationID}
+	}
+	if len(users) != 4 {
+		t.Fatalf("invite user count = %d, expected 4", len(users))
+	}
+	if _, found := users[1]; found {
+		t.Fatal("group creator was included in invite users")
+	}
+	if _, found := users[2]; found {
+		t.Fatal("existing group member was included in invite users")
+	}
+	for _, userID := range []int{3, 4, 6} {
+		if user := users[userID]; user.isInvited || user.invitationID != nil {
+			t.Fatalf("user %d was marked invited by historical data: %+v", userID, user)
+		}
+	}
+	pendingUser := users[5]
+	if !pendingUser.isInvited || pendingUser.invitationID == nil || *pendingUser.invitationID != 12 {
+		t.Fatalf("pending user state = %+v, expected invitation 12", pendingUser)
+	}
+
+	if _, err = db.Exec("INSERT INTO group_members (group_id, user_id) VALUES (7, 5)"); err != nil {
+		t.Fatal(err)
+	}
+	recorder = httptest.NewRecorder()
+	App{DB: db}.GetInviteUsers(recorder, inviteUsersRequest("7", 2))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status after membership = %d, expected %d", recorder.Code, http.StatusOK)
+	}
+	response.Users = nil
+	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
+		t.Fatal(err)
+	}
+	for _, user := range response.Users {
+		if user.ID == 5 {
+			t.Fatal("new group member remained in invite users")
+		}
+	}
+}
+
+func TestGetInviteUsersRejectsNonMember(t *testing.T) {
+	db := openInvitationAPITestDB(t, false)
+	recorder := httptest.NewRecorder()
+
+	App{DB: db}.GetInviteUsers(recorder, inviteUsersRequest("7", 4))
+
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, expected %d", recorder.Code, http.StatusForbidden)
+	}
+}
+
+func TestUndoInvitationDeletesOnlyPendingInvitationAndAllowsReinvite(t *testing.T) {
+	db := openInvitationAPITestDB(t, true)
+	_, err := db.Exec(`
+		INSERT INTO groups (id, creator_id) VALUES (8, 1);
+		INSERT INTO group_members (group_id, user_id) VALUES (8, 2);
+		INSERT INTO group_invitations (id, group_id, user_id, inviter_id, status)
+		VALUES
+			(10, 7, 3, 1, 'declined'),
+			(11, 7, 3, 1, 'pending'),
+			(12, 7, 3, 2, 'accepted');
+		INSERT INTO notifications (id, user_id, actor_id, category, type, message, related_id)
+		VALUES
+			(20, 3, 1, 'groups', 'invitation', 'old declined invitation', 10),
+			(21, 3, 1, 'groups', 'invitation', 'pending invitation', 11),
+			(22, 3, 2, 'groups', 'invitation', 'old accepted invitation', 12);
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	recorder := httptest.NewRecorder()
+	App{DB: db}.UndoInvitation(recorder, undoInvitationRequest("8", "11", 2))
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("wrong-group status = %d, expected %d", recorder.Code, http.StatusNotFound)
+	}
+	assertRowCount(t, db, "SELECT COUNT(*) FROM group_invitations WHERE id = 11 AND status = 'pending'", 1)
+
+	recorder = httptest.NewRecorder()
+	App{DB: db}.UndoInvitation(recorder, undoInvitationRequest("7", "11", 2))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, expected %d; body = %s", recorder.Code, http.StatusOK, recorder.Body.String())
+	}
+
+	assertRowCount(t, db, "SELECT COUNT(*) FROM group_invitations WHERE id = 11", 0)
+	assertRowCount(t, db, "SELECT COUNT(*) FROM group_invitations WHERE id = 10 AND status = 'declined'", 1)
+	assertRowCount(t, db, "SELECT COUNT(*) FROM group_invitations WHERE id = 12 AND status = 'accepted'", 1)
+	assertRowCount(t, db, "SELECT COUNT(*) FROM notifications WHERE id = 21", 0)
+	assertRowCount(t, db, "SELECT COUNT(*) FROM notifications WHERE id IN (20, 22)", 2)
+
+	recorder = httptest.NewRecorder()
+	App{DB: db}.UndoInvitation(recorder, undoInvitationRequest("7", "12", 1))
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("accepted invitation undo status = %d, expected %d", recorder.Code, http.StatusNotFound)
+	}
+
+	recorder = httptest.NewRecorder()
+	App{DB: db}.UserInvite(recorder, groupInvitationRequest(http.MethodPost, "/api/groups/7/invitations", "7", 2, 3))
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("reinvite status = %d, expected %d; body = %s", recorder.Code, http.StatusCreated, recorder.Body.String())
+	}
+	assertRowCount(t, db, "SELECT COUNT(*) FROM group_invitations WHERE group_id = 7 AND user_id = 3 AND status = 'pending'", 1)
+}
+
+func TestUndoInvitationRejectsNonMember(t *testing.T) {
+	db := openInvitationAPITestDB(t, true)
+	_, err := db.Exec(`
+		INSERT INTO group_invitations (id, group_id, user_id, inviter_id, status)
+		VALUES (11, 7, 3, 1, 'pending');
+		INSERT INTO notifications (id, user_id, actor_id, category, type, message, related_id)
+		VALUES (21, 3, 1, 'groups', 'invitation', 'pending invitation', 11);
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	recorder := httptest.NewRecorder()
+	App{DB: db}.UndoInvitation(recorder, undoInvitationRequest("7", "11", 4))
+
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, expected %d", recorder.Code, http.StatusForbidden)
+	}
+	assertRowCount(t, db, "SELECT COUNT(*) FROM group_invitations WHERE id = 11 AND status = 'pending'", 1)
+	assertRowCount(t, db, "SELECT COUNT(*) FROM notifications WHERE id = 21", 1)
+}
+
 func TestInvitationNotificationActionsUseExactInvitation(t *testing.T) {
 	t.Run("accept", func(t *testing.T) {
 		db := openInvitationActionTestDB(t)
@@ -321,7 +497,12 @@ func openInvitationAPITestDB(t *testing.T, withNotifications bool) *sql.DB {
 
 	db := openGroupAPITestDB(t)
 	_, err := db.Exec(`
-		CREATE TABLE user (id INTEGER PRIMARY KEY);
+		CREATE TABLE user (
+			id INTEGER PRIMARY KEY,
+			username TEXT,
+			first_name TEXT NOT NULL,
+			last_name TEXT NOT NULL
+		);
 		CREATE TABLE groups (id INTEGER PRIMARY KEY, creator_id INTEGER NOT NULL);
 		CREATE TABLE group_members (group_id INTEGER NOT NULL, user_id INTEGER NOT NULL, PRIMARY KEY (group_id, user_id));
 		CREATE TABLE group_invitations (
@@ -334,7 +515,13 @@ func openInvitationAPITestDB(t *testing.T, withNotifications bool) *sql.DB {
 		CREATE UNIQUE INDEX group_invitations_one_pending
 		ON group_invitations (group_id, user_id)
 		WHERE status = 'pending';
-		INSERT INTO user (id) VALUES (1), (2), (3), (4);
+		INSERT INTO user (id, username, first_name, last_name) VALUES
+			(1, 'owner', 'Group', 'Owner'),
+			(2, 'member', 'Group', 'Member'),
+			(3, 'ahmed', 'Ahmed', 'Ali'),
+			(4, 'sara', 'Sara', 'Hassan'),
+			(5, 'mohammed', 'Mohammed', 'Saleh'),
+			(6, 'moh123', 'Moh', 'Yusuf');
 		INSERT INTO groups (id, creator_id) VALUES (7, 1);
 		INSERT INTO group_members (group_id, user_id) VALUES (7, 1), (7, 2);
 	`)
@@ -354,6 +541,15 @@ func openInvitationAPITestDB(t *testing.T, withNotifications bool) *sql.DB {
 				related_id INTEGER,
 				is_read INTEGER NOT NULL DEFAULT 0
 			);
+			CREATE TRIGGER delete_group_invitation_notifications
+			AFTER DELETE ON group_invitations
+			FOR EACH ROW
+			BEGIN
+				DELETE FROM notifications
+				WHERE category = 'groups'
+				  AND type = 'invitation'
+				  AND related_id = OLD.id;
+			END;
 		`)
 		if err != nil {
 			t.Fatal(err)
@@ -434,6 +630,21 @@ func groupInvitationRequest(method string, path string, groupID string, inviterI
 	request := httptest.NewRequest(method, path, body)
 	request.SetPathValue("id", groupID)
 	ctx := context.WithValue(request.Context(), "userID", inviterID)
+	return request.WithContext(ctx)
+}
+
+func inviteUsersRequest(groupID string, userID int) *http.Request {
+	request := httptest.NewRequest(http.MethodGet, "/api/groups/"+groupID+"/invite-users", nil)
+	request.SetPathValue("id", groupID)
+	ctx := context.WithValue(request.Context(), "userID", userID)
+	return request.WithContext(ctx)
+}
+
+func undoInvitationRequest(groupID string, invitationID string, userID int) *http.Request {
+	request := httptest.NewRequest(http.MethodDelete, "/api/groups/"+groupID+"/invitations/"+invitationID, nil)
+	request.SetPathValue("id", groupID)
+	request.SetPathValue("invitationID", invitationID)
+	ctx := context.WithValue(request.Context(), "userID", userID)
 	return request.WithContext(ctx)
 }
 

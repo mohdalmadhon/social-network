@@ -1,27 +1,52 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { router } from '@/router/router.js'
 import { useRoute } from 'vue-router'
-import { getUsers } from '@/api/users/users.js'
 
 import {
     getGroup,
     deleteGroupApi,
+    getInviteUsers,
     inviteUserToGroup,
+    undoGroupInvitation,
 } from '@/api/groups/Groups.js'
 
 const route = useRoute()
 const groupId = route.params.groupId
 
 const group = ref(null)
-const users = ref([])
+const inviteUsers = ref([])
+const inviteSearch = ref('')
 
 const loading = ref(true)
 const error = ref(null)
 
 const inviteLoadingUserId = ref(null)
+const inviteLoadingAction = ref('')
 const inviteMessage = ref('')
 const inviteError = ref('')
+
+const filteredInviteUsers = computed(() => {
+    const search = inviteSearch.value.trim().toLowerCase()
+
+    if (!search) {
+        return inviteUsers.value
+    }
+
+    return inviteUsers.value.filter(user => {
+        const username = user.username?.toLowerCase() || ''
+        const firstName = user.firstName?.toLowerCase() || ''
+        const lastName = user.lastName?.toLowerCase() || ''
+        const fullName = `${firstName} ${lastName}`.trim()
+
+        return (
+            username.includes(search) ||
+            firstName.includes(search) ||
+            lastName.includes(search) ||
+            fullName.includes(search)
+        )
+    })
+})
 
 onMounted(async () => {
     try {
@@ -29,11 +54,10 @@ onMounted(async () => {
 
         group.value = groupResult.group
 
-        // Only members are allowed to invite other users
         if (group.value.isMember) {
-            const usersResult = await getUsers()
+            const usersResult = await getInviteUsers(groupId)
 
-            users.value = usersResult.users
+            inviteUsers.value = usersResult.users
         }
     } catch (err) {
         console.error(err)
@@ -55,19 +79,22 @@ async function deleteGroup() {
     }
 }
 
-async function inviteUser(userId) {
+async function inviteUser(user) {
     inviteMessage.value = ''
     inviteError.value = ''
 
-    inviteLoadingUserId.value = userId
+    inviteLoadingUserId.value = user.id
+    inviteLoadingAction.value = 'invite'
 
     try {
         const result = await inviteUserToGroup(
             groupId,
-            userId
+            user.id
         )
 
         if (result?.status) {
+            user.isInvited = true
+            user.invitationId = result.invitationId
             inviteMessage.value = 'Invitation sent successfully'
         }
     } catch (err) {
@@ -77,6 +104,38 @@ async function inviteUser(userId) {
             err.message || 'Could not send invitation'
     } finally {
         inviteLoadingUserId.value = null
+        inviteLoadingAction.value = ''
+    }
+}
+
+async function undoInvitation(user) {
+    if (!user.invitationId) return
+
+    inviteMessage.value = ''
+    inviteError.value = ''
+
+    inviteLoadingUserId.value = user.id
+    inviteLoadingAction.value = 'undo'
+
+    try {
+        const result = await undoGroupInvitation(
+            groupId,
+            user.invitationId
+        )
+
+        if (result?.status) {
+            user.isInvited = false
+            user.invitationId = null
+            inviteMessage.value = 'Invitation undone'
+        }
+    } catch (err) {
+        console.error(err)
+
+        inviteError.value =
+            err.message || 'Could not undo invitation'
+    } finally {
+        inviteLoadingUserId.value = null
+        inviteLoadingAction.value = ''
     }
 }
 </script>
@@ -142,10 +201,13 @@ async function inviteUser(userId) {
 
                     </div>
 
-                    <!-- Users List -->
-                    <div v-if="users.length" class="invite-users">
+                    <input v-model="inviteSearch" type="search" placeholder="Search by username or name..."
+                        class="invite-search" />
 
-                        <div v-for="user in users" :key="user.id" class="invite-user">
+                    <!-- Users List -->
+                    <div v-if="filteredInviteUsers.length" class="invite-users">
+
+                        <div v-for="user in filteredInviteUsers" :key="user.id" class="invite-user">
 
                             <div class="invite-user__info">
 
@@ -168,13 +230,28 @@ async function inviteUser(userId) {
 
                             </div>
 
-                            <button @click="inviteUser(user.id)" :disabled="inviteLoadingUserId === user.id">
-                                {{
-                                    inviteLoadingUserId === user.id
-                                        ? 'Sending...'
-                                        : 'Invite'
-                                }}
-                            </button>
+                            <div class="invite-user__actions">
+                                <template v-if="user.isInvited">
+                                    <span class="invite-status">Invited</span>
+
+                                    <button class="undo-button" @click="undoInvitation(user)"
+                                        :disabled="inviteLoadingUserId === user.id">
+                                        {{
+                                            inviteLoadingUserId === user.id && inviteLoadingAction === 'undo'
+                                                ? 'Undoing...'
+                                                : 'Undo'
+                                        }}
+                                    </button>
+                                </template>
+
+                                <button v-else @click="inviteUser(user)" :disabled="inviteLoadingUserId === user.id">
+                                    {{
+                                        inviteLoadingUserId === user.id && inviteLoadingAction === 'invite'
+                                            ? 'Sending...'
+                                            : 'Invite'
+                                    }}
+                                </button>
+                            </div>
 
                         </div>
 
@@ -387,6 +464,27 @@ async function inviteUser(userId) {
     font-size: 0.9rem;
 }
 
+.invite-search {
+    width: 100%;
+    min-height: var(--touch-target);
+    padding: 0 var(--space-3);
+    margin-top: var(--space-4);
+
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-small);
+
+    background: var(--color-input);
+    color: var(--color-text);
+
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+}
+
+.invite-search:focus {
+    border-color: var(--color-mint);
+    outline: none;
+}
+
 /* =========================
    Users List
    ========================= */
@@ -418,6 +516,13 @@ async function inviteUser(userId) {
     align-items: center;
 
     gap: var(--space-3);
+}
+
+.invite-user__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-shrink: 0;
 }
 
 /* =========================
@@ -510,6 +615,33 @@ async function inviteUser(userId) {
     opacity: 0.5;
 }
 
+.invite-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch-target);
+    padding: 0 var(--space-3);
+
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-small);
+
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.invite-user .undo-button {
+    border-color: var(--color-coral);
+    color: var(--color-coral);
+}
+
+.invite-user .undo-button:hover:not(:disabled) {
+    background: var(--color-coral);
+    color: var(--color-background);
+}
+
 /* =========================
    Messages
    ========================= */
@@ -577,6 +709,11 @@ async function inviteUser(userId) {
 
     .invite-user button {
         flex-shrink: 0;
+    }
+
+    .invite-user__actions {
+        flex-wrap: wrap;
+        justify-content: flex-end;
     }
 }
 </style>

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"social/internal/helpers"
+	"strconv"
 	"strings"
 )
 
@@ -805,7 +806,224 @@ func (app App) UserInvite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, map[string]any{
+		"status":       true,
+		"message":      "invitation sent",
+		"invitationId": invitationID,
+	})
+}
+
+func (app App) GetInviteUsers(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]any{
+			"status":  false,
+			"message": "authentication required",
+		})
+		return
+	}
+
+	groupID := r.PathValue("id")
+
+	var isMember bool
+	err := app.DB.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1
+			FROM group_members
+			WHERE group_id = ?
+			  AND user_id = ?
+		)
+	`, groupID, userID).Scan(&isMember)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not verify group membership",
+		})
+		return
+	}
+	if !isMember {
+		writeJSON(w, http.StatusForbidden, map[string]any{
+			"status":  false,
+			"message": "only group members can view invite users",
+		})
+		return
+	}
+
+	rows, err := app.DB.Query(`
+		SELECT
+			u.id,
+			COALESCE(u.username, ''),
+			u.first_name,
+			u.last_name,
+			gi.id
+		FROM user u
+		LEFT JOIN group_invitations gi
+			ON gi.group_id = ?
+			AND gi.user_id = u.id
+			AND gi.status = 'pending'
+		WHERE NOT EXISTS (
+			SELECT 1
+			FROM group_members gm
+			WHERE gm.group_id = ?
+			  AND gm.user_id = u.id
+		)
+		ORDER BY COALESCE(u.username, ''), u.id
+	`, groupID, groupID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not load invite users",
+		})
+		return
+	}
+	defer rows.Close()
+
+	type inviteUser struct {
+		ID           int    `json:"id"`
+		Username     string `json:"username"`
+		FirstName    string `json:"firstName"`
+		LastName     string `json:"lastName"`
+		IsInvited    bool   `json:"isInvited"`
+		InvitationID *int64 `json:"invitationId"`
+	}
+
+	users := []inviteUser{}
+	for rows.Next() {
+		var user inviteUser
+		var invitationID sql.NullInt64
+		if err := rows.Scan(
+			&user.ID,
+			&user.Username,
+			&user.FirstName,
+			&user.LastName,
+			&invitationID,
+		); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]any{
+				"status":  false,
+				"message": "could not read invite users",
+			})
+			return
+		}
+		if invitationID.Valid {
+			id := invitationID.Int64
+			user.IsInvited = true
+			user.InvitationID = &id
+		}
+		users = append(users, user)
+	}
+	if err := rows.Err(); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not load invite users",
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status": true,
+		"users":  users,
+	})
+}
+
+func (app App) UndoInvitation(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]any{
+			"status":  false,
+			"message": "authentication required",
+		})
+		return
+	}
+
+	groupID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || groupID <= 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid group id",
+		})
+		return
+	}
+	invitationID, err := strconv.ParseInt(r.PathValue("invitationID"), 10, 64)
+	if err != nil || invitationID <= 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid invitation id",
+		})
+		return
+	}
+
+	tx, err := app.DB.Begin()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not undo invitation",
+		})
+		return
+	}
+	defer tx.Rollback()
+
+	var isMember bool
+	err = tx.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1
+			FROM group_members
+			WHERE group_id = ?
+			  AND user_id = ?
+		)
+	`, groupID, userID).Scan(&isMember)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not verify group membership",
+		})
+		return
+	}
+	if !isMember {
+		writeJSON(w, http.StatusForbidden, map[string]any{
+			"status":  false,
+			"message": "only group members can undo invitations",
+		})
+		return
+	}
+
+	result, err := tx.Exec(`
+		DELETE FROM group_invitations
+		WHERE id = ?
+		  AND group_id = ?
+		  AND status = 'pending'
+	`, invitationID, groupID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not undo invitation",
+		})
+		return
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not undo invitation",
+		})
+		return
+	}
+	if affected == 0 {
+		writeJSON(w, http.StatusNotFound, map[string]any{
+			"status":  false,
+			"message": "pending invitation not found",
+		})
+		return
+	}
+
+	if err = tx.Commit(); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not undo invitation",
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
 		"status":  true,
-		"message": "invitation sent",
+		"message": "invitation undone",
 	})
 }

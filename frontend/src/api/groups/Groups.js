@@ -156,3 +156,43 @@ export async function inviteUserToGroup(groupId, userId) {
 
   return result;
 }
+
+export async function getInviteUsers(groupId) {
+  const response = await fetch(`/api/groups/${groupId}/invite-users`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  if (!checkSessionResponse(response)) {
+    router.replace("/login");
+    return;
+  }
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || "Could not load invite users");
+  }
+
+  return result;
+}
+
+export async function undoGroupInvitation(groupId, invitationId) {
+  const response = await fetch(`/api/groups/${groupId}/invitations/${invitationId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  if (!checkSessionResponse(response)) {
+    router.replace("/login");
+    return;
+  }
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || "Could not undo invitation");
+  }
+
+  return result;
+}
