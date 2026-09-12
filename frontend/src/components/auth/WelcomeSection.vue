@@ -1,10 +1,11 @@
 <script setup>
 import OrbitLogo from '@/components/layout/OrbitLogo.vue'
+import IconGlyph from '@/components/layout/IconGlyph.vue'
 
 const features = [
-  { icon: '◉', label: 'Followers you actually control', tone: 'violet' },
-  { icon: '▱', label: 'Groups with events and RSVP', tone: 'coral' },
-  { icon: '↗', label: 'Real-time chat over websockets', tone: 'mint' },
+  { icon: 'profile', label: 'Followers you actually control', tone: 'violet' },
+  { icon: 'groups', label: 'Groups with events and RSVP', tone: 'coral' },
+  { icon: 'chat', label: 'Real-time chat over websockets', tone: 'mint' },
 ]
 </script>
 
@@ -24,7 +25,7 @@ const features = [
 
         <ul class="feature-list" aria-label="Orbit features">
           <li v-for="feature in features" :key="feature.label">
-            <span class="feature-icon" :class="`feature-icon--${feature.tone}`" aria-hidden="true">{{ feature.icon }}</span>
+            <span class="feature-icon" :class="`feature-icon--${feature.tone}`"><IconGlyph :name="feature.icon" :size="17" /></span>
             <span>{{ feature.label }}</span>
           </li>
         </ul>

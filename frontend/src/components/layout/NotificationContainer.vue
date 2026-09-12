@@ -1,5 +1,6 @@
 <script setup>
 import { notifications, removeNotification } from '@/data/notifications'
+import IconGlyph from './IconGlyph.vue'
 </script>
 
 <template>
@@ -11,7 +12,7 @@ import { notifications, removeNotification } from '@/data/notifications'
           <p class="notification__label">{{ notification.type === 'error' ? 'Something went wrong' : 'Orbit update' }}</p>
           <p class="notification__message">{{ notification.message }}</p>
         </div>
-        <button type="button" aria-label="Dismiss notification" @click="removeNotification(notification.id)">×</button>
+        <button type="button" aria-label="Dismiss notification" @click="removeNotification(notification.id)"><IconGlyph name="close" :size="17" /></button>
       </article>
     </TransitionGroup>
   </div>

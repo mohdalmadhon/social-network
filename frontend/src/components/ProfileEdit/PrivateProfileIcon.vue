@@ -1,6 +1,10 @@
+<script setup>
+import IconGlyph from '@/components/layout/IconGlyph.vue'
+</script>
+
 <template>
     <div class="private-container">
-        <p><span class="icon">🔒</span>This account is private</p>
+        <p><span class="icon"><IconGlyph name="lock" :size="16" /></span>This account is private</p>
     </div>
 </template>
 

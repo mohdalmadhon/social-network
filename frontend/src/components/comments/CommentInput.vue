@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import IconGlyph from '@/components/layout/IconGlyph.vue'
 
 defineProps({
   inputId: {
@@ -51,7 +52,7 @@ function submitComment() {
       type="text"
     />
     <label class="comment-input__file" :for="`${inputId}-file`" aria-label="Attach an image to your comment">
-      <span aria-hidden="true">＋</span>
+      <IconGlyph name="image" :size="17" />
       <input
         :id="`${inputId}-file`"
         :disabled="disabled"
@@ -68,7 +69,7 @@ function submitComment() {
   </form>
   <div v-if="selectedFile" class="comment-input__selected-file">
     <span>{{ selectedFile.name }}</span>
-    <button type="button" aria-label="Remove comment image" @click="removeFile">×</button>
+    <button type="button" aria-label="Remove comment image" @click="removeFile"><IconGlyph name="close" :size="16" /></button>
   </div>
 </template>
 
