@@ -334,9 +334,8 @@ func (app *App) GetFollowing(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		
 
-		following, err := profiles.GetFollowers(app.DB, targetID, 20, offset)
+		following, err := profiles.GetFollowing(app.DB, targetID, 20, offset)
 		if err != nil {
 			log.Println(err)
 			helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{

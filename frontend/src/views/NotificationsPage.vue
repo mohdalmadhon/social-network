@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout.vue'
+import { useNotifications } from '@/helpers/useNotifications.js'
 import {
   applyNotificationAction,
   getNotifications,
@@ -20,6 +21,8 @@ const isLoading = ref(true)
 const loadError = ref('')
 
 const activeFilter = ref('all')
+const { items: liveItems, refreshNotifications } = useNotifications()
+watch(liveItems, (items) => { notificationItems.value = items.map(notificationForDisplay) })
 
 const visibleNotifications = computed(() => {
   if (activeFilter.value === 'all') return notificationItems.value
@@ -58,7 +61,7 @@ function notificationForDisplay(notification) {
   let action = ''
 
   if (notification.category === 'requests' && notification.type === 'follow_request') {
-    action = 'follow'
+    action = notification.followStatus === 0 ? 'follow' : notification.followStatus === 1 ? 'accept' : ''
   }
 
   if (notification.category === 'groups' && notification.type === 'join_request') {
@@ -82,7 +85,7 @@ function notificationForDisplay(notification) {
   }
 
   if (notification.category === 'events' && notification.type === 'event_created') {
-    action = 'rsvp'
+    action = notification.eventResponse === 'going' ? 'going' : notification.eventResponse === 'declined' ? 'decline' : 'rsvp'
   }
 
   return {
@@ -103,7 +106,7 @@ async function loadNotifications() {
   loadError.value = ''
 
   try {
-    const result = await getNotifications(activeFilter.value)
+    const result = await getNotifications('all')
     notificationItems.value = (result?.notifications || []).map(notificationForDisplay)
   } catch (error) {
     loadError.value = error.message || 'Could not load notifications.'
@@ -118,6 +121,7 @@ async function markAsRead(item) {
   try {
     await markNotificationRead(item.id)
     item.unread = false
+    await refreshNotifications()
   } catch (error) {
     loadError.value = error.message || 'Could not mark notification as read.'
   }
@@ -126,6 +130,7 @@ async function markAsRead(item) {
 async function markAllAsRead() {
   try {
     await markAllNotificationsRead()
+    await refreshNotifications()
     notificationItems.value.forEach((item) => {
       item.unread = false
     })
@@ -135,19 +140,23 @@ async function markAllAsRead() {
 }
 
 async function chooseAction(item, action) {
+  if (item.busy) return
+  item.busy = true
   const previousAction = item.action
 
   try {
     await applyNotificationAction(item.id, action)
     item.action = action
     item.unread = false
+    await refreshNotifications()
   } catch (error) {
     item.action = previousAction
     loadError.value = error.message || 'Could not complete notification action.'
+  } finally {
+    item.busy = false
   }
 }
 
-watch(activeFilter, loadNotifications)
 onMounted(loadNotifications)
 </script>
 

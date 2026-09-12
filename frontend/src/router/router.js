@@ -11,6 +11,8 @@ import EditProfile from "@/views/profiles/EditProfile.vue";
 import UserProfile from "@/views/profiles/UserProfile.vue";
 
 const routes = [
+  { path: '/', redirect: '/home' },
+  { path: '/:pathMatch(.*)*', redirect: '/home' },
   {
     path: "/login",
     component: LoginPage,

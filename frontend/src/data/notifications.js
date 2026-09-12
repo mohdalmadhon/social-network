@@ -5,9 +5,11 @@ export const notifications = reactive([]);
 export function addNotification(message, type = 'success') {
     const id = Date.now();
 
+    const displayMessage = message instanceof Error ? message.message : String(message);
+
     notifications.push({
         id,
-        message,
+        message: displayMessage,
         type
     });
 

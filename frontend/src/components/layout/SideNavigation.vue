@@ -1,8 +1,7 @@
 <script setup>
-import { onMounted, ref } from 'vue'
 import { logout } from '@/api/auth/auth'
 import { addNotification } from '@/data/notifications'
-import { getNotifications } from '@/api/notifications.js'
+import { useNotifications } from '@/helpers/useNotifications.js'
 
 defineProps({
   activePage: {
@@ -15,20 +14,11 @@ const links = [
   { name: 'home', label: 'Home', href: '/home-feed', icon: '⌂' },
   { name: 'profile', label: 'Profile', href: '/profile', icon: '◎' },
   { name: 'groups', label: 'Groups', href: '/groups', icon: '▱' },
-  { name: 'chats', label: 'Chats', href: '/chats', icon: '◌', badge: 5, badgeType: 'message' },
+  { name: 'chats', label: 'Chats', href: '/chats', icon: '◌', badgeType: 'message' },
   { name: 'notifications', label: 'Notifications', href: '/notifications', icon: '♢', badgeType: 'notification' },
 ]
 
-const notificationUnreadCount = ref(0)
-
-onMounted(async () => {
-  try {
-    const result = await getNotifications('all')
-    notificationUnreadCount.value = result?.unreadCount || 0
-  } catch {
-    notificationUnreadCount.value = 0
-  }
-})
+const { unreadCount: notificationUnreadCount } = useNotifications()
 
 async function logoutHandler() {
     try {
@@ -89,7 +79,7 @@ async function logoutHandler() {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   min-height: 4.25rem;
-  background: rgb(15 18 34 / 97%);
+  background: rgb(8 11 18 / 96%);
   border-top: 1px solid var(--color-border);
   backdrop-filter: blur(1rem);
 }
@@ -111,7 +101,7 @@ async function logoutHandler() {
 }
 
 .mobile-link--active {
-  color: var(--color-violet);
+  color: var(--color-mint);
 }
 
 @media (min-width: 64rem) {
@@ -142,8 +132,8 @@ async function logoutHandler() {
 
   .navigation-link:hover,
   .navigation-link--active {
-    background: rgb(124 92 255 / 16%);
-    color: var(--color-violet);
+    background: rgb(72 217 193 / 9%);
+    color: var(--color-mint);
   }
 
   .navigation-link__icon {

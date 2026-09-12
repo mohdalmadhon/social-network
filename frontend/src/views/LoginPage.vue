@@ -26,28 +26,23 @@ body,
 }
 
 .auth-page {
-    display: flex;
+    display: grid;
     min-height: 100vh;
     width: 100%;
-    background: #0f1020;
+    background: var(--color-background);
 }
 
 .login-side {
-    width: 70%;
-    min-height: 100vh;
+    width: 100%;
+    min-height: auto;
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 30px;
+    padding: clamp(1.5rem, 4vw, 3rem);
 }
 
-@media (max-width: 900px) {
-    .auth-page {
-        flex-direction: column;
-    }
-
-    .login-side {
-        width: 100%;
-    }
+@media (min-width: 56.25rem) {
+    .auth-page { grid-template-columns: minmax(20rem, .8fr) minmax(28rem, 1.2fr); }
+    .login-side { min-height: 100vh; }
 }
 </style>

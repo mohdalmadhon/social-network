@@ -25,13 +25,17 @@ function removeFile() {
   selectedFile.value = null
 }
 
+function reset() {
+  content.value = ''
+  selectedFile.value = null
+}
+defineExpose({ reset })
+
 function submitComment() {
   const cleanContent = content.value.trim()
   if (!cleanContent && !selectedFile.value) return
 
   emit('submit', { content: cleanContent, file: selectedFile.value })
-  content.value = ''
-  selectedFile.value = null
 }
 </script>
 
