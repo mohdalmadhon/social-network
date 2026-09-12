@@ -20,8 +20,8 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    radial-gradient(circle at 88% -10%, rgb(72 217 193 / 9%), transparent 28rem),
-    radial-gradient(circle at -10% 90%, rgb(158 140 255 / 8%), transparent 24rem),
+    radial-gradient(circle at 88% -10%, rgb(62 230 176 / 8%), transparent 28rem),
+    radial-gradient(circle at -10% 90%, rgb(124 92 255 / 8%), transparent 24rem),
     var(--color-background);
   color: var(--color-text);
   font-size: 1rem;
@@ -35,7 +35,7 @@ body::before {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background-image: linear-gradient(rgb(105 183 232 / 3%) 1px, transparent 1px), linear-gradient(90deg, rgb(105 183 232 / 3%) 1px, transparent 1px);
+  background-image: linear-gradient(rgb(76 195 255 / 3%) 1px, transparent 1px), linear-gradient(90deg, rgb(76 195 255 / 3%) 1px, transparent 1px);
   background-size: 4rem 4rem;
   mask-image: linear-gradient(to bottom, black, transparent 70%);
   content: '';

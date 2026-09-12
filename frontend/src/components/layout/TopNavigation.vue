@@ -3,7 +3,15 @@ import OrbitLogo from './OrbitLogo.vue'
 import { useNotifications } from '@/helpers/useNotifications.js'
 import { logout } from '@/api/auth/auth.js'
 import { ref } from 'vue'
+import { router } from '@/router/router.js'
 const logoutError = ref('')
+const searchText = ref('')
+
+function submitSearch() {
+  const search = searchText.value.trim()
+  router.push(search ? { path: '/groups', query: { search } } : '/groups')
+}
+
 async function signOut() {
   try { await logout() } catch { logoutError.value = 'Could not log out. Please try again.' }
 }
@@ -17,6 +25,10 @@ const { unreadCount: notificationUnreadCount } = useNotifications()
       <span>orbit</span>
     </a>
 
+    <form class="search" role="search" @submit.prevent="submitSearch">
+      <span aria-hidden="true">⌕</span>
+      <input v-model="searchText" type="search" placeholder="Search people, groups, posts…" aria-label="Search" />
+    </form>
 
     <nav class="top-actions" aria-label="Account shortcuts">
       <a class="icon-link orbit-touch-target" href="/chats" aria-label="Messages">
@@ -45,7 +57,7 @@ const { unreadCount: notificationUnreadCount } = useNotifications()
   align-items: center;
   min-height: 4rem;
   padding: var(--space-2) var(--space-3);
-  background: rgb(8 11 18 / 92%);
+  background: rgb(11 13 23 / 92%);
   border-bottom: 1px solid var(--color-border);
   backdrop-filter: blur(1rem);
 }
@@ -63,6 +75,16 @@ const { unreadCount: notificationUnreadCount } = useNotifications()
 
 .search {
   display: none;
+  align-items: center;
+  gap: var(--space-2);
+  justify-self: center;
+  width: min(100%, 28.5rem);
+  min-height: var(--touch-target);
+  padding-inline: var(--space-4);
+  background: var(--color-input);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-text-faint);
 }
 
 .top-actions {
@@ -133,20 +155,12 @@ const { unreadCount: notificationUnreadCount } = useNotifications()
 
 @media (min-width: 48rem) {
   .top-navigation {
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 28.5rem) minmax(0, 1fr);
     padding-inline: var(--space-5);
   }
 
   .search {
     display: flex;
-    align-items: center;
-    justify-self: center;
-    width: min(100%, 26rem);
-    min-height: var(--touch-target);
-    padding-inline: var(--space-4);
-    background: rgb(13 22 34 / 84%);
-    border: 1px solid var(--color-border);
-    border-radius: 999px;
-    color: var(--color-text-faint);
   }
 
   .search input {
@@ -157,7 +171,17 @@ const { unreadCount: notificationUnreadCount } = useNotifications()
     color: var(--color-text);
   }
 
+  .search input::placeholder {
+    color: var(--color-text-faint);
+  }
+
+  .search:focus-within {
+    border-color: var(--color-blue);
+    box-shadow: var(--focus-ring);
+  }
+
   .top-actions {
+    justify-self: end;
     gap: var(--space-2);
   }
 }

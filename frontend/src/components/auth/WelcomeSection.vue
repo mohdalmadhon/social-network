@@ -1,56 +1,188 @@
+<script setup>
+import OrbitLogo from '@/components/layout/OrbitLogo.vue'
+
+const features = [
+  { icon: '◉', label: 'Followers you actually control', tone: 'violet' },
+  { icon: '▱', label: 'Groups with events and RSVP', tone: 'coral' },
+  { icon: '↗', label: 'Real-time chat over websockets', tone: 'mint' },
+]
+</script>
+
 <template>
-  <section class="welcome-section">
-    <div class="welcome-content">
-      <div class="logo" aria-label="Orbit">◎</div>
-      <p class="eyebrow">WELCOME BACK</p>
-      <h1>Your people.<br />Your <span>place.</span></h1>
-      <p class="welcome-text">Connect with people, share your thoughts, and keep up with the things that matter to you.</p>
-      <div class="welcome-line"></div>
-      <p class="small-text">A simple place to stay connected.</p>
+  <section class="welcome-section" aria-label="About Orbit">
+    <div class="welcome-inner">
+      <a class="welcome-brand" href="/login" aria-label="Orbit home">
+        <OrbitLogo />
+        <span>orbit</span>
+      </a>
+
+      <div class="welcome-content">
+        <h1>Find your<br />people. Keep<br /><span>your orbit.</span></h1>
+        <p class="welcome-text">
+          Post to everyone, your followers, or a hand-picked few. Privacy is a choice you see — not a setting you forget.
+        </p>
+
+        <ul class="feature-list" aria-label="Orbit features">
+          <li v-for="feature in features" :key="feature.label">
+            <span class="feature-icon" :class="`feature-icon--${feature.tone}`" aria-hidden="true">{{ feature.icon }}</span>
+            <span>{{ feature.label }}</span>
+          </li>
+        </ul>
+      </div>
     </div>
-    <div class="decoration decoration-one" aria-hidden="true"></div>
-    <div class="decoration decoration-two" aria-hidden="true"></div>
-    <div class="decoration decoration-three" aria-hidden="true"></div>
-    <div class="circle circle-one" aria-hidden="true"></div>
-    <div class="circle circle-two" aria-hidden="true"></div>
-    <div class="grid-pattern" aria-hidden="true"></div>
+
+    <span class="welcome-orbit welcome-orbit--primary" aria-hidden="true"></span>
+    <span class="welcome-orbit welcome-orbit--secondary" aria-hidden="true"></span>
+    <span class="welcome-orbit welcome-orbit--tertiary" aria-hidden="true"></span>
+    <span class="welcome-grid" aria-hidden="true"></span>
   </section>
 </template>
 
 <style scoped>
 .welcome-section {
   position: relative;
-  display: flex;
-  min-height: 26rem;
-  align-items: center;
+  min-height: 18rem;
   overflow: hidden;
-  padding: clamp(2rem, 8vw, 5rem) clamp(1.5rem, 8vw, 5rem);
-  background: #0b1220;
+  background: var(--color-background);
   isolation: isolate;
 }
-.welcome-section::after {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(135deg, transparent 0 55%, rgb(72 217 193 / 6%) 55% 55.2%, transparent 55.2%);
-  content: '';
+
+.welcome-inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  align-content: start;
+  gap: clamp(2.5rem, 9vh, 6rem);
+  height: 100%;
+  padding: clamp(1.25rem, 4vw, 3rem) clamp(1.5rem, 5vw, 4rem);
 }
-.welcome-content { position: relative; z-index: 2; max-width: 38rem; }
-.logo { display: grid; width: 3.25rem; height: 3.25rem; margin-bottom: clamp(2rem, 8vw, 4.5rem); place-items: center; border: 1px solid rgb(72 217 193 / 70%); border-radius: var(--radius-small); background: var(--color-mint); box-shadow: 0 .75rem 2rem rgb(0 0 0 / 28%); color: #071713; font-size: 1.5rem; font-weight: 800; }
-.eyebrow { margin: 0 0 .75rem; color: var(--color-coral); font-family: var(--font-meta); font-size: .75rem; letter-spacing: .2em; }
-h1 { margin: 0; color: var(--color-text); font-family: var(--font-display); font-size: clamp(2.75rem, 10vw, 5.5rem); font-weight: 700; letter-spacing: -.05em; line-height: .98; }
-h1 span { color: var(--color-mint); }
-.welcome-text { max-width: 38ch; margin: 1.5rem 0 1.25rem; color: var(--color-text-soft); font-size: 1rem; line-height: 1.6; }
-.welcome-line { width: 4rem; height: .2rem; margin-bottom: 1rem; background: var(--color-coral); }
-.small-text { margin: 0; color: var(--color-text-muted); font-family: var(--font-meta); font-size: .75rem; }
-.decoration, .circle { position: absolute; pointer-events: none; }
-.decoration { border-radius: 50%; }
-.decoration-one { top: 14%; right: -8rem; width: 18rem; aspect-ratio: 1; background: rgb(158 140 255 / 15%); }
-.decoration-two { right: 12%; bottom: -8rem; width: 16rem; aspect-ratio: 1; background: rgb(255 111 145 / 12%); }
-.decoration-three { bottom: 8%; left: 8%; width: 7rem; aspect-ratio: 1; background: rgb(72 217 193 / 10%); }
-.circle { border: 1px solid rgb(105 183 232 / 35%); border-radius: 50%; }
-.circle-one { top: -7rem; right: 10%; width: 15rem; aspect-ratio: 1; }
-.circle-two { bottom: -3rem; left: 40%; width: 6rem; aspect-ratio: 1; }
-.grid-pattern { position: absolute; right: 0; bottom: 0; width: 20rem; height: 20rem; opacity: .35; background-image: linear-gradient(rgb(105 183 232 / 12%) 1px, transparent 1px), linear-gradient(90deg, rgb(105 183 232 / 12%) 1px, transparent 1px); background-size: 2rem 2rem; mask-image: linear-gradient(to top left, black, transparent); }
-@media (min-width: 56.25rem) { .welcome-section { min-height: 100vh; } }
+
+.welcome-brand {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.welcome-brand :deep(.orbit-logo) {
+  transform: scale(.68);
+  transform-origin: left center;
+  margin-right: -.55rem;
+}
+
+.welcome-content {
+  max-width: 31rem;
+}
+
+h1 {
+  margin: 0;
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: clamp(2.75rem, 6vw, 4.25rem);
+  font-weight: 700;
+  letter-spacing: -.055em;
+  line-height: .98;
+}
+
+h1 span {
+  color: var(--color-violet);
+}
+
+.welcome-text {
+  max-width: 34rem;
+  margin: 1.5rem 0 1.25rem;
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.feature-list {
+  display: grid;
+  gap: .65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-soft);
+  font-size: .875rem;
+}
+
+.feature-list li {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+}
+
+.feature-icon {
+  display: inline-grid;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: 0 0 1.25rem;
+  place-items: center;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.feature-icon--violet { color: var(--color-violet); }
+.feature-icon--coral { color: var(--color-coral); }
+.feature-icon--mint { color: var(--color-mint); }
+
+.welcome-orbit,
+.welcome-grid {
+  position: absolute;
+  pointer-events: none;
+}
+
+.welcome-orbit {
+  border-radius: 50%;
+}
+
+.welcome-orbit--primary {
+  top: 12%;
+  left: -9rem;
+  width: 22rem;
+  aspect-ratio: 1;
+  background: rgb(124 92 255 / 15%);
+}
+
+.welcome-orbit--secondary {
+  bottom: -9rem;
+  left: -2rem;
+  width: 16rem;
+  aspect-ratio: 1;
+  background: rgb(255 107 138 / 14%);
+}
+
+.welcome-orbit--tertiary {
+  right: 11%;
+  bottom: -12rem;
+  width: 25rem;
+  aspect-ratio: 1;
+  border: 1px solid rgb(76 195 255 / 18%);
+}
+
+.welcome-grid {
+  right: 0;
+  bottom: 0;
+  width: 19rem;
+  height: 19rem;
+  opacity: .28;
+  background-image: linear-gradient(rgb(76 195 255 / 14%) 1px, transparent 1px), linear-gradient(90deg, rgb(76 195 255 / 14%) 1px, transparent 1px);
+  background-size: 2rem 2rem;
+  mask-image: linear-gradient(to top left, black, transparent 72%);
+}
+
+@media (min-width: 56.25rem) {
+  .welcome-section {
+    min-height: 100vh;
+  }
+
+  .welcome-inner {
+    gap: clamp(4rem, 12vh, 8rem);
+  }
+}
 </style>
