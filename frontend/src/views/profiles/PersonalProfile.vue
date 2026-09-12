@@ -12,6 +12,7 @@ import AboutTab from '@/components/profile/AboutTab.vue';
 import FollowersTab from '@/components/profile/FollowersTab.vue';
 import GroupTab from '@/components/personalProfile/group/GroupTab.vue';
 import { addNotification } from '@/data/notifications';
+import ProfilePostsTab from '@/components/profile/posts/ProfilePostsTab.vue';
 
 const activeTab = ref('personal');
 const loading = ref(true);
@@ -63,6 +64,7 @@ onMounted(getData);
                     <FollowersTab v-if="activeTab === 'friends'" type="friends" :target-id="user.ID"
                         :follower-list="user.Profile.friends" />
 
+                    <ProfilePostsTab v-if="activeTab === 'posts'" />
                     <GroupTab v-if="activeTab === 'groups'" />
                 </template>
             </main>

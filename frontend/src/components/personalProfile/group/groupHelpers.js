@@ -1,7 +1,7 @@
 export const avatarUrl = (p) => (p ? `/uploads/${p}` : '');
 
 export const fullName = (u) =>
-    u ? [u.FirstName, u.LastName].filter(Boolean).join(' ') : '';
+    u ? [u.firstName ?? u.FirstName, u.lastName ?? u.LastName].filter(Boolean).join(' ') : '';
 
 export const userKey = (u) =>
     String(

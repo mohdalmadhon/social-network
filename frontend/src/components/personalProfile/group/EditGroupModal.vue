@@ -1,8 +1,8 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 
 import { updatePostGroup, getFriends } from '@/api/common/friends.js';
-import { avatarUrl, fullName, userKey, normalizeMember } from './groupHelpers.js';
+import { avatarUrl, fullName, userKey } from './groupHelpers.js';
 import ConfirmModal from './ConfirmModal.vue';
 
 const props = defineProps({
@@ -12,10 +12,22 @@ const props = defineProps({
     }
 });
 
+onMounted(() => {
+    console.log(props.group)
+})
 const emit = defineEmits(['close', 'saved']);
 
+function toMember(user) {
+    return {
+        ID: user.ID,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatar: user.avatar
+    };
+}
+
 const editName = ref(props.group.Name || '');
-const currentMembers = ref((props.group.Users || []).map(normalizeMember));
+const currentMembers = ref((props.group.Users || []).map(toMember));
 const saving = ref(false);
 const error = ref('');
 
@@ -33,11 +45,10 @@ async function runSearch(query) {
 
     try {
         const result = await getFriends(query);
-
-        searchResults.value = Object.entries(result).map(
+        searchResults.value = Object.entries(result.data || {}).map(
             ([key, value]) => ({
-                UserID: key,
-                ...value
+                ...value,
+                ID: key
             })
         );
     } catch {
@@ -62,24 +73,24 @@ watch(searchQuery, (value) => {
 
 const availableToAdd = computed(() => {
     const currentMemberIds = new Set(
-        currentMembers.value.map((member) => String(member.UserID))
+        currentMembers.value.map((member) => String(member.ID))
     );
 
     return searchResults.value.filter(
-        (user) => !currentMemberIds.has(String(user.UserID))
+        (user) => !currentMemberIds.has(String(user.ID))
     );
 });
 
 function addMember(user) {
     const alreadyMember = currentMembers.value.some(
-        (member) => String(member.UserID) === String(user.UserID)
+        (member) => String(member.ID) === String(user.ID)
     );
 
     if (alreadyMember) {
         return;
     }
 
-    currentMembers.value.push(normalizeMember(user));
+    currentMembers.value.push(toMember(user));
 }
 
 function requestRemoveMember(user, index) {
@@ -121,7 +132,7 @@ async function handleSave() {
         await updatePostGroup({
             groupId: props.group.ID,
             name: editName.value.trim(),
-            users: currentMembers.value.map((member) => Number(member.UserID))
+            users: currentMembers.value.map((member) => Number(member.ID))
         });
 
         emit('saved');
@@ -161,7 +172,7 @@ async function handleSave() {
                     <div v-else class="friends-list">
                         <div v-for="(user, index) in currentMembers" :key="userKey(user) || index"
                             class="friend-row friend-row--selected">
-                            <img v-if="avatarUrl(user.Avatar)" :src="avatarUrl(user.Avatar)" :alt="fullName(user)"
+                            <img v-if="avatarUrl(user.avatar)" :src="avatarUrl(user.avatar)" :alt="fullName(user)"
                                 class="friend-avatar" />
 
                             <div v-else class="friend-avatar friend-avatar--fallback"></div>
@@ -196,7 +207,7 @@ async function handleSave() {
 
                     <div v-else-if="availableToAdd.length" class="friends-list">
                         <div v-for="user in availableToAdd" :key="userKey(user)" class="friend-row">
-                            <img v-if="avatarUrl(user.Avatar)" :src="avatarUrl(user.Avatar)" :alt="fullName(user)"
+                            <img v-if="avatarUrl(user.avatar)" :src="avatarUrl(user.avatar)" :alt="fullName(user)"
                                 class="friend-avatar" />
 
                             <div v-else class="friend-avatar friend-avatar--fallback"></div>

@@ -17,3 +17,29 @@ export function getLocationData(locations = []) {
 
     return arr;
 }
+
+export function normalizeProfilePost(raw) {
+    return {
+        id: raw.id,
+        userId: raw.userId,
+        firstName: raw.firstName,
+        lastName: raw.lastName,
+        username: raw.username,
+        avatarPath: raw.avatarPath,
+        content: raw.content,
+        imagePath: raw.imagePath,
+        allowComments: raw.allowComments,
+        location: raw.location,
+        groupId: raw.groupId,
+        groupName: raw.GroupName ?? raw.groupName ?? '',
+        createdAt: raw.createdAt,
+        relationship: raw.relationship,
+        visibility: raw.visibility,
+        visibilityUser: raw.visibilityUser,
+        taggedPeople: raw.taggedPeople ?? [],
+        likeCount: raw.likeCount ?? 0,
+        dislikeCount: raw.disLikeCount ?? 0,
+        commentCount: raw.commentCount ?? 0,
+        reactionValue: raw.ReactionValue ?? raw.reactionValue ?? 0
+    };
+}

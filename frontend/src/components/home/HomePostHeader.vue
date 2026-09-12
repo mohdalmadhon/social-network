@@ -92,18 +92,6 @@ function openLocationDialog() {
                         Visibility limited by user
                     </span>
 
-                    <template v-if="taggedPeople">
-                        <span class="with-text">with</span>
-
-                        <button class="tagged-name" type="button" @click="openTaggedPeople">
-                            {{ taggedPeople[0]?.firstName }}
-                            {{ taggedPeople[0]?.lastName }}
-
-                            <template v-if="taggedPeople.length > 1">
-                                and {{ taggedPeople.length - 1 }} more
-                            </template>
-                        </button>
-                    </template>
                 </div>
 
                 <div class="post-meta">

@@ -20,17 +20,18 @@ type TaggedPerson struct {
 }
 
 type Post struct {
-	Id             int            `json:"id"`
-	UserId         int            `json:"userId"`
-	FirstName      string         `json:"firstName"`
-	LastName       string         `json:"lastName"`
-	Username       *string        `json:"username"`
-	AvatarPath     string         `json:"avatarPath"`
-	Content        string         `json:"content"`
-	ImagePath      *string        `json:"imagePath"`
-	AllowComments  bool           `json:"allowComments"`
-	Location       *string        `json:"location"`
-	GroupId        *int           `json:"groupId"`
+	Id             int     `json:"id"`
+	UserId         int     `json:"userId"`
+	FirstName      string  `json:"firstName"`
+	LastName       string  `json:"lastName"`
+	Username       *string `json:"username"`
+	AvatarPath     string  `json:"avatarPath"`
+	Content        string  `json:"content"`
+	ImagePath      *string `json:"imagePath"`
+	AllowComments  bool    `json:"allowComments"`
+	Location       *string `json:"location"`
+	GroupId        *int    `json:"groupId"`
+	GroupName      string
 	CreatedAt      string         `json:"createdAt"`
 	Relationship   string         `json:"relationship"`
 	Visibility     string         `json:"visibility"`

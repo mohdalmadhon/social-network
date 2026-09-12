@@ -247,3 +247,85 @@ func (app *App) PostReaction(w http.ResponseWriter, r *http.Request) {
 		"message": "reaction inserted!",
 	})
 }
+
+func (app *App) GetUserPosts(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+
+	if !ok {
+		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
+			"status":  false,
+			"message": "could not authorize user",
+		})
+		return
+	}
+
+	targetIDStr := r.URL.Query().Get("targetID")
+
+	targetID := 0
+
+	if targetIDStr != "" {
+		var err error
+
+		targetID, err = strconv.Atoi(targetIDStr)
+
+		if err != nil {
+			helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "invalid targetID",
+			})
+			return
+		}
+	}
+
+	offsetStr := r.URL.Query().Get("offset")
+
+	offset := 0
+
+	if offsetStr != "" {
+		var err error
+
+		offset, err = strconv.Atoi(offsetStr)
+
+		if err != nil {
+			helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "invalid offset",
+			})
+			return
+		}
+	}
+
+	userPosts, err := posts.GetUserPosts(app.DB, targetID, offset)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			helpers.WriteJson(w, http.StatusOK, map[string]any{
+				"status":  true,
+				"message": "no posts",
+			})
+			return
+		}
+
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not get posts",
+		})
+		return
+	}
+
+	if targetID != userID {
+		userPosts, err = posts.FilterPosts(app.DB, &userPosts, userID, targetID)
+
+		if err != nil {
+			helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+				"status":  false,
+				"message": "could not filter posts",
+			})
+			return
+		}
+	}
+
+	helpers.WriteJson(w, http.StatusOK, map[string]any{
+		"status": true,
+		"data":   userPosts,
+	})
+}

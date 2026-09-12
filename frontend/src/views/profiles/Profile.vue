@@ -14,6 +14,7 @@ import { useRoute } from 'vue-router';
 import FollowersTab from '@/components/profile/FollowersTab.vue';
 import { addNotification } from '@/data/notifications';
 import { getFriends } from '@/api/common/friends';
+import ProfilePostsTab from '@/components/profile/posts/ProfilePostsTab.vue';
 
 const route = useRoute();
 
@@ -52,8 +53,6 @@ let id = route.query.id;
 if (!id) {
     id = ""
 }
-
-
 onMounted(getData);
 </script>
 
@@ -92,6 +91,7 @@ onMounted(getData);
                             <FollowersTab :target-id="id" v-if="user.show && activeTab === 'friends'"
                                 :follower-list="user.Profile.friends" />
 
+                            <ProfilePostsTab v-if="activeTab === 'posts' && user.show" :user-id="id" />
                             <PrivateProfileIcon v-else-if="!user.show" />
                         </section>
                     </template>

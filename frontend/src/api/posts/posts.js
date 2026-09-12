@@ -27,3 +27,17 @@ export async function addPost(post = {}, image = null) {
 
     return await resp.json();
 }
+
+export async function getUserPosts(userID = "", offset = 0) {
+    const resp = await fetch(`/api/user/posts?offset=${offset}&targetID=${userID}`, {
+        method: "GET",
+        credentials: 'include',
+    });
+
+    const result = await resp.json()
+    if (!resp.ok) {
+        throw new Error('Error: ' + (result.message || 'could not get data'))
+    }
+
+    return result;
+}

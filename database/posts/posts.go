@@ -668,3 +668,83 @@ func attachTaggedPeople(db *sql.DB, posts []models.Post, tagsByPostIndex map[int
 
 	return nil
 }
+
+func GetUserPosts(db *sql.DB, targetID, offset int) ([]models.Post, error) {
+	var posts []models.Post
+	tagsByPostIndex := make(map[int]string)
+
+	rows, err := db.Query(`
+		SELECT u.id, u.first_name, u.last_name, p.content, p.image_path, p.allow_comments,
+			   p.location, p.group_id, p.created_at, p.tags, p.like_count, p.dislike_count, p.comment_count
+		FROM user u
+		JOIN posts p ON p.user_id = u.id
+		WHERE p.user_id = ?
+		ORDER BY p.created_at DESC
+		LIMIT 9
+		OFFSET ?
+	`, targetID, offset)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var tags sql.NullString
+		var p models.Post
+
+		err := rows.Scan(
+			&p.UserId, &p.FirstName, &p.LastName,
+			&p.Content, &p.ImagePath, &p.AllowComments,
+			&p.Location, &p.GroupId, &p.CreatedAt, &tags,
+			&p.LikeCount, &p.DisLikeCount, &p.CommentCount,
+		)
+		if err != nil {
+			rows.Close()
+			return nil, err
+		}
+
+		if tags.Valid {
+			tagsByPostIndex[len(posts)] = tags.String
+		}
+
+		var avatar string
+		err = db.QueryRow(`
+			SELECT avatar_path FROM profile WHERE user_id = ?
+		`, targetID).Scan(&avatar)
+		if err != nil {
+			rows.Close()
+			return nil, err
+		}
+
+		p.AvatarPath = avatar
+
+		if p.GroupId != nil && *p.GroupId > 0 {
+			var groupName string
+
+			err = db.QueryRow(`
+				SELECT name FROM user_posts_groups WHERE id = ?
+			`, *p.GroupId).Scan(&groupName)
+			if err != nil && err != sql.ErrNoRows {
+				rows.Close()
+				return nil, err
+			}
+
+			p.GroupName = groupName
+		}
+
+		posts = append(posts, p)
+	}
+
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
+
+	rows.Close()
+
+	if err := attachTaggedPeople(db, posts, tagsByPostIndex); err != nil {
+		return nil, err
+	}
+
+	return posts, nil
+}

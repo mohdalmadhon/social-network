@@ -43,7 +43,7 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("DELETE /api/profile/follow", app.AuthMiddleware(app.CancelRequest))
 	mux.HandleFunc("GET /api/profile/follow", app.AuthMiddleware(app.GetFollowers))
 	mux.HandleFunc("GET /api/profile/following", app.AuthMiddleware(app.GetFollowing))
-	mux.HandleFunc("/api/follow/accept", app.AcceptFollowRequest)
+	mux.HandleFunc("/api/follow/accept", app.AuthMiddleware(app.AcceptFollowRequest))
 
 	//folder handlers
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadsDir))))
@@ -53,13 +53,14 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("POST /api/post", app.AuthMiddleware(app.AddPost))
 	mux.HandleFunc("GET /api/posts", app.AuthMiddleware(app.GetHomePosts))
 	mux.HandleFunc("POST /api/post/reaction", app.AuthMiddleware(app.PostReaction))
+	mux.HandleFunc("GET /api/user/posts", app.AuthMiddleware(app.GetUserPosts))
 
 	// post's groups
 	mux.HandleFunc("GET /api/post/groups", app.AuthMiddleware(app.GetPostGroups))
 	mux.HandleFunc("POST /api/post/groups", app.AuthMiddleware(app.AddPostGroup))
 	mux.HandleFunc("DELETE /api/post/groups", app.AuthMiddleware(app.DeletePostGroup))
 	mux.HandleFunc("PATCH /api/post/groups", app.AuthMiddleware(app.UpdatePostGroup))
-
+	
 	//comments
 	mux.HandleFunc("POST /api/post/comment", app.AuthMiddleware(app.AddComment))
 	mux.HandleFunc("GET /api/post/comment", app.AuthMiddleware(app.GetComments))
