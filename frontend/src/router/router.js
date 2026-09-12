@@ -6,6 +6,7 @@ import Profile from '@/views/profiles/Profile.vue'
 import AddPostPage from '@/views/posts/AddPostPage.vue'
 import HomePage from '@/views/home/HomePage.vue'
 import Notifications from '@/views/Notifications.vue'
+import Chats from '@/views/chats/Chats.vue'
 
 const routes = [
     {
@@ -35,6 +36,10 @@ const routes = [
     {
         path: `/notifications`,
         component: Notifications
+    },
+    {
+        path: '/chats',
+        component: Chats
     }
 ]
 

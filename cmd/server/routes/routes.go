@@ -60,7 +60,7 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("POST /api/post/groups", app.AuthMiddleware(app.AddPostGroup))
 	mux.HandleFunc("DELETE /api/post/groups", app.AuthMiddleware(app.DeletePostGroup))
 	mux.HandleFunc("PATCH /api/post/groups", app.AuthMiddleware(app.UpdatePostGroup))
-	
+
 	//comments
 	mux.HandleFunc("POST /api/post/comment", app.AuthMiddleware(app.AddComment))
 	mux.HandleFunc("GET /api/post/comment", app.AuthMiddleware(app.GetComments))
@@ -71,6 +71,11 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("GET /api/profile/follows/search", app.AuthMiddleware(app.SearchFollows))
 	mux.HandleFunc("GET /api/profile/following/search", app.AuthMiddleware(app.SearchFollowing))
 	mux.HandleFunc("GET /api/location/search", app.SearchLocation)
+	mux.HandleFunc("GET /api/groups/search", app.AuthMiddleware(app.SearchPrivateChats))
+
+	// chats
+	mux.HandleFunc("GET /api/groups", app.AuthMiddleware(app.GetGroups))
+	mux.HandleFunc("POST /api/chats", app.AuthMiddleware(app.AddMessages))
 
 	//ws
 	mux.Handle("/api/ws", websocket.Handler(app.HandleWS))

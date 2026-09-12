@@ -294,7 +294,7 @@ func (app *App) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
+	
 	userPosts, err := posts.GetUserPosts(app.DB, targetID, offset)
 	if err != nil {
 		if err == sql.ErrNoRows {

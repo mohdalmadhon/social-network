@@ -48,6 +48,11 @@ async function logoutHandler() {
                 </span>
             </a>
 
+            <a href="/chats" :class="{ active: route.path === '/chats' }">
+                <span class="icon">✉</span>
+                <span class="label">chats</span>
+            </a>
+
 
         </nav>
 
