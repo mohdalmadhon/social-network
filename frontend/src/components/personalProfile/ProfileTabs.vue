@@ -16,7 +16,6 @@ let tabs = [];
 
 if (props.type === 'personal') {
     tabs = [
-        'posts',
         'friends',
         'groups',
         'following',
@@ -25,7 +24,6 @@ if (props.type === 'personal') {
     ];
 } else {
     tabs = [
-        'posts',
         'following',
         'followers',
         'about'

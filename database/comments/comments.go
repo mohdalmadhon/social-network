@@ -15,8 +15,8 @@ func CreateComment(db *sql.DB, userID int, postID int64, content string) (models
 
 func CreateCommentWithImage(db *sql.DB, userID int, postID int64, content, imagePath string) (models.Comment, error) {
 	content = strings.TrimSpace(content)
-	if content == "" || len([]rune(content)) > 200 {
-		return models.Comment{}, errors.New("comment must contain 1 to 200 characters")
+	if (content == "" && imagePath == "") || len([]rune(content)) > 200 {
+		return models.Comment{}, errors.New("comment needs text or an image, with at most 200 characters")
 	}
 
 	canView, err := CanViewPost(db, userID, postID)

@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import IconGlyph from '@/components/layout/IconGlyph.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -69,7 +70,7 @@ function goBack() {
           type="button"
           @click="goHome"
         >
-          ⌂
+          <IconGlyph name="home" :size="17" />
           <span>Go home</span>
         </button>
 
@@ -78,7 +79,7 @@ function goBack() {
           type="button"
           @click="goBack"
         >
-          ←
+          <IconGlyph name="arrowLeft" :size="17" />
           <span>Go back</span>
         </button>
       </div>

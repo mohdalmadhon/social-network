@@ -2,12 +2,17 @@
 import { ref, onMounted } from 'vue'
 import { router } from '@/router/router.js'
 import { useRoute } from 'vue-router'
-import { getGroup, deleteGroupApi } from '@/api/groups/Groups.js'
+import { getGroup, deleteGroupApi, getGroupPosts } from '@/api/groups/Groups.js'
+import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout.vue'
+import GroupActivity from '@/components/groups/GroupActivity.vue'
+import GroupPostCard from '@/components/groups/GroupPostCard.vue'
+import GroupPostComposer from '@/components/groups/GroupPostComposer.vue'
 
 const route = useRoute()
 const groupId = route.params.groupId
 
 const group = ref(null)
+const groupPosts = ref([])
 const loading = ref(true)
 const error = ref(null)
 
@@ -16,6 +21,10 @@ onMounted(async () => {
         const result = await getGroup(groupId)
 
         group.value = result.group
+        if (group.value?.isMember) {
+            const postsResult = await getGroupPosts(groupId)
+            groupPosts.value = postsResult?.posts || []
+        }
     } catch (err) {
         console.error(err)
         error.value = 'Could not load group'
@@ -35,10 +44,19 @@ async function deleteGroup() {
         console.error(err)
     }
 }
+
+function addGroupPost(post) {
+    groupPosts.value.unshift(post)
+}
+
+function removeGroupPost(postId) {
+    groupPosts.value = groupPosts.value.filter((post) => post.id !== postId)
+}
 </script>
 
 <template>
-    <main class="group-page">
+    <AuthenticatedLayout active-page="groups">
+    <div class="group-page">
         <section class="group-container">
 
             <p v-if="loading">
@@ -70,17 +88,40 @@ async function deleteGroup() {
                         You are a member of this group.
                     </p>
                 </section>
+
+                <section v-if="group.isMember" class="group-feed orbit-surface">
+                    <div class="group-feed__heading">
+                        <div>
+                            <p class="orbit-meta">Shared space</p>
+                            <h2>Group posts</h2>
+                        </div>
+                        <span>{{ groupPosts.length }} {{ groupPosts.length === 1 ? 'post' : 'posts' }}</span>
+                    </div>
+                    <GroupPostComposer :group-id="groupId" @post-created="addGroupPost" />
+                    <div v-if="groupPosts.length" class="group-posts">
+                        <GroupPostCard
+                            v-for="post in groupPosts"
+                            :key="post.id"
+                            :group-id="groupId"
+                            :post="post"
+                            @post-deleted="removeGroupPost"
+                        />
+                    </div>
+                    <p v-else class="group-feed__state">No posts yet. Start the group conversation.</p>
+                </section>
+                <GroupActivity v-if="group.isMember" :group-id="groupId" />
             </template>
 
         </section>
-    </main>
+    </div>
+    </AuthenticatedLayout>
 </template>
 
 <style scoped>
 .group-page {
     width: 100%;
     min-height: 100vh;
-    padding: var(--space-6);
+    padding: clamp(.25rem, 2vw, 1.5rem);
     background: var(--color-background);
     color: var(--color-text);
 }
@@ -203,6 +244,49 @@ async function deleteGroup() {
     font-weight: 600;
 }
 
+.group-feed {
+    display: grid;
+    gap: var(--space-4);
+    margin-top: var(--space-5);
+    padding: var(--space-5);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-medium);
+    background: var(--color-surface);
+}
+
+.group-feed__heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.group-feed__heading h2 {
+    margin: var(--space-1) 0 0;
+    color: var(--color-text);
+    font-family: var(--font-display);
+    font-size: clamp(1.3rem, 3vw, 1.7rem);
+}
+
+.group-feed__heading > span {
+    color: var(--color-text-muted);
+    font-size: .875rem;
+}
+
+.group-posts {
+    display: grid;
+    gap: var(--space-4);
+}
+
+.group-feed__state {
+    margin: 0;
+    padding: var(--space-5);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-small);
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
 .group-container>p {
     margin: var(--space-6) 0;
     text-align: center;
@@ -221,6 +305,10 @@ async function deleteGroup() {
     }
 
     .group-content {
+        padding: var(--space-4);
+    }
+
+    .group-feed {
         padding: var(--space-4);
     }
 

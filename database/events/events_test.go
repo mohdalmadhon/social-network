@@ -16,6 +16,8 @@ func TestSetRSVPUpdatesExistingResponse(t *testing.T) {
 
 	_, err = db.Exec(`
 		CREATE TABLE user (id INTEGER PRIMARY KEY);
+		CREATE TABLE group_members (group_id INTEGER, user_id INTEGER);
+		INSERT INTO group_members VALUES (1,3);
 		CREATE TABLE events (id INTEGER PRIMARY KEY, group_id INTEGER, creator_id INTEGER, title TEXT, content TEXT);
 		CREATE TABLE event_rsvps (
 			event_id INTEGER NOT NULL,
