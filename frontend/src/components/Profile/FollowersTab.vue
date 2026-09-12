@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { getFriends } from '@/api/common/friends';
 import { searchFollowing, searchFollows } from '@/api/users/profiles';
+import IconGlyph from '@/components/layout/IconGlyph.vue';
 
 const props = defineProps({
     type: {
@@ -357,13 +358,13 @@ onUnmounted(() => {
                         aria-label="Close"
                         @click="closeDialog"
                     >
-                        ×
+                        <IconGlyph name="close" :size="17" />
                     </button>
                 </header>
 
                 <div class="search-wrap">
                     <div class="search-box">
-                        <span class="search-icon">⌕</span>
+                        <IconGlyph class="search-icon" name="search" :size="16" />
 
                         <input
                             v-model="searchQuery"
@@ -409,7 +410,7 @@ onUnmounted(() => {
                                 </span>
                             </div>
 
-                            <span class="row-arrow">↗</span>
+                            <IconGlyph class="row-arrow" name="arrowRight" :size="16" />
                         </article>
 
                         <p
@@ -460,7 +461,7 @@ onUnmounted(() => {
                                 </span>
                             </div>
 
-                            <span class="row-arrow">↗</span>
+                            <IconGlyph class="row-arrow" name="arrowRight" :size="16" />
                         </article>
 
                         <p

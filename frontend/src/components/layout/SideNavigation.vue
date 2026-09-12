@@ -4,6 +4,7 @@ import { addNotification } from '@/data/notifications'
 import { useNotifications } from '@/helpers/useNotifications.js'
 import { getGroups } from '@/api/groups/Groups'
 import { onMounted, ref } from 'vue'
+import IconGlyph from './IconGlyph.vue'
 
 defineProps({
   activePage: {
@@ -24,11 +25,11 @@ onMounted(async () => {
 })
 
 const links = [
-  { name: 'home', label: 'Home', href: '/home-feed', icon: '⌂' },
-  { name: 'profile', label: 'Profile', href: '/profile', icon: '◎' },
-  { name: 'groups', label: 'Groups', href: '/groups', icon: '▱' },
-  { name: 'chats', label: 'Chats', href: '/chats', icon: '◌', badgeType: 'message' },
-  { name: 'notifications', label: 'Notifications', href: '/notifications', icon: '♢', badgeType: 'notification' },
+  { name: 'home', label: 'Home', href: '/home-feed', icon: 'home' },
+  { name: 'profile', label: 'Profile', href: '/profile', icon: 'profile' },
+  { name: 'groups', label: 'Groups', href: '/groups', icon: 'groups' },
+  { name: 'chats', label: 'Chats', href: '/chats', icon: 'chat', badgeType: 'message' },
+  { name: 'notifications', label: 'Notifications', href: '/notifications', icon: 'bell', badgeType: 'notification' },
 ]
 
 const { unreadCount: notificationUnreadCount } = useNotifications()
@@ -50,7 +51,7 @@ async function logoutHandler() {
       <a v-for="link in links" :key="link.name" class="navigation-link"
         :class="{ 'navigation-link--active': activePage === link.name }" :href="link.href"
         :aria-current="activePage === link.name ? 'page' : undefined">
-        <span class="navigation-link__icon" aria-hidden="true">{{ link.icon }}</span>
+        <span class="navigation-link__icon"><IconGlyph :name="link.icon" :size="18" /></span>
         <span class="navigation-link__label">{{ link.label }}</span>
         <span
           v-if="link.name === 'notifications' ? notificationUnreadCount : link.badge"
@@ -70,14 +71,14 @@ async function logoutHandler() {
       </a>
     </section>
 
-    <button class="logout-link" type="button" @click="logoutHandler">↪ <span>Log out</span></button>
+    <button class="logout-link" type="button" @click="logoutHandler"><IconGlyph name="logout" :size="18" /> <span>Log out</span></button>
   </aside>
 
   <nav class="mobile-navigation" aria-label="Mobile navigation">
     <a v-for="link in links" :key="link.name" class="mobile-link"
       :class="{ 'mobile-link--active': activePage === link.name }" :href="link.href" :aria-label="link.label"
       :aria-current="activePage === link.name ? 'page' : undefined">
-      <span aria-hidden="true">{{ link.icon }}</span>
+      <IconGlyph :name="link.icon" :size="19" />
       <span>{{ link.label }}</span>
     </a>
   </nav>
@@ -117,8 +118,9 @@ async function logoutHandler() {
   text-decoration: none;
 }
 
-.mobile-link>span:first-child {
-  font-size: 1.3rem;
+.mobile-link > .icon-glyph {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 .mobile-link--active {

@@ -1,3 +1,7 @@
+<script setup>
+import IconGlyph from '@/components/layout/IconGlyph.vue'
+</script>
+
 <template>
     <section class="profile-section">
         <div class="section-heading">
@@ -26,9 +30,9 @@
             </p>
 
             <div class="post-actions">
-                <button>♡ 24</button>
-                <button>○ 8 comments</button>
-                <button>↗ Share</button>
+                <button><IconGlyph name="heart" :size="15" /> 24</button>
+                <button><IconGlyph name="comment" :size="15" /> 8 comments</button>
+                <button><IconGlyph name="arrowRight" :size="15" /> Share</button>
             </div>
         </article>
 
@@ -47,9 +51,9 @@
             </p>
 
             <div class="post-actions">
-                <button>♡ 41</button>
-                <button>○ 12 comments</button>
-                <button>↗ Share</button>
+                <button><IconGlyph name="heart" :size="15" /> 41</button>
+                <button><IconGlyph name="comment" :size="15" /> 12 comments</button>
+                <button><IconGlyph name="arrowRight" :size="15" /> Share</button>
             </div>
         </article>
     </section>
@@ -170,6 +174,9 @@ h2 {
 }
 
 .post-actions button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     border: 0;
     background: transparent;
     color: var(--color-text-muted);

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout.vue'
+import IconGlyph from '@/components/layout/IconGlyph.vue'
 import { useNotifications } from '@/helpers/useNotifications.js'
 import {
   applyNotificationAction,
@@ -50,9 +51,9 @@ function actionLabel(action) {
 
 function notificationForDisplay(notification) {
   const categoryStyles = {
-    requests: { icon: 'R', color: '#7c5cff' },
-    groups: { icon: 'G', color: '#3ee6b0' },
-    events: { icon: 'E', color: '#ffb84d' },
+    requests: { icon: 'profile', color: '#7c5cff' },
+    groups: { icon: 'groups', color: '#3ee6b0' },
+    events: { icon: 'calendar', color: '#ffb84d' },
   }
 
   const style =
@@ -205,7 +206,7 @@ onMounted(loadNotifications)
         <article v-for="item in visibleNotifications" :key="item.id" class="notification-item"
           :class="{ 'notification-item--unread': item.unread }" @click="markAsRead(item)">
           <div class="notification-item__icon" :style="{ background: item.color }" aria-hidden="true">
-            {{ item.icon }}
+            <IconGlyph :name="item.icon" :size="19" :stroke-width="2" />
           </div>
 
           <div class="notification-item__body">
@@ -279,7 +280,7 @@ onMounted(loadNotifications)
         <h2 id="notification-legend-title">Two kinds of signals</h2>
 
         <div class="notification-legend__item">
-          <span class="notification-legend__icon notification-legend__icon--coral" aria-hidden="true">♢</span>
+          <span class="notification-legend__icon notification-legend__icon--coral"><IconGlyph name="bell" :size="19" /></span>
           <div>
             <strong>Coral bell</strong>
             <p>Requests, group updates, and event reminders.</p>
@@ -287,7 +288,7 @@ onMounted(loadNotifications)
         </div>
 
         <div class="notification-legend__item">
-          <span class="notification-legend__icon notification-legend__icon--mint" aria-hidden="true">◌</span>
+          <span class="notification-legend__icon notification-legend__icon--mint"><IconGlyph name="chat" :size="19" /></span>
           <div>
             <strong>Mint bubble</strong>
             <p>New messages waiting in your chats.</p>

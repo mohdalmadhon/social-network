@@ -16,6 +16,7 @@ import {
 import InputHolder from './InputHolder.vue'
 import { router } from '@/router/router.js'
 import { addNotification } from '@/data/notifications.js'
+import IconGlyph from '@/components/layout/IconGlyph.vue'
 
 const signingUp = ref(false)
 const avatarInput = ref(null)
@@ -203,7 +204,7 @@ async function loggUser(event) {
             <span>Keep me signed in on this device <small>session cookie</small></span>
           </label>
 
-          <button class="auth-submit" type="submit">Let's go →</button>
+          <button class="auth-submit" type="submit">Let's go <IconGlyph name="arrowRight" :size="16" /></button>
         </form>
 
         <p class="auth-footer">Don't have an account? <button type="button" @click="signingUp = true">Create account</button></p>
@@ -254,7 +255,7 @@ async function loggUser(event) {
           <div class="input-group">
             <label for="avatar">AVATAR <span>— OPTIONAL · JPG, PNG, GIF</span></label>
             <label class="upload-zone" for="avatar" @dragover.prevent @drop.prevent="handleAvatarDrop">
-              <span class="upload-zone__icon" aria-hidden="true">☁</span>
+              <span class="upload-zone__icon"><IconGlyph name="upload" :size="18" /></span>
               <span>{{ avatarName || 'Drop an image or click to browse' }}</span>
               <input id="avatar" ref="avatarInput" type="file" name="Avatar" accept="image/jpeg,image/png,image/gif" @change="handleAvatar" />
             </label>
@@ -272,7 +273,7 @@ async function loggUser(event) {
             <span>Keep me signed in on this device <small>session cookie</small></span>
           </label>
 
-          <button class="auth-submit" type="submit">Create my orbit →</button>
+          <button class="auth-submit" type="submit">Create my orbit <IconGlyph name="arrowRight" :size="16" /></button>
         </form>
 
         <p class="auth-footer">Already orbiting? <button type="button" @click="signingUp = false">Sign in</button></p>
@@ -413,6 +414,10 @@ async function loggUser(event) {
 }
 
 .auth-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
   width: 100%;
   min-height: 3.25rem;
   border: 0;

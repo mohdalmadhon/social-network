@@ -4,6 +4,7 @@ import { useNotifications } from '@/helpers/useNotifications.js'
 import { logout } from '@/api/auth/auth.js'
 import { ref } from 'vue'
 import { router } from '@/router/router.js'
+import IconGlyph from './IconGlyph.vue'
 const logoutError = ref('')
 const searchText = ref('')
 
@@ -26,19 +27,19 @@ const { unreadCount: notificationUnreadCount } = useNotifications()
     </a>
 
     <form class="search" role="search" @submit.prevent="submitSearch">
-      <span aria-hidden="true">⌕</span>
+      <IconGlyph name="search" :size="16" />
       <input v-model="searchText" type="search" placeholder="Search people, groups, posts…" aria-label="Search" />
     </form>
 
     <nav class="top-actions" aria-label="Account shortcuts">
       <a class="icon-link orbit-touch-target" href="/chats" aria-label="Messages">
-        <span aria-hidden="true">◌</span>
+        <IconGlyph name="chat" :size="19" />
       </a>
       <a class="icon-link orbit-touch-target" href="/notifications" aria-label="Notifications">
-        <span aria-hidden="true">♢</span>
+        <IconGlyph name="bell" :size="19" />
         <span v-if="notificationUnreadCount" class="badge badge--notification">{{ notificationUnreadCount }}</span>
       </a>
-      <a class="avatar orbit-touch-target" href="/profile" aria-label="My profile">◎</a>
+      <a class="avatar orbit-touch-target" href="/profile" aria-label="My profile"><IconGlyph name="profile" :size="18" stroke-width="2" /></a>
       <button class="sign-out" type="button" @click="signOut">Log out</button>
     </nav>
     <p v-if="logoutError" role="alert">{{ logoutError }}</p>
@@ -107,7 +108,7 @@ const { unreadCount: notificationUnreadCount } = useNotifications()
 }
 
 .icon-link {
-  font-size: 1.5rem;
+  width: var(--touch-target);
 }
 
 .avatar {

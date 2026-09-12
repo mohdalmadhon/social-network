@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useNotifications } from '@/helpers/useNotifications.js'
+import IconGlyph from '@/components/layout/IconGlyph.vue'
 const { items, unreadCount, error } = useNotifications()
 const recent = computed(() => items.value.slice(0, 4))
 </script>
@@ -13,8 +14,8 @@ const recent = computed(() => items.value.slice(0, 4))
     <ul v-else>
       <li v-for="item in recent" :key="item.id"><a href="/notifications">{{ item.message }}</a></li>
     </ul>
-    <a class="activity-link" href="/notifications">View notifications →</a>
-    <a class="activity-link" href="/groups">Explore groups →</a>
+    <a class="activity-link" href="/notifications">View notifications <IconGlyph name="arrowRight" :size="15" /></a>
+    <a class="activity-link" href="/groups">Explore groups <IconGlyph name="arrowRight" :size="15" /></a>
   </aside>
 </template>
 
@@ -31,5 +32,5 @@ ul { margin: 0; padding: 0; list-style: none; }
 li { padding-block: .75rem; border-bottom: 1px solid var(--color-border); overflow-wrap: anywhere; }
 a { color: var(--color-text-soft); text-decoration: none; }
 a:hover { color: var(--color-mint); }
-.activity-link { padding-block: .5rem; color: var(--color-mint); }
+.activity-link { display: inline-flex; align-items: center; gap: .4rem; padding-block: .5rem; color: var(--color-mint); }
 </style>
