@@ -235,19 +235,19 @@ func (app App) applyNotificationAction(userID int, notification models.Notificat
 
 		switch action {
 		case "accept":
-			return profiles.SendFollowRequest(
+			return profiles.DecideFollowRequest(
 				app.DB,
 				userID,
 				*notification.ActorID,
-				1,
+				true,
 			)
 
 		case "decline":
-			return profiles.SendFollowRequest(
+			return profiles.DecideFollowRequest(
 				app.DB,
 				userID,
 				*notification.ActorID,
-				-1,
+				false,
 			)
 
 		default:

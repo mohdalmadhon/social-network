@@ -1,6 +1,8 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout.vue'
+import IconGlyph from '@/components/layout/IconGlyph.vue'
+import { useNotifications } from '@/helpers/useNotifications.js'
 import {
   applyNotificationAction,
   getNotifications,
@@ -20,6 +22,8 @@ const isLoading = ref(true)
 const loadError = ref('')
 
 const activeFilter = ref('all')
+const { items: liveItems, refreshNotifications } = useNotifications()
+watch(liveItems, (items) => { notificationItems.value = items.map(notificationForDisplay) })
 
 const visibleNotifications = computed(() => {
   if (activeFilter.value === 'all') return notificationItems.value
@@ -47,9 +51,9 @@ function actionLabel(action) {
 
 function notificationForDisplay(notification) {
   const categoryStyles = {
-    requests: { icon: 'R', color: '#9b7cff' },
-    groups: { icon: 'G', color: '#45d9d0' },
-    events: { icon: 'E', color: '#ffb84d' },
+    requests: { icon: 'profile', color: '#7c5cff' },
+    groups: { icon: 'groups', color: '#3ee6b0' },
+    events: { icon: 'calendar', color: '#ffb84d' },
   }
 
   const style =
@@ -58,7 +62,7 @@ function notificationForDisplay(notification) {
   let action = ''
 
   if (notification.category === 'requests' && notification.type === 'follow_request') {
-    action = 'follow'
+    action = notification.followStatus === 0 ? 'follow' : notification.followStatus === 1 ? 'accept' : ''
   }
 
   if (notification.category === 'groups' && notification.type === 'join_request') {
@@ -82,7 +86,7 @@ function notificationForDisplay(notification) {
   }
 
   if (notification.category === 'events' && notification.type === 'event_created') {
-    action = 'rsvp'
+    action = notification.eventResponse === 'going' ? 'going' : notification.eventResponse === 'declined' ? 'decline' : 'rsvp'
   }
 
   return {
@@ -103,7 +107,7 @@ async function loadNotifications() {
   loadError.value = ''
 
   try {
-    const result = await getNotifications(activeFilter.value)
+    const result = await getNotifications('all')
     notificationItems.value = (result?.notifications || []).map(notificationForDisplay)
   } catch (error) {
     loadError.value = error.message || 'Could not load notifications.'
@@ -118,6 +122,7 @@ async function markAsRead(item) {
   try {
     await markNotificationRead(item.id)
     item.unread = false
+    await refreshNotifications()
   } catch (error) {
     loadError.value = error.message || 'Could not mark notification as read.'
   }
@@ -126,6 +131,7 @@ async function markAsRead(item) {
 async function markAllAsRead() {
   try {
     await markAllNotificationsRead()
+    await refreshNotifications()
     notificationItems.value.forEach((item) => {
       item.unread = false
     })
@@ -135,25 +141,30 @@ async function markAllAsRead() {
 }
 
 async function chooseAction(item, action) {
+  if (item.busy) return
+  item.busy = true
   const previousAction = item.action
 
   try {
     await applyNotificationAction(item.id, action)
     item.action = action
     item.unread = false
+    await refreshNotifications()
   } catch (error) {
     item.action = previousAction
     loadError.value = error.message || 'Could not complete notification action.'
+  } finally {
+    item.busy = false
   }
 }
 
-watch(activeFilter, loadNotifications)
 onMounted(loadNotifications)
 </script>
 
 <template>
   <AuthenticatedLayout active-page="notifications">
-    <section class="notifications-page orbit-surface" aria-labelledby="notifications-title">
+    <div class="notifications-layout">
+      <section class="notifications-page orbit-surface" aria-labelledby="notifications-title">
       <header class="notifications-page__header">
         <div>
           <p class="orbit-meta">Stay in the loop</p>
@@ -195,7 +206,7 @@ onMounted(loadNotifications)
         <article v-for="item in visibleNotifications" :key="item.id" class="notification-item"
           :class="{ 'notification-item--unread': item.unread }" @click="markAsRead(item)">
           <div class="notification-item__icon" :style="{ background: item.color }" aria-hidden="true">
-            {{ item.icon }}
+            <IconGlyph :name="item.icon" :size="19" :stroke-width="2" />
           </div>
 
           <div class="notification-item__body">
@@ -262,16 +273,46 @@ onMounted(loadNotifications)
       <p v-else class="notifications-empty">
         Nothing here yet.
       </p>
-    </section>
+      </section>
+
+      <aside class="notification-legend orbit-surface" aria-labelledby="notification-legend-title">
+        <p class="orbit-meta">How Orbit speaks</p>
+        <h2 id="notification-legend-title">Two kinds of signals</h2>
+
+        <div class="notification-legend__item">
+          <span class="notification-legend__icon notification-legend__icon--coral"><IconGlyph name="bell" :size="19" /></span>
+          <div>
+            <strong>Coral bell</strong>
+            <p>Requests, group updates, and event reminders.</p>
+          </div>
+        </div>
+
+        <div class="notification-legend__item">
+          <span class="notification-legend__icon notification-legend__icon--mint"><IconGlyph name="chat" :size="19" /></span>
+          <div>
+            <strong>Mint bubble</strong>
+            <p>New messages waiting in your chats.</p>
+          </div>
+        </div>
+      </aside>
+    </div>
   </AuthenticatedLayout>
 </template>
 
 <style scoped>
 .notifications-page {
   width: 100%;
-  max-width: 60rem;
+  min-width: 0;
   margin: 0 auto;
   padding: var(--space-4);
+}
+
+.notifications-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  width: min(100%, 74rem);
+  margin: 0 auto;
 }
 
 .notifications-page__header {
@@ -459,7 +500,63 @@ onMounted(loadNotifications)
   cursor: pointer;
 }
 
+.notification-legend {
+  align-self: start;
+  padding: var(--space-5);
+}
+
+.notification-legend h2 {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+}
+
+.notification-legend__item {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  margin-top: var(--space-5);
+}
+
+.notification-legend__icon {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.notification-legend__icon--coral {
+  background: rgb(255 107 138 / 16%);
+  color: var(--color-coral);
+}
+
+.notification-legend__icon--mint {
+  background: rgb(62 230 176 / 16%);
+  color: var(--color-mint);
+}
+
+.notification-legend strong {
+  color: var(--color-text);
+  font-size: 0.9375rem;
+}
+
+.notification-legend p:not(.orbit-meta) {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
 @media (min-width: 48rem) {
+  .notifications-layout {
+    grid-template-columns: minmax(0, 1fr) 18rem;
+    align-items: start;
+  }
+
   .notifications-page {
     padding: var(--space-6);
   }

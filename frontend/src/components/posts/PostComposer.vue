@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { createPost } from '@/api/posts/posts.js'
-import { getMyFollowing } from '@/api/users/profiles.js'
+import { getFollowers } from '@/api/users/profiles.js'
+import IconGlyph from '@/components/layout/IconGlyph.vue'
 
 const emit = defineEmits(['post-created'])
 
@@ -34,7 +35,7 @@ async function loadFollowing() {
   followingError.value = ''
 
   try {
-    const result = await getMyFollowing(100)
+    const result = await getFollowers('', 100)
     following.value = Object.entries(result?.data || {}).map(([id, user]) => ({
       id: Number(id),
       name: `${user.FirstName} ${user.LastName}`.trim(),
@@ -137,14 +138,14 @@ watch(privacy, (value) => {
 <template>
   <form class="post-composer orbit-surface" @submit.prevent="preparePost">
     <div class="post-composer__input-row">
-      <div class="post-composer__avatar" aria-hidden="true">N</div>
+      <div class="post-composer__avatar"><IconGlyph name="profile" :size="18" /></div>
 
       <label class="visually-hidden" for="post-content">Post content</label>
       <textarea
         id="post-content"
         v-model="content"
         maxlength="500"
-        placeholder="What's happening in your orbit, Noa?"
+        placeholder="What's happening in your orbit?"
         rows="2"
         @input="message = ''"
       ></textarea>
@@ -152,7 +153,7 @@ watch(privacy, (value) => {
 
     <div v-if="selectedFile" class="selected-file">
       <span>{{ selectedFile.name }}</span>
-      <button type="button" aria-label="Remove selected file" @click="removeFile">×</button>
+      <button type="button" aria-label="Remove selected file" @click="removeFile"><IconGlyph name="close" :size="16" /></button>
     </div>
 
     <div v-if="previewUrl" class="selected-preview">
@@ -165,9 +166,7 @@ watch(privacy, (value) => {
     <div class="post-composer__toolbar">
       <div class="post-composer__tools">
         <button class="composer-action composer-action--media" type="button" @click="openFilePicker">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 5.5h16v13H4zM7 15l3-3 2.5 2.5 2-2L18 16M8 9h.01" />
-          </svg>
+          <IconGlyph name="image" :size="17" />
           <span>Photo / GIF</span>
         </button>
         <input
@@ -185,7 +184,7 @@ watch(privacy, (value) => {
             :aria-expanded="showFeelings"
             @click="showFeelings = !showFeelings"
           >
-            <span aria-hidden="true">☺</span>
+            <IconGlyph name="smile" :size="17" />
             <span>{{ feeling || 'Feeling' }}</span>
           </button>
 
@@ -199,7 +198,7 @@ watch(privacy, (value) => {
 
       <div class="post-composer__actions">
         <label class="privacy-control">
-          <span aria-hidden="true">◉</span>
+          <IconGlyph name="globe" :size="16" />
           <span class="visually-hidden">Post privacy</span>
           <select v-model="privacy">
             <option value="public">Public</option>

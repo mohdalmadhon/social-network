@@ -16,7 +16,7 @@ func SetRSVP(db *sql.DB, userID int, eventID int64, response string) error {
 	}
 
 	var exists int
-	if err := db.QueryRow("SELECT 1 FROM events WHERE id = ?", eventID).Scan(&exists); err == sql.ErrNoRows {
+	if err := db.QueryRow(`SELECT 1 FROM events e JOIN group_members m ON m.group_id=e.group_id WHERE e.id=? AND m.user_id=?`, eventID, userID).Scan(&exists); err == sql.ErrNoRows {
 		return ErrEventNotFound
 	} else if err != nil {
 		return err

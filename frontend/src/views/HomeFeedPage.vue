@@ -10,7 +10,7 @@ const posts = ref([])
 const isLoading = ref(true)
 const feedError = ref('')
 
-const avatarColors = ['#45d9d0', '#ff8b5c', '#9b7cff', '#f2b84b', '#28668d']
+const avatarColors = ['#3ee6b0', '#ff6b8a', '#7c5cff', '#ffb84d', '#4cc3ff']
 
 function formatPostTime(value) {
   if (!value) return 'Just now'
@@ -39,6 +39,7 @@ function toCardPost(post, index = 0) {
     id: post.id,
     author: post.author || 'Orbit member',
     avatarColor: avatarColors[index % avatarColors.length],
+    avatarPath: post.avatarPath || '',
     time: formatPostTime(post.createdAt),
     privacy: privacyLabel(post.privacy),
     content: post.content,

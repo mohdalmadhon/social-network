@@ -1,8 +1,10 @@
 <script setup>
-import { onMounted, ref } from 'vue'
 import { logout } from '@/api/auth/auth'
 import { addNotification } from '@/data/notifications'
-import { getNotifications } from '@/api/notifications.js'
+import { useNotifications } from '@/helpers/useNotifications.js'
+import { getGroups } from '@/api/groups/Groups'
+import { onMounted, ref } from 'vue'
+import IconGlyph from './IconGlyph.vue'
 
 defineProps({
   activePage: {
@@ -11,24 +13,26 @@ defineProps({
   },
 })
 
-const links = [
-  { name: 'home', label: 'Home', href: '/home-feed', icon: '⌂' },
-  { name: 'profile', label: 'Profile', href: '/profile', icon: '◎' },
-  { name: 'groups', label: 'Groups', href: '/groups', icon: '▱' },
-  { name: 'chats', label: 'Chats', href: '/chats', icon: '◌', badge: 5, badgeType: 'message' },
-  { name: 'notifications', label: 'Notifications', href: '/notifications', icon: '♢', badgeType: 'notification' },
-]
-
-const notificationUnreadCount = ref(0)
+const myGroups = ref([])
 
 onMounted(async () => {
   try {
-    const result = await getNotifications('all')
-    notificationUnreadCount.value = result?.unreadCount || 0
+    const result = await getGroups()
+    myGroups.value = (result?.groups || []).filter((group) => group.isMember).slice(0, 4)
   } catch {
-    notificationUnreadCount.value = 0
+    // The main navigation should remain usable if the groups request fails.
   }
 })
+
+const links = [
+  { name: 'home', label: 'Home', href: '/home-feed', icon: 'home' },
+  { name: 'profile', label: 'Profile', href: '/profile', icon: 'profile' },
+  { name: 'groups', label: 'Groups', href: '/groups', icon: 'groups' },
+  { name: 'chats', label: 'Chats', href: '/chats', icon: 'chat', badgeType: 'message' },
+  { name: 'notifications', label: 'Notifications', href: '/notifications', icon: 'bell', badgeType: 'notification' },
+]
+
+const { unreadCount: notificationUnreadCount } = useNotifications()
 
 async function logoutHandler() {
     try {
@@ -47,7 +51,7 @@ async function logoutHandler() {
       <a v-for="link in links" :key="link.name" class="navigation-link"
         :class="{ 'navigation-link--active': activePage === link.name }" :href="link.href"
         :aria-current="activePage === link.name ? 'page' : undefined">
-        <span class="navigation-link__icon" aria-hidden="true">{{ link.icon }}</span>
+        <span class="navigation-link__icon"><IconGlyph :name="link.icon" :size="18" /></span>
         <span class="navigation-link__label">{{ link.label }}</span>
         <span
           v-if="link.name === 'notifications' ? notificationUnreadCount : link.badge"
@@ -59,14 +63,22 @@ async function logoutHandler() {
       </a>
     </nav>
 
-    <button class="logout-link" type="button" @click="logoutHandler">↪ <span>Log out</span></button>
+    <section v-if="myGroups.length" class="my-groups" aria-labelledby="my-groups-title">
+      <h2 id="my-groups-title">My groups</h2>
+      <a v-for="group in myGroups" :key="group.id" :href="`/groups/${group.id}`" class="my-group-link">
+        <span class="my-group-link__dot" aria-hidden="true"></span>
+        <span>{{ group.title }}</span>
+      </a>
+    </section>
+
+    <button class="logout-link" type="button" @click="logoutHandler"><IconGlyph name="logout" :size="18" /> <span>Log out</span></button>
   </aside>
 
   <nav class="mobile-navigation" aria-label="Mobile navigation">
     <a v-for="link in links" :key="link.name" class="mobile-link"
       :class="{ 'mobile-link--active': activePage === link.name }" :href="link.href" :aria-label="link.label"
       :aria-current="activePage === link.name ? 'page' : undefined">
-      <span aria-hidden="true">{{ link.icon }}</span>
+      <IconGlyph :name="link.icon" :size="19" />
       <span>{{ link.label }}</span>
     </a>
   </nav>
@@ -89,7 +101,7 @@ async function logoutHandler() {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   min-height: 4.25rem;
-  background: rgb(15 18 34 / 97%);
+  background: rgb(11 13 23 / 96%);
   border-top: 1px solid var(--color-border);
   backdrop-filter: blur(1rem);
 }
@@ -106,12 +118,13 @@ async function logoutHandler() {
   text-decoration: none;
 }
 
-.mobile-link>span:first-child {
-  font-size: 1.3rem;
+.mobile-link > .icon-glyph {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 .mobile-link--active {
-  color: var(--color-violet);
+  color: var(--color-mint);
 }
 
 @media (min-width: 64rem) {
@@ -142,8 +155,8 @@ async function logoutHandler() {
 
   .navigation-link:hover,
   .navigation-link--active {
-    background: rgb(124 92 255 / 16%);
-    color: var(--color-violet);
+    background: rgb(72 217 193 / 9%);
+    color: var(--color-mint);
   }
 
   .navigation-link__icon {
@@ -167,6 +180,51 @@ async function logoutHandler() {
 
   .navigation-link__badge--notification {
     background: var(--color-coral);
+  }
+
+  .my-groups {
+    display: grid;
+    gap: var(--space-2);
+    margin-top: var(--space-5);
+    padding-inline: var(--space-3);
+  }
+
+  .my-groups h2 {
+    margin: 0 0 var(--space-1);
+    color: var(--color-text-faint);
+    font-family: var(--font-meta);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  .my-group-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+    text-decoration: none;
+  }
+
+  .my-group-link span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .my-group-link:hover {
+    color: var(--color-mint);
+  }
+
+  .my-group-link__dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--color-violet);
   }
 
   .logout-link {

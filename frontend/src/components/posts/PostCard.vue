@@ -1,7 +1,8 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import CommentInput from '@/components/comments/CommentInput.vue'
 import CommentPreview from '@/components/comments/CommentPreview.vue'
+import IconGlyph from '@/components/layout/IconGlyph.vue'
 import { createComment, getComments } from '@/api/posts/comments.js'
 
 const props = defineProps({
@@ -11,18 +12,16 @@ const props = defineProps({
   },
 })
 
-const liked = ref(false)
 const comments = ref([])
+const commentInput = ref(null)
 const commentsError = ref('')
-const isLoadingComments = ref(true)
+const isLoadingComments = ref(false)
+const areCommentsOpen = ref(false)
+const commentsLoaded = ref(false)
 const isSubmittingComment = ref(false)
 
-const likeCount = computed(() => props.post.likes + (liked.value ? 1 : 0))
 const commentCount = computed(() => Math.max(props.post.comments, comments.value.length))
 
-function toggleLike() {
-  liked.value = !liked.value
-}
 
 function commentForPreview(comment) {
   return {
@@ -33,12 +32,15 @@ function commentForPreview(comment) {
 }
 
 async function loadComments() {
+  if (commentsLoaded.value) return
+
   isLoadingComments.value = true
   commentsError.value = ''
 
   try {
     const result = await getComments(props.post.id)
     comments.value = (result?.comments || []).map(commentForPreview)
+    commentsLoaded.value = true
   } catch (error) {
     commentsError.value = error.message || 'Could not load comments.'
   } finally {
@@ -57,6 +59,7 @@ async function addComment(comment) {
     }
 
     comments.value.push(commentForPreview(result.comment))
+    commentInput.value?.reset()
   } catch (error) {
     commentsError.value = error.message || 'Could not create comment.'
   } finally {
@@ -70,14 +73,25 @@ function imageUrl(imagePath) {
   return imagePath.startsWith('/') ? imagePath : `/uploads/${imagePath}`
 }
 
-onMounted(loadComments)
+async function toggleComments() {
+  areCommentsOpen.value = !areCommentsOpen.value
+  if (areCommentsOpen.value && !commentsLoaded.value) {
+    await loadComments()
+  }
+}
+
+function initials(author) {
+  return author.slice(0, 2).toUpperCase()
+}
+
 </script>
 
 <template>
   <article class="post-card orbit-surface">
     <header class="post-card__header">
       <div class="post-card__avatar" :style="{ background: post.avatarColor }" aria-hidden="true">
-        {{ post.author.charAt(0) }}
+        <img v-if="post.avatarPath" :src="imageUrl(post.avatarPath)" alt="" />
+        <span v-else>{{ initials(post.author) }}</span>
       </div>
 
       <div class="post-card__author">
@@ -85,9 +99,6 @@ onMounted(loadComments)
         <p>{{ post.time }} <span aria-hidden="true">•</span> {{ post.privacy }}</p>
       </div>
 
-      <button class="post-card__menu" type="button" :aria-label="`More options for ${post.author}'s post`">
-        <span aria-hidden="true">•••</span>
-      </button>
     </header>
 
     <p class="post-card__content">{{ post.content }}</p>
@@ -102,40 +113,57 @@ onMounted(loadComments)
       <span class="post-card__mountain post-card__mountain--front" aria-hidden="true"></span>
     </div>
 
-    <p v-if="isLoadingComments" class="comments-state">Loading comments...</p>
-    <div v-else-if="commentsError" class="comments-state comments-state--error">
-      <span>{{ commentsError }}</span>
-      <button type="button" @click="loadComments">Retry</button>
-    </div>
-    <CommentPreview v-for="comment in comments" v-else :key="comment.id" :comment="comment" />
-
     <footer class="post-card__actions">
-      <button
+      <span
         class="post-action"
-        :class="{ 'post-action--liked': liked }"
-        type="button"
-        :aria-pressed="liked"
-        @click="toggleLike"
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z" />
         </svg>
-        <span>{{ likeCount }}</span>
-      </button>
+        <span>{{ post.likes }} likes</span>
+      </span>
 
-      <button class="post-action" type="button" :aria-label="`${commentCount} comments`">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M21 11.5a8.4 8.4 0 0 1-9 8.5 9.8 9.8 0 0 1-3.8-.8L3 21l1.8-4.6A8.4 8.4 0 1 1 21 11.5Z" />
-        </svg>
+      <button
+        class="post-action post-action--comments"
+        type="button"
+        :aria-expanded="areCommentsOpen"
+        :aria-controls="`comments-${post.id}`"
+        @click="toggleComments"
+      >
+        <IconGlyph name="comment" :size="21" />
         <span>{{ commentCount }} comments</span>
+        <span class="post-action__hint">{{ areCommentsOpen ? 'Hide' : 'View' }}</span>
       </button>
     </footer>
 
-    <CommentInput
-      :input-id="`comment-${post.id}`"
-      :disabled="isSubmittingComment"
-      @submit="addComment"
-    />
+    <section v-if="areCommentsOpen" :id="`comments-${post.id}`" class="comments-panel" aria-label="Comments">
+      <header class="comments-panel__header">
+        <div>
+          <p class="comments-panel__eyebrow">The conversation</p>
+          <h3>Comments <span>{{ commentCount }}</span></h3>
+        </div>
+        <button type="button" class="comments-panel__close" aria-label="Close comments" @click="areCommentsOpen = false">
+          <IconGlyph name="close" :size="17" />
+        </button>
+      </header>
+
+      <p v-if="isLoadingComments" class="comments-state">Loading comments...</p>
+      <div v-else-if="commentsError" class="comments-state comments-state--error">
+        <span>{{ commentsError }}</span>
+        <button type="button" @click="loadComments">Retry</button>
+      </div>
+      <p v-else-if="!comments.length" class="comments-state comments-state--empty">No comments yet. Start the conversation.</p>
+      <div v-else class="comments-list">
+        <CommentPreview v-for="comment in comments" :key="comment.id" :comment="comment" />
+      </div>
+
+      <CommentInput
+        ref="commentInput"
+        :input-id="`comment-${post.id}`"
+        :disabled="isSubmittingComment"
+        @submit="addComment"
+      />
+    </section>
   </article>
 </template>
 
@@ -160,6 +188,13 @@ onMounted(loadComments)
   border-radius: 50%;
   color: #0b0d17;
   font-weight: 700;
+}
+
+.post-card__avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
 }
 
 .post-card__author {
@@ -194,6 +229,25 @@ onMounted(loadComments)
   background: transparent;
   color: var(--color-text-muted);
   cursor: pointer;
+}
+
+.post-action--comments {
+  align-items: center;
+  font: inherit;
+}
+
+.post-action__hint {
+  color: var(--color-violet-soft);
+  font-size: 0.75rem;
+  opacity: 0;
+  transform: translateX(-0.25rem);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.post-action--comments:hover .post-action__hint,
+.post-action--comments:focus-visible .post-action__hint {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 .post-card__menu {
@@ -277,6 +331,80 @@ onMounted(loadComments)
   margin: var(--space-3) 0 0;
   color: var(--color-text-faint);
   font-size: 0.875rem;
+}
+
+.comments-panel {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: rgb(11 13 23 / 46%);
+  animation: comments-panel-in 180ms ease-out;
+}
+
+.comments-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.comments-panel__eyebrow {
+  margin: 0 0 var(--space-1);
+  color: var(--color-mint);
+  font-family: var(--font-meta);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.comments-panel h3 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 1rem;
+}
+
+.comments-panel h3 span {
+  color: var(--color-text-faint);
+  font-family: var(--font-meta);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.comments-panel__close {
+  display: grid;
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.comments-panel__close:hover,
+.comments-panel__close:focus-visible {
+  border-color: var(--color-violet);
+  color: var(--color-text);
+}
+
+.comments-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.comments-state--empty {
+  display: block;
+  padding: var(--space-3);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+}
+
+@keyframes comments-panel-in {
+  from { opacity: 0; transform: translateY(-0.35rem); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .comments-state--error {

@@ -2,17 +2,11 @@ package routes
 
 import (
 	"database/sql"
-	"log"
 	"net/http"
-	"path/filepath"
 	"social/internal/app/api"
 )
 
 func StartServer(db *sql.DB) *http.ServeMux {
-	uploadsDir, err := filepath.Abs("uploads")
-	if err != nil {
-		log.Fatal(err)
-	}
 	mux := http.NewServeMux()
 
 	app := api.App{DB: db}
@@ -35,6 +29,7 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("GET /api/friends/", app.AuthMiddleware(app.GetFriends))
 
 	// searches
+	mux.HandleFunc("GET /api/search", app.AuthMiddleware(app.Search))
 	mux.HandleFunc("GET /api/profile/follows/search", app.AuthMiddleware(app.SearchFollows))
 	mux.HandleFunc("GET /api/profile/following/search", app.AuthMiddleware(app.SearchFollowing))
 	mux.HandleFunc("GET /api/location/search", app.SearchLocation)
@@ -56,6 +51,16 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("PATCH /api/notifications/{notificationID}/read", app.AuthMiddleware(app.MarkNotificationRead))
 
 	//groups
+	mux.HandleFunc("PATCH /api/events/{eventID}/rsvp", app.AuthMiddleware(app.EventRSVP))
+	mux.HandleFunc("POST /api/groups/{id}/invitations", app.AuthMiddleware(app.InviteGroupMember))
+	mux.HandleFunc("GET /api/groups/{id}/events", app.AuthMiddleware(app.GroupEvents))
+	mux.HandleFunc("POST /api/groups/{id}/events", app.AuthMiddleware(app.GroupEvents))
+	mux.HandleFunc("GET /api/groups/{id}/posts", app.AuthMiddleware(app.GetGroupPosts))
+	mux.HandleFunc("POST /api/groups/{id}/posts", app.AuthMiddleware(app.CreateGroupPost))
+	mux.HandleFunc("DELETE /api/groups/{id}/posts/{postID}", app.AuthMiddleware(app.DeleteGroupPost))
+	mux.HandleFunc("GET /api/groups/{id}/posts/{postID}/comments", app.AuthMiddleware(app.GetGroupPostComments))
+	mux.HandleFunc("POST /api/groups/{id}/posts/{postID}/comments", app.AuthMiddleware(app.CreateGroupPostComment))
+	mux.HandleFunc("DELETE /api/groups/{id}/posts/{postID}/comments/{commentID}", app.AuthMiddleware(app.DeleteGroupPostComment))
 	mux.HandleFunc("GET /api/groups", app.AuthMiddleware(app.GetGroups))
 	mux.HandleFunc("POST /api/groups", app.AuthMiddleware(app.CreateGroup))
 	mux.HandleFunc("GET /api/groups/{id}", app.AuthMiddleware(app.GetGroup))
@@ -64,6 +69,6 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("DELETE /api/groups/{id}/join-requests", app.AuthMiddleware(app.UndoJoinRequest))
 
 	//folder handlers
-	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadsDir))))
+	mux.HandleFunc("GET /uploads/", app.AuthMiddleware(app.ServeUpload))
 	return mux
 }
