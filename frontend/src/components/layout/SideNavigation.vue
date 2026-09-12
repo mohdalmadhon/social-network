@@ -2,12 +2,25 @@
 import { logout } from '@/api/auth/auth'
 import { addNotification } from '@/data/notifications'
 import { useNotifications } from '@/helpers/useNotifications.js'
+import { getGroups } from '@/api/groups/Groups'
+import { onMounted, ref } from 'vue'
 
 defineProps({
   activePage: {
     type: String,
     required: true,
   },
+})
+
+const myGroups = ref([])
+
+onMounted(async () => {
+  try {
+    const result = await getGroups()
+    myGroups.value = (result?.groups || []).filter((group) => group.isMember).slice(0, 4)
+  } catch {
+    // The main navigation should remain usable if the groups request fails.
+  }
 })
 
 const links = [
@@ -49,6 +62,14 @@ async function logoutHandler() {
       </a>
     </nav>
 
+    <section v-if="myGroups.length" class="my-groups" aria-labelledby="my-groups-title">
+      <h2 id="my-groups-title">My groups</h2>
+      <a v-for="group in myGroups" :key="group.id" :href="`/groups/${group.id}`" class="my-group-link">
+        <span class="my-group-link__dot" aria-hidden="true"></span>
+        <span>{{ group.title }}</span>
+      </a>
+    </section>
+
     <button class="logout-link" type="button" @click="logoutHandler">↪ <span>Log out</span></button>
   </aside>
 
@@ -79,7 +100,7 @@ async function logoutHandler() {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   min-height: 4.25rem;
-  background: rgb(8 11 18 / 96%);
+  background: rgb(11 13 23 / 96%);
   border-top: 1px solid var(--color-border);
   backdrop-filter: blur(1rem);
 }
@@ -157,6 +178,51 @@ async function logoutHandler() {
 
   .navigation-link__badge--notification {
     background: var(--color-coral);
+  }
+
+  .my-groups {
+    display: grid;
+    gap: var(--space-2);
+    margin-top: var(--space-5);
+    padding-inline: var(--space-3);
+  }
+
+  .my-groups h2 {
+    margin: 0 0 var(--space-1);
+    color: var(--color-text-faint);
+    font-family: var(--font-meta);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  .my-group-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+    text-decoration: none;
+  }
+
+  .my-group-link span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .my-group-link:hover {
+    color: var(--color-mint);
+  }
+
+  .my-group-link__dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--color-violet);
   }
 
   .logout-link {

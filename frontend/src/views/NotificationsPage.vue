@@ -50,8 +50,8 @@ function actionLabel(action) {
 
 function notificationForDisplay(notification) {
   const categoryStyles = {
-    requests: { icon: 'R', color: '#9b7cff' },
-    groups: { icon: 'G', color: '#45d9d0' },
+    requests: { icon: 'R', color: '#7c5cff' },
+    groups: { icon: 'G', color: '#3ee6b0' },
     events: { icon: 'E', color: '#ffb84d' },
   }
 
@@ -162,7 +162,8 @@ onMounted(loadNotifications)
 
 <template>
   <AuthenticatedLayout active-page="notifications">
-    <section class="notifications-page orbit-surface" aria-labelledby="notifications-title">
+    <div class="notifications-layout">
+      <section class="notifications-page orbit-surface" aria-labelledby="notifications-title">
       <header class="notifications-page__header">
         <div>
           <p class="orbit-meta">Stay in the loop</p>
@@ -271,16 +272,46 @@ onMounted(loadNotifications)
       <p v-else class="notifications-empty">
         Nothing here yet.
       </p>
-    </section>
+      </section>
+
+      <aside class="notification-legend orbit-surface" aria-labelledby="notification-legend-title">
+        <p class="orbit-meta">How Orbit speaks</p>
+        <h2 id="notification-legend-title">Two kinds of signals</h2>
+
+        <div class="notification-legend__item">
+          <span class="notification-legend__icon notification-legend__icon--coral" aria-hidden="true">♢</span>
+          <div>
+            <strong>Coral bell</strong>
+            <p>Requests, group updates, and event reminders.</p>
+          </div>
+        </div>
+
+        <div class="notification-legend__item">
+          <span class="notification-legend__icon notification-legend__icon--mint" aria-hidden="true">◌</span>
+          <div>
+            <strong>Mint bubble</strong>
+            <p>New messages waiting in your chats.</p>
+          </div>
+        </div>
+      </aside>
+    </div>
   </AuthenticatedLayout>
 </template>
 
 <style scoped>
 .notifications-page {
   width: 100%;
-  max-width: 60rem;
+  min-width: 0;
   margin: 0 auto;
   padding: var(--space-4);
+}
+
+.notifications-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  width: min(100%, 74rem);
+  margin: 0 auto;
 }
 
 .notifications-page__header {
@@ -468,7 +499,63 @@ onMounted(loadNotifications)
   cursor: pointer;
 }
 
+.notification-legend {
+  align-self: start;
+  padding: var(--space-5);
+}
+
+.notification-legend h2 {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+}
+
+.notification-legend__item {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  margin-top: var(--space-5);
+}
+
+.notification-legend__icon {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.notification-legend__icon--coral {
+  background: rgb(255 107 138 / 16%);
+  color: var(--color-coral);
+}
+
+.notification-legend__icon--mint {
+  background: rgb(62 230 176 / 16%);
+  color: var(--color-mint);
+}
+
+.notification-legend strong {
+  color: var(--color-text);
+  font-size: 0.9375rem;
+}
+
+.notification-legend p:not(.orbit-meta) {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
 @media (min-width: 48rem) {
+  .notifications-layout {
+    grid-template-columns: minmax(0, 1fr) 18rem;
+    align-items: start;
+  }
+
   .notifications-page {
     padding: var(--space-6);
   }

@@ -42,7 +42,7 @@ body,
 }
 
 @media (min-width: 56.25rem) {
-    .auth-page { grid-template-columns: minmax(20rem, .8fr) minmax(28rem, 1.2fr); }
+    .auth-page { grid-template-columns: minmax(20rem, .72fr) minmax(28rem, 1.28fr); }
     .login-side { min-height: 100vh; }
 }
 </style>
