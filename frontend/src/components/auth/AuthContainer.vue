@@ -1,5 +1,6 @@
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
+const signingUp = ref(false)
 
 import { loggingSession, registerUser } from '@/api/auth/auth.js'
 
@@ -148,6 +149,7 @@ async function sendData(e) {
 
         if (result.status) {
             addNotification('REGISTERED SUCCESSFULLY', 'success')
+            signingUp.value = false
         } else {
             addNotification('Failed to register: ' + result.message, 'error')
         }
@@ -199,15 +201,14 @@ async function loggUser(e) {
     <section class="auth-section">
         <div class="wrapper">
             <div class="card-switch">
-                <label class="switch">
-                    <input type="checkbox" class="toggle">
-
-                    <span class="slider"></span>
-
-                    <span class="card-side"></span>
+                <div class="switch">
+                    <nav class="auth-tabs" aria-label="Account access">
+                      <button type="button" :aria-pressed="!signingUp" @click="signingUp = false">Log in</button>
+                      <button type="button" :aria-pressed="signingUp" @click="signingUp = true">Sign up</button>
+                    </nav>
 
                     <div class="flip-card__inner">
-                        <div class="flip-card__front">
+                        <div v-if="!signingUp" class="flip-card__front">
                             <div class="title">
                                 Log in
                             </div>
@@ -256,11 +257,11 @@ async function loggUser(e) {
 
                             <p class="form-footer">
                                 Don't have an account?
-                                <span>Sign up</span>
+                                <button type="button" @click="signingUp = true">Sign up</button>
                             </p>
                         </div>
 
-                        <div class="flip-card__back">
+                        <div v-else class="flip-card__back">
                             <div class="title">
                                 Sign up
                             </div>
@@ -391,333 +392,36 @@ async function loggUser(e) {
 
                             <p class="form-footer">
                                 Already have an account?
-                                <span>Log in</span>
+                                <button type="button" @click="signingUp = false">Log in</button>
                             </p>
                         </div>
                     </div>
-                </label>
+                </div>
             </div>
         </div>
     </section>
 </template>
 
 <style scoped>
-.login-error {
-    text-align: center;
-    margin-top: -5px;
-}
-
-.auth-section {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 60px;
-    background:
-        radial-gradient(circle at 80% 30%, rgba(75, 63, 160, 0.14), transparent 40%),
-        #100d2b;
-}
-
-.wrapper {
-    width: 100%;
-    max-width: 520px;
-}
-
-.card-switch {
-    width: 100%;
-}
-
-.switch {
-    position: relative;
-    width: 100%;
-    min-height: 700px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-.toggle {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.card-side {
-    position: absolute;
-    top: 0;
-    width: 60px;
-    height: 22px;
-}
-
-.card-side::before {
-    position: absolute;
-    content: "Log in";
-    left: -90px;
-    top: 0;
-    width: 100px;
-    color: #ffffff;
-    font-family: Arial, sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.card-side::after {
-    position: absolute;
-    content: "Sign up";
-    left: 75px;
-    top: 0;
-    width: 100px;
-    color: #69749a;
-    font-family: Arial, sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.toggle:checked~.card-side::before {
-    color: #69749a;
-}
-
-.toggle:checked~.card-side::after {
-    color: #ffffff;
-}
-
-.slider {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    width: 50px;
-    height: 24px;
-    transform: translateX(-50%);
-    border: 1px solid #303754;
-    border-radius: 20px;
-    background: #222741;
-    cursor: pointer;
-    transition: 0.3s;
-}
-
-.slider::before {
-    position: absolute;
-    content: "";
-    width: 18px;
-    height: 18px;
-    left: 2px;
-    top: 2px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #805cff, #ff6288);
-    transition: 0.3s;
-}
-
-.toggle:checked+.slider {
-    background: #222741;
-    border-color: #835cff;
-}
-
-.toggle:checked+.slider::before {
-    transform: translateX(26px);
-}
-
-.flip-card__inner {
-    position: relative;
-    width: 480px;
-    height: 650px;
-    margin-top: 45px;
-    perspective: 1000px;
-    transition: transform 0.8s;
-    transform-style: preserve-3d;
-}
-
-.toggle:checked~.flip-card__inner {
-    transform: rotateY(180deg);
-}
-
-.flip-card__front,
-.flip-card__back {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    padding: 35px 40px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background: #171b2d;
-    border: 1px solid #303754;
-    border-radius: 23px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
-    color: #f5f5ff;
-    font-family: Arial, sans-serif;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-}
-
-.flip-card__back {
-    transform: rotateY(180deg);
-    overflow-y: auto;
-}
-
-.title {
-    margin: 0 0 2px;
-    color: #ffffff;
-    font-family: Arial, sans-serif;
-    font-size: 26px;
-    font-weight: 700;
-}
-
-.form-subtitle {
-    margin: 0 0 20px;
-    color: #69749a;
-    font-family: Arial, sans-serif;
-    font-size: 12px;
-}
-
-.flip-card__form {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-
-.input-row {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 9px;
-}
-
-.input-group {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.input-group label {
-    color: #69749a;
-    font-family: Arial, sans-serif;
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-}
-
-.input-group :deep(.form-input) {
-    width: 100%;
-}
-
-.input-group textarea {
-    width: 100%;
-    min-height: 61px;
-    resize: none;
-    padding: 12px 13px;
-    border: 1px solid transparent;
-    border-radius: 7px;
-    outline: none;
-    background: #222741;
-    color: #f4f3ff;
-    font-family: inherit;
-    font-size: 12px;
-    transition: 0.2s ease;
-}
-
-.input-group textarea::placeholder {
-    color: #59627f;
-}
-
-.input-group textarea:focus {
-    border-color: #835cff;
-    box-shadow: 0 0 0 1px rgba(131, 92, 255, 0.15);
-}
-
-.input-group :deep(.input-error),
-.input-group textarea.input-error {
-    border-color: #ff6288 !important;
-    box-shadow: 0 0 0 1px rgba(255, 98, 136, 0.15) !important;
-}
-
-.input-group :deep(.input-valid),
-.input-group textarea.input-valid {
-    border-color: #35d68a !important;
-    box-shadow: 0 0 0 1px rgba(53, 214, 138, 0.15) !important;
-}
-
-.input-error-message {
-    color: #ff6288;
-    font-family: Arial, sans-serif;
-    font-size: 11px;
-    font-weight: 400;
-    line-height: 1.4;
-}
-
-.flip-card__btn {
-    align-self: center;
-    width: 100%;
-    height: 44px;
-    margin-top: 8px;
-    border: 0;
-    border-radius: 25px;
-    background: linear-gradient(90deg, #805cff, #ff6288);
-    color: white;
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    transition:
-        transform 0.15s ease,
-        filter 0.15s ease;
-}
-
-.flip-card__btn:hover {
-    filter: brightness(1.08);
-    transform: translateY(-1px);
-}
-
-.flip-card__btn:active {
-    transform: translateY(0);
-}
-
-.form-footer {
-    margin: 18px 0 0;
-    color: #69749a;
-    font-family: Arial, sans-serif;
-    font-size: 11px;
-}
-
-.form-footer span {
-    color: #9b7cff;
-    font-weight: 600;
-}
-
-@media (max-width: 900px) {
-    .auth-section {
-        min-height: 600px;
-        padding: 60px 30px;
-    }
-
-    .flip-card__inner {
-        width: 440px;
-    }
-}
-
-@media (max-width: 550px) {
-    .auth-section {
-        padding: 50px 20px;
-    }
-
-    .flip-card__inner {
-        width: min(400px, 90vw);
-    }
-
-    .flip-card__front,
-    .flip-card__back {
-        padding: 30px 25px;
-        border-radius: 18px;
-    }
-
-    .input-row {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
-}
+.auth-section { width: 100%; max-width: 36rem; margin-inline: auto; }
+.wrapper, .card-switch, .switch, .flip-card__inner { width: 100%; }
+.auth-tabs { display: flex; gap: .75rem; margin-bottom: 1.5rem; }
+.auth-tabs button, .form-footer button { border: 0; background: transparent; color: var(--color-text-muted); cursor: pointer; min-height: 44px; }
+.auth-tabs button { padding: .6rem 1.25rem; border-bottom: 2px solid transparent; }
+.auth-tabs button[aria-pressed="true"] { color: var(--color-text); border-color: var(--color-violet); }
+.flip-card__front, .flip-card__back { padding: clamp(1.25rem, 3vw, 2.5rem); border: 1px solid var(--color-border); border-radius: var(--radius-large); background: var(--color-surface); }
+.title { font-family: var(--font-display); font-size: 1.8rem; color: var(--color-text); }
+.form-subtitle { margin: .4rem 0 1.5rem; color: var(--color-text-muted); }
+.flip-card__form, .input-group { display: grid; gap: .5rem; }
+.flip-card__form { gap: 1rem; }
+.input-row { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; }
+.input-group { min-width: 0; }
+.input-group label { font-size: .875rem; color: var(--color-text-soft); }
+textarea, :deep(input) { width: 100%; min-width: 0; min-height: 44px; padding: .7rem; background: var(--color-input); color: var(--color-text); border: 1px solid var(--color-border); border-radius: var(--radius-small); font: inherit; }
+textarea { min-height: 5rem; resize: vertical; }
+.flip-card__btn { min-height: 44px; border: 0; border-radius: var(--radius-small); background: var(--gradient-action); color: white; font: inherit; cursor: pointer; }
+.form-footer { margin: 1rem 0 0; color: var(--color-text-muted); font-size: .875rem; }
+.form-footer button { color: var(--color-mint); }
+.input-error-message { color: var(--color-coral); font-size: .8125rem; }
+@media (max-width: 30rem) { .input-row { grid-template-columns: 1fr; } }
 </style>

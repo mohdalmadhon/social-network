@@ -35,7 +35,7 @@ func ValidateRegisterData(userData *models.UserRegistration) error {
 	}
 
 	if err := validateAbout(&userData.About); err != nil {
-		return nil
+		return err
 	}
 
 	return nil

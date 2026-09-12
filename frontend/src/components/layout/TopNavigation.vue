@@ -1,18 +1,13 @@
 <script setup>
-import { onMounted, ref } from 'vue'
 import OrbitLogo from './OrbitLogo.vue'
-import { getNotifications } from '@/api/notifications.js'
-
-const notificationUnreadCount = ref(0)
-
-onMounted(async () => {
-  try {
-    const result = await getNotifications('all')
-    notificationUnreadCount.value = result?.unreadCount || 0
-  } catch {
-    notificationUnreadCount.value = 0
-  }
-})
+import { useNotifications } from '@/helpers/useNotifications.js'
+import { logout } from '@/api/auth/auth.js'
+import { ref } from 'vue'
+const logoutError = ref('')
+async function signOut() {
+  try { await logout() } catch { logoutError.value = 'Could not log out. Please try again.' }
+}
+const { unreadCount: notificationUnreadCount } = useNotifications()
 </script>
 
 <template>
@@ -22,23 +17,19 @@ onMounted(async () => {
       <span>orbit</span>
     </a>
 
-    <form class="search" role="search" @submit.prevent>
-      <label class="visually-hidden" for="orbit-search">Search Orbit</label>
-      <span aria-hidden="true">⌕</span>
-      <input id="orbit-search" type="search" placeholder="Search people, groups, posts..." />
-    </form>
 
     <nav class="top-actions" aria-label="Account shortcuts">
       <a class="icon-link orbit-touch-target" href="/chats" aria-label="Messages">
         <span aria-hidden="true">◌</span>
-        <span class="badge badge--message">5</span>
       </a>
       <a class="icon-link orbit-touch-target" href="/notifications" aria-label="Notifications">
         <span aria-hidden="true">♢</span>
         <span v-if="notificationUnreadCount" class="badge badge--notification">{{ notificationUnreadCount }}</span>
       </a>
-      <a class="avatar orbit-touch-target" href="/profile" aria-label="My profile">N</a>
+      <a class="avatar orbit-touch-target" href="/profile" aria-label="My profile">◎</a>
+      <button class="sign-out" type="button" @click="signOut">Log out</button>
     </nav>
+    <p v-if="logoutError" role="alert">{{ logoutError }}</p>
   </header>
 </template>
 
@@ -50,11 +41,11 @@ onMounted(async () => {
   top: 0;
   z-index: 20;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr auto;
   align-items: center;
   min-height: 4rem;
   padding: var(--space-2) var(--space-3);
-  background: rgb(15 18 34 / 96%);
+  background: rgb(8 11 18 / 92%);
   border-bottom: 1px solid var(--color-border);
   backdrop-filter: blur(1rem);
 }
@@ -80,6 +71,8 @@ onMounted(async () => {
   justify-content: flex-end;
   gap: var(--space-1);
 }
+.sign-out { min-height: 44px; border: 0; background: transparent; color: var(--color-text-muted); cursor: pointer; font-size: .8125rem; }
+.sign-out:hover { color: var(--color-coral); }
 
 .icon-link,
 .avatar {
@@ -98,7 +91,7 @@ onMounted(async () => {
 .avatar {
   width: var(--touch-target);
   border-radius: 50%;
-  background: var(--gradient-action);
+  background: var(--color-violet);
   color: white;
   font-weight: 700;
 }
@@ -150,7 +143,7 @@ onMounted(async () => {
     width: min(100%, 26rem);
     min-height: var(--touch-target);
     padding-inline: var(--space-4);
-    background: var(--color-input);
+    background: rgb(13 22 34 / 84%);
     border: 1px solid var(--color-border);
     border-radius: 999px;
     color: var(--color-text-faint);

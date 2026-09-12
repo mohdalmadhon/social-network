@@ -2,17 +2,11 @@ package routes
 
 import (
 	"database/sql"
-	"log"
 	"net/http"
-	"path/filepath"
 	"social/internal/app/api"
 )
 
 func StartServer(db *sql.DB) *http.ServeMux {
-	uploadsDir, err := filepath.Abs("uploads")
-	if err != nil {
-		log.Fatal(err)
-	}
 	mux := http.NewServeMux()
 
 	app := api.App{DB: db}
@@ -56,6 +50,10 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("PATCH /api/notifications/{notificationID}/read", app.AuthMiddleware(app.MarkNotificationRead))
 
 	//groups
+	mux.HandleFunc("PATCH /api/events/{eventID}/rsvp", app.AuthMiddleware(app.EventRSVP))
+	mux.HandleFunc("POST /api/groups/{id}/invitations", app.AuthMiddleware(app.InviteGroupMember))
+	mux.HandleFunc("GET /api/groups/{id}/events", app.AuthMiddleware(app.GroupEvents))
+	mux.HandleFunc("POST /api/groups/{id}/events", app.AuthMiddleware(app.GroupEvents))
 	mux.HandleFunc("GET /api/groups", app.AuthMiddleware(app.GetGroups))
 	mux.HandleFunc("POST /api/groups", app.AuthMiddleware(app.CreateGroup))
 	mux.HandleFunc("GET /api/groups/{id}", app.AuthMiddleware(app.GetGroup))
@@ -64,6 +62,6 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("DELETE /api/groups/{id}/join-requests", app.AuthMiddleware(app.UndoJoinRequest))
 
 	//folder handlers
-	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadsDir))))
+	mux.HandleFunc("GET /uploads/", app.AuthMiddleware(app.ServeUpload))
 	return mux
 }

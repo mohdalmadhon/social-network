@@ -11,18 +11,14 @@ const props = defineProps({
   },
 })
 
-const liked = ref(false)
 const comments = ref([])
+const commentInput = ref(null)
 const commentsError = ref('')
 const isLoadingComments = ref(true)
 const isSubmittingComment = ref(false)
 
-const likeCount = computed(() => props.post.likes + (liked.value ? 1 : 0))
 const commentCount = computed(() => Math.max(props.post.comments, comments.value.length))
 
-function toggleLike() {
-  liked.value = !liked.value
-}
 
 function commentForPreview(comment) {
   return {
@@ -57,6 +53,7 @@ async function addComment(comment) {
     }
 
     comments.value.push(commentForPreview(result.comment))
+    commentInput.value?.reset()
   } catch (error) {
     commentsError.value = error.message || 'Could not create comment.'
   } finally {
@@ -85,9 +82,6 @@ onMounted(loadComments)
         <p>{{ post.time }} <span aria-hidden="true">•</span> {{ post.privacy }}</p>
       </div>
 
-      <button class="post-card__menu" type="button" :aria-label="`More options for ${post.author}'s post`">
-        <span aria-hidden="true">•••</span>
-      </button>
     </header>
 
     <p class="post-card__content">{{ post.content }}</p>
@@ -110,28 +104,25 @@ onMounted(loadComments)
     <CommentPreview v-for="comment in comments" v-else :key="comment.id" :comment="comment" />
 
     <footer class="post-card__actions">
-      <button
+      <span
         class="post-action"
-        :class="{ 'post-action--liked': liked }"
-        type="button"
-        :aria-pressed="liked"
-        @click="toggleLike"
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z" />
         </svg>
-        <span>{{ likeCount }}</span>
-      </button>
+        <span>{{ post.likes }} likes</span>
+      </span>
 
-      <button class="post-action" type="button" :aria-label="`${commentCount} comments`">
+      <span class="post-action">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M21 11.5a8.4 8.4 0 0 1-9 8.5 9.8 9.8 0 0 1-3.8-.8L3 21l1.8-4.6A8.4 8.4 0 1 1 21 11.5Z" />
         </svg>
         <span>{{ commentCount }} comments</span>
-      </button>
+      </span>
     </footer>
 
     <CommentInput
+      ref="commentInput"
       :input-id="`comment-${post.id}`"
       :disabled="isSubmittingComment"
       @submit="addComment"

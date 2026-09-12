@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { createPost } from '@/api/posts/posts.js'
-import { getMyFollowing } from '@/api/users/profiles.js'
+import { getFollowers } from '@/api/users/profiles.js'
 
 const emit = defineEmits(['post-created'])
 
@@ -34,7 +34,7 @@ async function loadFollowing() {
   followingError.value = ''
 
   try {
-    const result = await getMyFollowing(100)
+    const result = await getFollowers('', 100)
     following.value = Object.entries(result?.data || {}).map(([id, user]) => ({
       id: Number(id),
       name: `${user.FirstName} ${user.LastName}`.trim(),
@@ -137,14 +137,14 @@ watch(privacy, (value) => {
 <template>
   <form class="post-composer orbit-surface" @submit.prevent="preparePost">
     <div class="post-composer__input-row">
-      <div class="post-composer__avatar" aria-hidden="true">N</div>
+      <div class="post-composer__avatar" aria-hidden="true">◎</div>
 
       <label class="visually-hidden" for="post-content">Post content</label>
       <textarea
         id="post-content"
         v-model="content"
         maxlength="500"
-        placeholder="What's happening in your orbit, Noa?"
+        placeholder="What's happening in your orbit?"
         rows="2"
         @input="message = ''"
       ></textarea>

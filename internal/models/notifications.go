@@ -14,6 +14,8 @@ type Notification struct {
 	CreatedAt        time.Time `json:"createdAt"`
 	RequestStatus    *string   `json:"requestStatus"`
 	InvitationStatus *string   `json:"invitationStatus"`
+	FollowStatus     *int      `json:"followStatus"`
+	EventResponse    *string   `json:"eventResponse"`
 }
 
 type CreateNotificationRequest struct {

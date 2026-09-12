@@ -3,6 +3,8 @@ import { ref, onMounted } from 'vue'
 import { router } from '@/router/router.js'
 import { useRoute } from 'vue-router'
 import { getGroup, deleteGroupApi } from '@/api/groups/Groups.js'
+import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout.vue'
+import GroupActivity from '@/components/groups/GroupActivity.vue'
 
 const route = useRoute()
 const groupId = route.params.groupId
@@ -38,7 +40,8 @@ async function deleteGroup() {
 </script>
 
 <template>
-    <main class="group-page">
+    <AuthenticatedLayout active-page="groups">
+    <div class="group-page">
         <section class="group-container">
 
             <p v-if="loading">
@@ -70,17 +73,19 @@ async function deleteGroup() {
                         You are a member of this group.
                     </p>
                 </section>
+                <GroupActivity v-if="group.isMember" :group-id="groupId" />
             </template>
 
         </section>
-    </main>
+    </div>
+    </AuthenticatedLayout>
 </template>
 
 <style scoped>
 .group-page {
     width: 100%;
     min-height: 100vh;
-    padding: var(--space-6);
+    padding: clamp(.25rem, 2vw, 1.5rem);
     background: var(--color-background);
     color: var(--color-text);
 }

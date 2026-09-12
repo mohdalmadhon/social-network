@@ -128,7 +128,11 @@ const notificationSelect = `
 		n.created_at,
 
 		gjr.status AS request_status,
-		gi.status AS invitation_status
+		gi.status AS invitation_status,
+		(SELECT status FROM user_followers f WHERE n.type = 'follow_request'
+		 AND f.target_id = n.user_id AND f.follower_id = n.actor_id) AS follow_status,
+		(SELECT response FROM event_rsvps v WHERE n.type = 'event_created'
+		 AND v.event_id = n.related_id AND v.user_id = n.user_id) AS event_response
 
 	FROM notifications n
 
@@ -164,6 +168,8 @@ func scanNotification(row rowScanner) (models.Notification, error) {
 		&notification.CreatedAt,
 		&notification.RequestStatus,
 		&notification.InvitationStatus,
+		&notification.FollowStatus,
+		&notification.EventResponse,
 	); err != nil {
 		return models.Notification{}, err
 	}

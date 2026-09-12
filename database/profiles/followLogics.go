@@ -49,13 +49,28 @@ func SendFollowRequest(db *sql.DB, targetID, followerID, requestCode int) error 
 		return err
 	}
 
-	_, err = db.Exec(`
-		UPDATE user_followers
-		SET status = ?
-		WHERE target_id = ? AND follower_id = ?
-	`, requestCode, targetID, followerID)
+	// Repeating Follow must not downgrade an accepted relationship or duplicate a request.
+	return nil
+}
 
-	return err
+// Only the recipient can decide a request that is still pending.
+func DecideFollowRequest(db *sql.DB, targetID, followerID int, accept bool) error {
+	query := `DELETE FROM user_followers WHERE target_id = ? AND follower_id = ? AND status = 0`
+	if accept {
+		query = `UPDATE user_followers SET status = 1 WHERE target_id = ? AND follower_id = ? AND status = 0`
+	}
+	result, err := db.Exec(query, targetID, followerID)
+	if err != nil {
+		return err
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 func GetFollowers(db *sql.DB, targetID, count, offset int) (map[int]models.UserRegistration, error) {
@@ -70,7 +85,7 @@ func GetFollowers(db *sql.DB, targetID, count, offset int) (map[int]models.UserR
 			ON u.id = uf.follower_id
 		LEFT JOIN profile p
 			ON p.user_id = u.id
-		WHERE uf.target_id = ?
+		WHERE uf.target_id = ? AND uf.status = 1
 		ORDER BY u.id
 		LIMIT ?
 		OFFSET ?
@@ -128,7 +143,7 @@ func GetFollowers(db *sql.DB, targetID, count, offset int) (map[int]models.UserR
 	return followers, nil
 }
 
-func GetFollowing(db *sql.DB, followerID, count int) (map[int]models.UserRegistration, error) {
+func GetFollowing(db *sql.DB, followerID, count, offset int) (map[int]models.UserRegistration, error) {
 	rows, err := db.Query(`
 		SELECT
 			u.id,
@@ -140,9 +155,9 @@ func GetFollowing(db *sql.DB, followerID, count int) (map[int]models.UserRegistr
 			ON u.id = uf.target_id
 		LEFT JOIN profile p
 			ON p.user_id = u.id
-		WHERE uf.follower_id = ?
-		LIMIT ?
-	`, followerID, count)
+		WHERE uf.follower_id = ? AND uf.status = 1
+		LIMIT ? OFFSET ?
+	`, followerID, count, offset)
 
 	if err != nil {
 		return nil, err
@@ -197,9 +212,9 @@ func GetFollowing(db *sql.DB, followerID, count int) (map[int]models.UserRegistr
 }
 
 func SearchFollows(db *sql.DB, userID int, searchValue string) ([]models.UserRegistration, error) {
-    searchPattern := "%" + searchValue + "%"
+	searchPattern := "%" + searchValue + "%"
 
-    rows, err := db.Query(`
+	rows, err := db.Query(`
         SELECT u.id, u.first_name, u.last_name, p.avatar_path
         FROM user u
         LEFT JOIN profile p
@@ -209,6 +224,7 @@ func SearchFollows(db *sql.DB, userID int, searchValue string) ([]models.UserReg
             FROM user_followers uf
             WHERE uf.target_id = u.id
             AND uf.follower_id = ?
+            AND uf.status = 1
         )
         AND (
             u.first_name LIKE ?
@@ -217,41 +233,41 @@ func SearchFollows(db *sql.DB, userID int, searchValue string) ([]models.UserReg
         LIMIT 100
     `, userID, searchPattern, searchPattern)
 
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-    follows := make([]models.UserRegistration, 0)
+	follows := make([]models.UserRegistration, 0)
 
-    for rows.Next() {
-        var user models.UserRegistration
+	for rows.Next() {
+		var user models.UserRegistration
 
-        err := rows.Scan(
-            &user.ID,
-            &user.FirstName,
-            &user.LastName,
-            &user.Avatar,
-        )
+		err := rows.Scan(
+			&user.ID,
+			&user.FirstName,
+			&user.LastName,
+			&user.Avatar,
+		)
 
-        if err != nil {
-            return nil, err
-        }
+		if err != nil {
+			return nil, err
+		}
 
-        follows = append(follows, user)
-    }
+		follows = append(follows, user)
+	}
 
-    if err := rows.Err(); err != nil {
-        return nil, err
-    }
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
-    return follows, nil
+	return follows, nil
 }
 
 func SearchFollowing(db *sql.DB, userID int, searchValue string) ([]models.UserRegistration, error) {
-    searchPattern := "%" + searchValue + "%"
+	searchPattern := "%" + searchValue + "%"
 
-    rows, err := db.Query(`
+	rows, err := db.Query(`
         SELECT u.id, u.first_name, u.last_name, p.avatar_path
         FROM user u
         LEFT JOIN profile p
@@ -261,6 +277,7 @@ func SearchFollowing(db *sql.DB, userID int, searchValue string) ([]models.UserR
             FROM user_followers uf
             WHERE uf.follower_id = u.id
             AND uf.target_id = ?
+            AND uf.status = 1
         )
         AND (
             u.first_name LIKE ?
@@ -269,33 +286,33 @@ func SearchFollowing(db *sql.DB, userID int, searchValue string) ([]models.UserR
         LIMIT 100
     `, userID, searchPattern, searchPattern)
 
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-    following := make([]models.UserRegistration, 0)
+	following := make([]models.UserRegistration, 0)
 
-    for rows.Next() {
-        var user models.UserRegistration
+	for rows.Next() {
+		var user models.UserRegistration
 
-        err := rows.Scan(
-            &user.ID,
-            &user.FirstName,
-            &user.LastName,
-            &user.Avatar,
-        )
+		err := rows.Scan(
+			&user.ID,
+			&user.FirstName,
+			&user.LastName,
+			&user.Avatar,
+		)
 
-        if err != nil {
-            return nil, err
-        }
+		if err != nil {
+			return nil, err
+		}
 
-        following = append(following, user)
-    }
+		following = append(following, user)
+	}
 
-    if err := rows.Err(); err != nil {
-        return nil, err
-    }
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
-    return following, nil
+	return following, nil
 }

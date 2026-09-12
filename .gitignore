@@ -21,6 +21,15 @@ uploads/
 ./db/
 db/
 *.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+PROJECT_PLAN.md
+PROJECT_CONTEXT.md
+CODE_EXPLANATION.md
+output/
+.playwright-cli/
 .vscode/*
 !.vscode/extensions.json
 .idea

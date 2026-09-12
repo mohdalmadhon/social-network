@@ -109,6 +109,8 @@ func newNotificationTestDatabase(t *testing.T) *sql.DB {
 
 	_, err = db.Exec(`
 		CREATE TABLE user (id INTEGER PRIMARY KEY);
+		CREATE TABLE user_followers (target_id INTEGER, follower_id INTEGER, status INTEGER);
+		CREATE TABLE event_rsvps (event_id INTEGER, user_id INTEGER, response TEXT);
 		CREATE TABLE notifications (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			user_id INTEGER NOT NULL,

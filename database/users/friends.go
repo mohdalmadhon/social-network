@@ -18,12 +18,14 @@ func GetFriends(db *sql.DB, userID, offset int) (map[int]models.UserRegistration
 			FROM user_followers AS uf1
 			WHERE uf1.follower_id = ?
 			  AND uf1.target_id = u.id
+			  AND uf1.status = 1
 		)
 		AND EXISTS (
 			SELECT 1
 			FROM user_followers AS uf2
 			WHERE uf2.follower_id = u.id
 			  AND uf2.target_id = ?
+			  AND uf2.status = 1
 		)
 		ORDER BY u.id
 		LIMIT 30
@@ -89,12 +91,14 @@ func SearchFriends(db *sql.DB, userID int, search string) (map[int]models.UserRe
 			FROM user_followers AS uf1
 			WHERE uf1.follower_id = ?
 			  AND uf1.target_id = u.id
+			  AND uf1.status = 1
 		)
 		AND EXISTS (
 			SELECT 1
 			FROM user_followers AS uf2
 			WHERE uf2.follower_id = u.id
 			  AND uf2.target_id = ?
+			  AND uf2.status = 1
 		)
 		AND (
 			u.first_name LIKE ?
@@ -157,6 +161,7 @@ func GetFollowers(db *sql.DB, userID, limit, offset int) ([]models.UserRegistrat
 		JOIN user u ON u.id = uf.follower_id
 		LEFT JOIN profile p ON p.user_id = u.id
 		WHERE uf.target_id = ?
+		  AND uf.status = 1
 		ORDER BY u.id
 		LIMIT ? OFFSET ?
 	`, userID, limit, offset)
@@ -214,6 +219,7 @@ func GetFollowing(db *sql.DB, userID, limit, offset int) ([]models.UserRegistrat
 		JOIN user u ON u.id = uf.target_id
 		LEFT JOIN profile p ON p.user_id = u.id
 		WHERE uf.follower_id = ?
+		  AND uf.status = 1
 		ORDER BY u.id
 		LIMIT ? OFFSET ?
 	`, userID, limit, offset)
