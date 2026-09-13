@@ -7,6 +7,7 @@ import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout.vue'
 import GroupActivity from '@/components/groups/GroupActivity.vue'
 import GroupPostCard from '@/components/groups/GroupPostCard.vue'
 import GroupPostComposer from '@/components/groups/GroupPostComposer.vue'
+import IconGlyph from '@/components/layout/IconGlyph.vue'
 
 const route = useRoute()
 const groupId = route.params.groupId
@@ -15,6 +16,8 @@ const group = ref(null)
 const groupPosts = ref([])
 const loading = ref(true)
 const error = ref(null)
+const isDeletingGroup = ref(false)
+const deleteError = ref('')
 
 onMounted(async () => {
     try {
@@ -34,6 +37,10 @@ onMounted(async () => {
 })
 
 async function deleteGroup() {
+    if (isDeletingGroup.value || !window.confirm('Delete this group and all of its content?')) return
+
+    isDeletingGroup.value = true
+    deleteError.value = ''
     try {
         const result = await deleteGroupApi(groupId)
 
@@ -42,6 +49,9 @@ async function deleteGroup() {
         }
     } catch (err) {
         console.error(err)
+        deleteError.value = err.message || 'Could not delete group.'
+    } finally {
+        isDeletingGroup.value = false
     }
 }
 
@@ -57,42 +67,48 @@ function removeGroupPost(postId) {
 <template>
     <AuthenticatedLayout active-page="groups">
     <div class="group-page">
-        <section class="group-container">
+        <div class="group-container">
 
-            <p v-if="loading">
+            <p v-if="loading" class="group-page__state">
                 Loading group...
             </p>
 
-            <p v-else-if="error">
+            <p v-else-if="error" class="group-page__state group-page__state--error" role="alert">
                 {{ error }}
             </p>
 
             <template v-else-if="group">
-                <header class="group-header">
-                    <div>
+                <header class="group-header orbit-surface">
+                    <div class="group-header__copy">
+                        <p class="orbit-meta">Community</p>
                         <h1>{{ group.title }}</h1>
                         <p>{{ group.description }}</p>
                     </div>
 
-                    <button v-if="group.isCreator" @click="deleteGroup">
-                        Delete Group
+                    <button v-if="group.isCreator" class="group-header__delete" :disabled="isDeletingGroup" @click="deleteGroup">
+                        {{ isDeletingGroup ? 'Deleting...' : 'Delete group' }}
                     </button>
+                    <p v-if="deleteError" class="group-header__error" role="alert">{{ deleteError }}</p>
                 </header>
 
-                <section class="group-content">
-                    <p>
-                        Members: {{ group.memberCount }}
-                    </p>
-
-                    <p v-if="group.isMember">
-                        You are a member of this group.
+                <section class="group-membership" aria-label="Group membership">
+                    <div>
+                        <IconGlyph name="groups" :size="19" />
+                        <strong>{{ group.memberCount }}</strong>
+                        <span>{{ group.memberCount === 1 ? 'member' : 'members' }}</span>
+                    </div>
+                    <p v-if="group.isMember" class="group-membership__status">
+                        <IconGlyph name="check" :size="16" />
+                        Member
                     </p>
                 </section>
+
+                <GroupActivity v-if="group.isMember" :group-id="groupId" />
 
                 <section v-if="group.isMember" class="group-feed orbit-surface">
                     <div class="group-feed__heading">
                         <div>
-                            <p class="orbit-meta">Shared space</p>
+                            <p class="orbit-meta">Conversation</p>
                             <h2>Group posts</h2>
                         </div>
                         <span>{{ groupPosts.length }} {{ groupPosts.length === 1 ? 'post' : 'posts' }}</span>
@@ -109,10 +125,9 @@ function removeGroupPost(postId) {
                     </div>
                     <p v-else class="group-feed__state">No posts yet. Start the group conversation.</p>
                 </section>
-                <GroupActivity v-if="group.isMember" :group-id="groupId" />
             </template>
 
-        </section>
+        </div>
     </div>
     </AuthenticatedLayout>
 </template>
@@ -120,138 +135,105 @@ function removeGroupPost(postId) {
 <style scoped>
 .group-page {
     width: 100%;
-    min-height: 100vh;
-    padding: clamp(.25rem, 2vw, 1.5rem);
+    padding: 0;
     background: var(--color-background);
     color: var(--color-text);
 }
 
 .group-container {
+    display: grid;
     width: 100%;
-    max-width: 960px;
+    max-width: 64rem;
     margin: 0 auto;
+    gap: var(--space-7);
 }
 
 .group-header {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: var(--space-5);
     padding: var(--space-6);
-    margin-bottom: var(--space-5);
-
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-large);
-
-    background: var(--color-surface);
-    box-shadow: var(--shadow-raised);
 }
+
+.group-header__copy { min-width: 0; }
+.group-header .orbit-meta { margin: 0 0 var(--space-2); color: var(--color-violet-soft); }
 
 .group-header h1 {
     margin: 0;
-
     color: var(--color-text);
     font-family: var(--font-display);
-    font-size: clamp(2rem, 5vw, 3rem);
+    font-size: 2.25rem;
     font-weight: 700;
-    line-height: 1.1;
+    line-height: 1.15;
+    letter-spacing: 0;
 }
 
-.group-header p {
+.group-header__copy > p:last-child {
     max-width: 700px;
-    margin: 0;
-
+    margin: var(--space-3) 0 0;
     color: var(--color-text-muted);
-    font-family: var(--font-body);
     font-size: 1rem;
-    line-height: 1.7;
+    line-height: 1.65;
 }
 
-.group-header button {
-    align-self: flex-start;
-
+.group-header__delete {
     min-height: var(--touch-target);
     padding: 0 var(--space-4);
-
     border: 1px solid var(--color-coral);
     border-radius: var(--radius-small);
-
     background: transparent;
     color: var(--color-coral);
-
-    font-family: var(--font-body);
     font-size: 0.9rem;
     font-weight: 600;
-
     cursor: pointer;
-
-    transition:
-        background 0.15s ease,
-        color 0.15s ease,
-        transform 0.15s ease;
+    transition: background 0.15s ease, color 0.15s ease;
 }
 
-.group-header button:hover {
+.group-header__delete:hover:not(:disabled) {
     background: var(--color-coral);
     color: var(--color-background);
-    transform: translateY(-1px);
 }
 
-.group-header button:active {
-    transform: translateY(0);
-}
-
-.group-content {
-    display: grid;
-    gap: var(--space-4);
-
-    padding: var(--space-5);
-
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-medium);
-
-    background: var(--color-surface);
-}
-
-.group-content p {
+.group-header__error {
+    grid-column: 1 / -1;
     margin: 0;
-
-    color: var(--color-text-soft);
-    font-family: var(--font-body);
-    font-size: 0.95rem;
-    line-height: 1.6;
+    color: var(--color-coral);
+    font-size: .875rem;
 }
 
-.group-content p:first-child {
-    color: var(--color-text);
-    font-weight: 600;
+.group-membership {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-top: calc(var(--space-5) * -1);
+    padding: 0 var(--space-2) var(--space-5);
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-muted);
 }
-
-.group-content p:last-child {
+.group-membership > div,
+.group-membership__status {
     display: inline-flex;
     align-items: center;
-    width: fit-content;
-
-    padding: var(--space-2) var(--space-3);
-
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-small);
-
-    background: var(--color-surface-raised);
+    gap: var(--space-2);
+}
+.group-membership strong { color: var(--color-text); }
+.group-membership__status {
+    margin: 0;
     color: var(--color-mint);
-
     font-size: 0.875rem;
     font-weight: 600;
 }
 
 .group-feed {
     display: grid;
-    gap: var(--space-4);
-    margin-top: var(--space-5);
-    padding: var(--space-5);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-medium);
-    background: var(--color-surface);
+    gap: var(--space-5);
+    padding: var(--space-6) 0 0;
+    border-width: 1px 0 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
 }
 
 .group-feed__heading {
@@ -265,7 +247,8 @@ function removeGroupPost(postId) {
     margin: var(--space-1) 0 0;
     color: var(--color-text);
     font-family: var(--font-display);
-    font-size: clamp(1.3rem, 3vw, 1.7rem);
+    font-size: 1.75rem;
+    letter-spacing: 0;
 }
 
 .group-feed__heading > span {
@@ -275,7 +258,7 @@ function removeGroupPost(postId) {
 
 .group-posts {
     display: grid;
-    gap: var(--space-4);
+    gap: var(--space-5);
 }
 
 .group-feed__state {
@@ -287,33 +270,30 @@ function removeGroupPost(postId) {
     text-align: center;
 }
 
-.group-container>p {
-    margin: var(--space-6) 0;
+.group-page__state {
+    margin: var(--space-7) 0;
+    padding: var(--space-6);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-medium);
     text-align: center;
-
     color: var(--color-text-muted);
-    font-family: var(--font-body);
 }
+.group-page__state--error { color: var(--color-coral); }
 
 @media (max-width: 700px) {
-    .group-page {
-        padding: var(--space-4);
-    }
-
+    .group-container { gap: var(--space-6); }
     .group-header {
+        grid-template-columns: 1fr;
+        align-items: start;
         padding: var(--space-5);
     }
-
-    .group-content {
-        padding: var(--space-4);
-    }
-
-    .group-feed {
-        padding: var(--space-4);
-    }
-
-    .group-header button {
+    .group-header h1 { font-size: 1.875rem; }
+    .group-header__delete {
         width: 100%;
     }
+    .group-membership { margin-top: calc(var(--space-4) * -1); }
+    .group-feed { padding-top: var(--space-5); }
+    .group-feed__heading { align-items: start; }
+    .group-feed__heading h2 { font-size: 1.5rem; }
 }
 </style>

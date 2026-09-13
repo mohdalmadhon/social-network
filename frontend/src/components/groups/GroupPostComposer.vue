@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { createGroupPost } from '@/api/groups/Groups.js'
+import IconGlyph from '@/components/layout/IconGlyph.vue'
 
 const props = defineProps({
   groupId: {
@@ -82,7 +83,10 @@ onBeforeUnmount(clearPreview)
 
 <template>
   <form class="group-post-composer" @submit.prevent="submitPost">
-    <label for="group-post-content">Share with the group</label>
+    <div class="group-post-composer__heading">
+      <span class="group-post-composer__icon"><IconGlyph name="comment" :size="18" /></span>
+      <label for="group-post-content">Share with the group</label>
+    </div>
     <textarea
       id="group-post-content"
       v-model="content"
@@ -98,7 +102,8 @@ onBeforeUnmount(clearPreview)
 
     <div class="group-post-composer__actions">
       <button type="button" class="image-button" @click="chooseImage">
-        Add image
+        <IconGlyph name="image" :size="17" />
+        Photo / GIF
       </button>
       <input
         ref="fileInput"
@@ -108,7 +113,8 @@ onBeforeUnmount(clearPreview)
         @change="selectFile"
       />
       <button v-if="selectedFile" type="button" class="remove-button" @click="removeFile">
-        Remove image
+        <IconGlyph name="close" :size="16" />
+        Remove
       </button>
       <button type="submit" class="publish-button" :disabled="!canPost || isPosting">
         {{ isPosting ? 'Posting...' : 'Post' }}
@@ -121,22 +127,38 @@ onBeforeUnmount(clearPreview)
 
 <style scoped>
 .group-post-composer {
-  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-medium);
   background: var(--color-surface);
 }
 
+.group-post-composer__heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.group-post-composer__icon {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-surface-teal);
+  color: var(--color-mint);
+}
+
 .group-post-composer label {
-  display: block;
-  margin-bottom: var(--space-2);
   color: var(--color-text);
   font-weight: 600;
 }
 
 .group-post-composer textarea {
   width: 100%;
-  min-height: 6rem;
+  min-height: 7rem;
   padding: var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-small);
@@ -150,10 +172,10 @@ onBeforeUnmount(clearPreview)
 
 .group-post-composer textarea:focus {
   border-color: var(--color-mint);
+  box-shadow: var(--focus-ring);
 }
 
 .group-post-composer__preview {
-  margin-top: var(--space-3);
   overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-small);
@@ -171,10 +193,15 @@ onBeforeUnmount(clearPreview)
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
 }
 
 .group-post-composer button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
   min-height: var(--touch-target);
   padding: 0 var(--space-3);
   border: 1px solid var(--color-border);
@@ -188,8 +215,9 @@ onBeforeUnmount(clearPreview)
 
 .group-post-composer .publish-button {
   margin-left: auto;
-  border-color: var(--color-mint);
-  color: var(--color-mint);
+  border: 0;
+  background: var(--gradient-action);
+  color: white;
 }
 
 .group-post-composer button:hover:not(:disabled) {
@@ -211,12 +239,16 @@ onBeforeUnmount(clearPreview)
 }
 
 .group-post-composer__error {
-  margin: var(--space-2) 0 0;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--color-coral);
+  background: var(--color-surface-coral);
   color: var(--color-coral);
   font-size: 0.875rem;
 }
 
 @media (max-width: 520px) {
+  .group-post-composer { padding: var(--space-4); }
   .group-post-composer__actions {
     flex-wrap: wrap;
   }
