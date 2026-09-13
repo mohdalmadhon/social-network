@@ -3,6 +3,8 @@ package migrations
 import (
 	"database/sql"
 	"os"
+	"path/filepath"
+	"sort"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -281,6 +283,197 @@ func TestGroupDeletionCleansUpJoinRequestNotifications(t *testing.T) {
 
 	runMigrationFile(t, db, "015_fix_group_notification_cleanup.down.sql")
 	runMigrationFile(t, db, "015_fix_group_notification_cleanup.up.sql")
+}
+
+func TestGroupInvitationHistoryMigrationPreservesDataAndCleansNotifications(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.SetMaxOpenConns(1)
+	defer db.Close()
+
+	if _, err = db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		t.Fatal(err)
+	}
+	for _, filename := range []string{
+		"001_init_users.up.sql",
+		"003_init_chats.up.sql",
+		"006_notifications.up.sql",
+		"008_event_rsvps.up.sql",
+		"009_add_creator_id_to_groups.up.sql",
+		"010_create_group_members.up.sql",
+		"011_create_group_join_requests.up.sql",
+		"012_create_group_invitations.up.sql",
+		"013_add_notification_cleanup_triggers.up.sql",
+		"014_group_join_request_history.up.sql",
+		"015_fix_group_notification_cleanup.up.sql",
+		"017_event_schedule.up.sql",
+	} {
+		runMigrationFile(t, db, filename)
+	}
+
+	_, err = db.Exec(`
+		INSERT INTO user (id, email, username, first_name, last_name, dob, password) VALUES
+			(1, 'owner@orbit.test', 'owner', 'Group', 'Owner', '2000-01-01', 'password'),
+			(2, 'invitee@orbit.test', 'invitee', 'Group', 'Invitee', '2000-01-01', 'password'),
+			(3, 'other@orbit.test', 'other', 'Other', 'User', '2000-01-01', 'password');
+		INSERT INTO groups (id, title, description, creator_id) VALUES
+			(7, 'Main group', 'Main', 1),
+			(8, 'Other group', 'Other', 3);
+		INSERT INTO group_invitations (group_id, user_id, inviter_id, status)
+		VALUES (7, 2, 1, 'declined');
+		INSERT INTO group_join_requests (id, group_id, user_id, status)
+		VALUES (40, 7, 2, 'rejected');
+		INSERT INTO events (id, title, content, group_id, creator_id, starts_at)
+		VALUES (30, 'Group event', 'Event', 7, 1, '2099-01-01T12:00:00Z');
+		INSERT INTO notifications (id, user_id, actor_id, category, type, message, related_id) VALUES
+			(20, 2, 1, 'groups', 'invitation', 'Old invitation', 7),
+			(23, 1, 2, 'groups', 'join_request', 'Old request', 40),
+			(24, 2, 1, 'groups', 'group_update', 'Group update', 7),
+			(25, 2, 1, 'events', 'event_created', 'Event', 30),
+			(26, 3, 1, 'requests', 'follow_request', 'Unrelated', 7),
+			(27, 3, 1, 'groups', 'group_update', 'Other group', 8);
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runMigrationFile(t, db, "019_group_invitation_history.up.sql")
+	assertColumn(t, db, "group_invitations", "id", true)
+
+	var originalInvitationID, notificationRelatedID int64
+	if err := db.QueryRow(`SELECT id FROM group_invitations WHERE group_id = 7 AND user_id = 2`).Scan(&originalInvitationID); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow(`SELECT related_id FROM notifications WHERE id = 20`).Scan(&notificationRelatedID); err != nil {
+		t.Fatal(err)
+	}
+	if notificationRelatedID != originalInvitationID {
+		t.Fatalf("invitation notification related_id = %d, expected invitation id %d", notificationRelatedID, originalInvitationID)
+	}
+
+	runMigrationFile(t, db, "019_group_invitation_history.down.sql")
+	assertColumn(t, db, "group_invitations", "id", false)
+	if err := db.QueryRow(`SELECT related_id FROM notifications WHERE id = 20`).Scan(&notificationRelatedID); err != nil {
+		t.Fatal(err)
+	}
+	if notificationRelatedID != 7 {
+		t.Fatalf("down migration related_id = %d, expected group id 7", notificationRelatedID)
+	}
+	runMigrationFile(t, db, "019_group_invitation_history.up.sql")
+
+	result, err := db.Exec(`INSERT INTO group_invitations (group_id, user_id, inviter_id, status) VALUES (7, 2, 1, 'pending')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pendingID, err := result.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(`INSERT INTO notifications (id, user_id, actor_id, category, type, message, related_id) VALUES (21, 2, 1, 'groups', 'invitation', 'Pending invitation', ?)`, pendingID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(`INSERT INTO group_invitations (group_id, user_id, inviter_id, status) VALUES (7, 2, 1, 'pending')`); err == nil {
+		t.Fatal("duplicate pending invitation succeeded")
+	}
+	if _, err = db.Exec(`DELETE FROM group_invitations WHERE id = ?`, pendingID); err != nil {
+		t.Fatal(err)
+	}
+	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM notifications WHERE id = 21", 0)
+	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM notifications WHERE id = 20", 1)
+
+	result, err = db.Exec(`INSERT INTO group_invitations (group_id, user_id, inviter_id, status) VALUES (7, 2, 1, 'pending')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pendingID, err = result.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(`
+		INSERT INTO notifications (id, user_id, actor_id, category, type, message, related_id)
+		VALUES (22, 2, 1, 'groups', 'invitation', 'Current invitation', ?)
+	`, pendingID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(`DELETE FROM groups WHERE id = 7`); err != nil {
+		t.Fatal(err)
+	}
+	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM notifications WHERE id IN (20, 22, 23, 24, 25)", 0)
+	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM notifications WHERE id IN (26, 27)", 2)
+}
+
+func TestEventNotificationCleanupMigration(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.SetMaxOpenConns(1)
+	defer db.Close()
+	if _, err = db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		t.Fatal(err)
+	}
+	for _, filename := range []string{
+		"001_init_users.up.sql",
+		"003_init_chats.up.sql",
+		"006_notifications.up.sql",
+		"008_event_rsvps.up.sql",
+		"020_delete_event_notifications.up.sql",
+	} {
+		runMigrationFile(t, db, filename)
+	}
+
+	_, err = db.Exec(`
+		INSERT INTO user (id, email, username, first_name, last_name, dob, password) VALUES
+			(1, 'owner@orbit.test', 'owner', 'Group', 'Owner', '2000-01-01', 'password'),
+			(2, 'member@orbit.test', 'member', 'Group', 'Member', '2000-01-01', 'password');
+		INSERT INTO groups (id, title, description) VALUES (7, 'Main group', 'Main');
+		INSERT INTO events (id, title, content, group_id, creator_id) VALUES
+			(30, 'Deleted event', 'Deleted', 7, 1),
+			(31, 'Other event', 'Other', 7, 1);
+		INSERT INTO event_rsvps (event_id, user_id, response) VALUES (30, 1, 'going'), (30, 2, 'declined');
+		INSERT INTO notifications (id, user_id, actor_id, category, type, message, related_id) VALUES
+			(20, 2, 1, 'events', 'event_created', 'Deleted event', 30),
+			(21, 2, 1, 'events', 'event_created', 'Other event', 31),
+			(22, 2, 1, 'groups', 'group_update', 'Unrelated category', 30);
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(`DELETE FROM events WHERE id = 30`); err != nil {
+		t.Fatal(err)
+	}
+	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM event_rsvps WHERE event_id = 30", 0)
+	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM notifications WHERE id = 20", 0)
+	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM notifications WHERE id IN (21, 22)", 2)
+
+	runMigrationFile(t, db, "020_delete_event_notifications.down.sql")
+	runMigrationFile(t, db, "020_delete_event_notifications.up.sql")
+}
+
+func TestAllUpMigrationsApplyToCleanDatabase(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.SetMaxOpenConns(1)
+	defer db.Close()
+
+	filenames, err := filepath.Glob("*.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Strings(filenames)
+	for _, filename := range filenames {
+		runMigrationFile(t, db, filename)
+	}
+
+	assertColumn(t, db, "group_invitations", "id", true)
+	assertColumn(t, db, "group_join_requests", "id", true)
+	assertColumn(t, db, "events", "starts_at", true)
+	assertTable(t, db, "group_posts", true)
+	assertTable(t, db, "group_post_comments", true)
 }
 
 func insertLegacyPostData(t *testing.T, db *sql.DB) {

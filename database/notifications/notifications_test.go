@@ -97,6 +97,36 @@ func TestJoinRequestNotificationUsesSpecificRequest(t *testing.T) {
 	}
 }
 
+func TestInvitationNotificationUsesSpecificInvitation(t *testing.T) {
+	db := newNotificationTestDatabase(t)
+
+	_, err := db.Exec(`
+		INSERT INTO group_invitations (id, group_id, user_id, status)
+		VALUES (10, 7, 1, 'declined'), (11, 7, 1, 'pending');
+		INSERT INTO notifications (id, user_id, category, type, message, related_id)
+		VALUES
+			(20, 1, 'groups', 'invitation', 'old invitation', 10),
+			(21, 1, 'groups', 'invitation', 'new invitation', 11);
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	items, err := List(db, 1, "groups")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("notification count = %d, expected 2", len(items))
+	}
+	if items[0].InvitationStatus == nil || *items[0].InvitationStatus != "pending" {
+		t.Fatalf("new invitation status = %+v", items[0].InvitationStatus)
+	}
+	if items[1].InvitationStatus == nil || *items[1].InvitationStatus != "declined" {
+		t.Fatalf("old invitation status = %+v", items[1].InvitationStatus)
+	}
+}
+
 func newNotificationTestDatabase(t *testing.T) *sql.DB {
 	t.Helper()
 
@@ -133,6 +163,7 @@ func newNotificationTestDatabase(t *testing.T) *sql.DB {
 		ON group_join_requests (group_id, user_id)
 		WHERE status = 'pending';
 		CREATE TABLE group_invitations (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			group_id INTEGER NOT NULL,
 			user_id INTEGER NOT NULL,
 			status TEXT NOT NULL DEFAULT 'pending'
