@@ -2,6 +2,7 @@ package groups
 
 import (
 	"database/sql"
+	"errors"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -19,16 +20,16 @@ func TestJoinGroupCreatesMembership(t *testing.T) {
 		CREATE TABLE chats (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, group_id INTEGER, num_of_members INTEGER DEFAULT 0);
 		CREATE TABLE chat_users (user_id INTEGER, chat_id INTEGER, is_owner INTEGER DEFAULT 0, PRIMARY KEY (user_id, chat_id));
 		CREATE TABLE group_members (group_id INTEGER, user_id INTEGER, joined_at DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (group_id, user_id));
-		CREATE TABLE group_invitations (group_id INTEGER, user_id INTEGER, status TEXT NOT NULL DEFAULT 'pending', PRIMARY KEY (group_id, user_id));
+		CREATE TABLE group_invitations (id INTEGER PRIMARY KEY, group_id INTEGER, user_id INTEGER, status TEXT NOT NULL DEFAULT 'pending');
 		INSERT INTO groups (id, title, description) VALUES (7, 'Orbit hikers', 'Walks');
 		INSERT INTO chats (id, type, group_id) VALUES (11, 'group', 7);
-		INSERT INTO group_invitations (group_id, user_id, status) VALUES (7, 3, 'pending');
+		INSERT INTO group_invitations (id, group_id, user_id, status) VALUES (21, 7, 3, 'pending');
 	`)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err := AcceptInvitation(db, 3, 7); err != nil {
+	if err := AcceptInvitation(db, 3, 21); err != nil {
 		t.Fatal(err)
 	}
 
@@ -38,6 +39,73 @@ func TestJoinGroupCreatesMembership(t *testing.T) {
 	}
 	if count != 1 {
 		t.Fatalf("membership count = %d, want 1", count)
+	}
+}
+
+func TestInvitationActionsUseExactInvitation(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.SetMaxOpenConns(1)
+	defer db.Close()
+
+	_, err = db.Exec(`
+		CREATE TABLE groups (id INTEGER PRIMARY KEY, creator_id INTEGER);
+		CREATE TABLE chats (id INTEGER PRIMARY KEY, group_id INTEGER);
+		CREATE TABLE chat_users (user_id INTEGER, chat_id INTEGER, PRIMARY KEY (user_id, chat_id));
+		CREATE TABLE group_members (group_id INTEGER, user_id INTEGER, PRIMARY KEY (group_id, user_id));
+		CREATE TABLE group_invitations (
+			id INTEGER PRIMARY KEY,
+			group_id INTEGER,
+			user_id INTEGER,
+			status TEXT NOT NULL
+		);
+		INSERT INTO groups (id, creator_id) VALUES (7, 1);
+		INSERT INTO group_invitations (id, group_id, user_id, status) VALUES
+			(10, 7, 3, 'declined'),
+			(11, 7, 3, 'pending');
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := AcceptInvitation(db, 3, 10); !errors.Is(err, ErrInvitationNotFound) {
+		t.Fatalf("historical invitation action error = %v, expected ErrInvitationNotFound", err)
+	}
+	if err := AcceptInvitation(db, 3, 11); err != nil {
+		t.Fatal(err)
+	}
+
+	var oldStatus, newStatus string
+	if err := db.QueryRow("SELECT status FROM group_invitations WHERE id = 10").Scan(&oldStatus); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow("SELECT status FROM group_invitations WHERE id = 11").Scan(&newStatus); err != nil {
+		t.Fatal(err)
+	}
+	if oldStatus != "declined" || newStatus != "accepted" {
+		t.Fatalf("invitation statuses = %q, %q", oldStatus, newStatus)
+	}
+
+	if _, err := db.Exec(`
+		INSERT INTO group_invitations (id, group_id, user_id, status) VALUES
+			(12, 7, 4, 'accepted'),
+			(13, 7, 4, 'pending')
+	`); err != nil {
+		t.Fatal(err)
+	}
+	if err := DeclineInvitation(db, 4, 12); !errors.Is(err, ErrInvitationNotFound) {
+		t.Fatalf("historical decline error = %v, expected ErrInvitationNotFound", err)
+	}
+	if err := DeclineInvitation(db, 4, 13); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow("SELECT status FROM group_invitations WHERE id = 13").Scan(&newStatus); err != nil {
+		t.Fatal(err)
+	}
+	if newStatus != "declined" {
+		t.Fatalf("declined invitation status = %q", newStatus)
 	}
 }
 

@@ -52,7 +52,11 @@ func StartServer(db *sql.DB) *http.ServeMux {
 
 	//groups
 	mux.HandleFunc("PATCH /api/events/{eventID}/rsvp", app.AuthMiddleware(app.EventRSVP))
+	mux.HandleFunc("DELETE /api/groups/{id}/events/{eventID}/rsvp", app.AuthMiddleware(app.RemoveEventRSVP))
+	mux.HandleFunc("DELETE /api/groups/{id}/events/{eventID}", app.AuthMiddleware(app.DeleteEvent))
 	mux.HandleFunc("POST /api/groups/{id}/invitations", app.AuthMiddleware(app.InviteGroupMember))
+	mux.HandleFunc("GET /api/groups/{id}/invite-users", app.AuthMiddleware(app.GetInviteUsers))
+	mux.HandleFunc("DELETE /api/groups/{id}/invitations/{invitationID}", app.AuthMiddleware(app.UndoInvitation))
 	mux.HandleFunc("GET /api/groups/{id}/events", app.AuthMiddleware(app.GroupEvents))
 	mux.HandleFunc("POST /api/groups/{id}/events", app.AuthMiddleware(app.GroupEvents))
 	mux.HandleFunc("GET /api/groups/{id}/posts", app.AuthMiddleware(app.GetGroupPosts))

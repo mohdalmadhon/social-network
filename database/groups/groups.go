@@ -5,13 +5,16 @@ import (
 	"errors"
 )
 
-var ErrGroupNotFound = errors.New("group not found")
+var (
+	ErrGroupNotFound      = errors.New("group not found")
+	ErrInvitationNotFound = errors.New("pending group invitation not found")
+)
 
-// JoinGroup adds a user to the group's membership table. If the group already
-// has a chat, the same user is added there too.
-func AcceptInvitation(db *sql.DB, userID int, groupID int64) error {
-	if userID <= 0 || groupID <= 0 {
-		return ErrGroupNotFound
+// AcceptInvitation accepts one specific pending invitation. If the group has
+// a chat, the same user is added there too.
+func AcceptInvitation(db *sql.DB, userID int, invitationID int64) error {
+	if userID <= 0 || invitationID <= 0 {
+		return ErrInvitationNotFound
 	}
 
 	tx, err := db.Begin()
@@ -20,31 +23,30 @@ func AcceptInvitation(db *sql.DB, userID int, groupID int64) error {
 	}
 	defer tx.Rollback()
 
-	// Make sure the group exists
-	var exists int
-
+	var groupID int64
 	err = tx.QueryRow(`
-		SELECT 1
-		FROM groups
+		SELECT group_id
+		FROM group_invitations
 		WHERE id = ?
-	`, groupID).Scan(&exists)
+		  AND user_id = ?
+		  AND status = 'pending'
+	`, invitationID, userID).Scan(&groupID)
 
-	if err == sql.ErrNoRows {
-		return ErrGroupNotFound
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrInvitationNotFound
 	}
 
 	if err != nil {
 		return err
 	}
 
-	// Accept only an existing pending invitation
 	result, err := tx.Exec(`
 		UPDATE group_invitations
 		SET status = 'accepted'
-		WHERE group_id = ?
+		WHERE id = ?
 		  AND user_id = ?
 		  AND status = 'pending'
-	`, groupID, userID)
+	`, invitationID, userID)
 
 	if err != nil {
 		return err
@@ -56,7 +58,7 @@ func AcceptInvitation(db *sql.DB, userID int, groupID int64) error {
 	}
 
 	if affected == 0 {
-		return errors.New("pending group invitation not found")
+		return ErrInvitationNotFound
 	}
 
 	// Add user as group member
@@ -101,18 +103,18 @@ func AcceptInvitation(db *sql.DB, userID int, groupID int64) error {
 	return tx.Commit()
 }
 
-func DeclineInvitation(db *sql.DB, userID int, groupID int64) error {
-	if userID <= 0 || groupID <= 0 {
-		return ErrGroupNotFound
+func DeclineInvitation(db *sql.DB, userID int, invitationID int64) error {
+	if userID <= 0 || invitationID <= 0 {
+		return ErrInvitationNotFound
 	}
 
 	result, err := db.Exec(`
 		UPDATE group_invitations
 		SET status = 'declined'
-		WHERE group_id = ?
+		WHERE id = ?
 		  AND user_id = ?
 		  AND status = 'pending'
-	`, groupID, userID)
+	`, invitationID, userID)
 
 	if err != nil {
 		return err
@@ -124,7 +126,7 @@ func DeclineInvitation(db *sql.DB, userID int, groupID int64) error {
 	}
 
 	if affected == 0 {
-		return errors.New("pending group invitation not found")
+		return ErrInvitationNotFound
 	}
 
 	return nil

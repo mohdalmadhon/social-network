@@ -200,7 +200,7 @@ func (app App) ApplyNotificationAction(w http.ResponseWriter, r *http.Request) {
 
 	if err := app.applyNotificationAction(userID, notification, request.Action); err != nil {
 		status := http.StatusBadRequest
-		if errors.Is(err, sql.ErrNoRows) || errors.Is(err, groups.ErrGroupNotFound) || errors.Is(err, events.ErrEventNotFound) {
+		if errors.Is(err, sql.ErrNoRows) || errors.Is(err, groups.ErrGroupNotFound) || errors.Is(err, groups.ErrInvitationNotFound) || errors.Is(err, events.ErrEventNotFound) {
 			status = http.StatusNotFound
 		}
 		helpers.WriteJson(w, status, map[string]any{

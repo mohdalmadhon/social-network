@@ -183,3 +183,53 @@ export function deleteGroupPostComment(groupID, postID, commentID) {
     method: "DELETE",
   });
 }
+
+export function getInviteUsers(groupID) {
+  return groupContentRequest(`/api/groups/${groupID}/invite-users`);
+}
+
+export function inviteUserToGroup(groupID, userID) {
+  return groupContentRequest(`/api/groups/${groupID}/invitations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId: userID }),
+  });
+}
+
+export function undoGroupInvitation(groupID, invitationID) {
+  return groupContentRequest(`/api/groups/${groupID}/invitations/${invitationID}`, {
+    method: "DELETE",
+  });
+}
+
+export function getGroupEvents(groupID) {
+  return groupContentRequest(`/api/groups/${groupID}/events`);
+}
+
+export function createGroupEvent(groupID, event) {
+  return groupContentRequest(`/api/groups/${groupID}/events`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(event),
+  });
+}
+
+export function setEventRSVP(eventID, response) {
+  return groupContentRequest(`/api/events/${eventID}/rsvp`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ response }),
+  });
+}
+
+export function removeEventRSVP(groupID, eventID) {
+  return groupContentRequest(`/api/groups/${groupID}/events/${eventID}/rsvp`, {
+    method: "DELETE",
+  });
+}
+
+export function deleteGroupEvent(groupID, eventID) {
+  return groupContentRequest(`/api/groups/${groupID}/events/${eventID}`, {
+    method: "DELETE",
+  });
+}
