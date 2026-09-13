@@ -6,6 +6,7 @@ import {
   deleteGroupPostComment,
   getGroupPostComments,
 } from '@/api/groups/Groups.js'
+import IconGlyph from '@/components/layout/IconGlyph.vue'
 
 const props = defineProps({
   groupId: {
@@ -182,6 +183,7 @@ onBeforeUnmount(clearCommentPreview)
     <p v-if="postDeleteError" class="comments-error" role="alert">{{ postDeleteError }}</p>
 
     <button type="button" class="comments-toggle" :aria-expanded="commentsVisible" @click="toggleComments">
+      <IconGlyph name="comment" :size="17" />
       {{ commentsVisible ? 'Hide comments' : `Comments (${localCommentCount})` }}
     </button>
 
@@ -213,10 +215,11 @@ onBeforeUnmount(clearCommentPreview)
       </div>
 
       <form class="comment-form" @submit.prevent="submitComment">
-        <textarea v-model="commentContent" maxlength="200" rows="2" placeholder="Write a comment..."></textarea>
+        <label class="visually-hidden" :for="`group-comment-${post.id}`">Write a comment</label>
+        <textarea :id="`group-comment-${post.id}`" v-model="commentContent" maxlength="200" rows="2" placeholder="Write a comment..."></textarea>
         <img v-if="commentPreviewUrl" class="comment-form__preview" :src="commentPreviewUrl" alt="Preview of the selected comment image" />
         <div class="comment-form__actions">
-          <button type="button" @click="commentFileInput?.click()">Add image</button>
+          <button type="button" @click="commentFileInput?.click()"><IconGlyph name="image" :size="16" /> Add image</button>
           <input
             ref="commentFileInput"
             class="file-input"
@@ -224,8 +227,8 @@ onBeforeUnmount(clearCommentPreview)
             accept="image/jpeg,image/png,image/gif"
             @change="selectCommentFile"
           />
-          <button v-if="commentFile" type="button" @click="removeCommentFile">Remove image</button>
-          <button type="submit" :disabled="!canComment || isSubmittingComment">
+          <button v-if="commentFile" type="button" @click="removeCommentFile"><IconGlyph name="close" :size="15" /> Remove</button>
+          <button class="comment-submit" type="submit" :disabled="!canComment || isSubmittingComment">
             {{ isSubmittingComment ? 'Commenting...' : 'Comment' }}
           </button>
         </div>
@@ -237,7 +240,7 @@ onBeforeUnmount(clearCommentPreview)
 
 <style scoped>
 .group-post-card {
-  padding: var(--space-4);
+  padding: var(--space-5);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-medium);
   background: var(--color-surface);
@@ -280,6 +283,7 @@ onBeforeUnmount(clearCommentPreview)
 .group-post-card h3 {
   color: var(--color-text);
   font-size: 1rem;
+  line-height: 1.35;
 }
 
 .delete-post-button,
@@ -312,10 +316,11 @@ onBeforeUnmount(clearCommentPreview)
 .group-comment small {
   color: var(--color-text-faint);
   font-size: 0.8125rem;
+  overflow-wrap: anywhere;
 }
 
 .group-post-card__content {
-  margin: var(--space-4) 0 0;
+  margin: var(--space-5) 0 0;
   color: var(--color-text-soft);
   line-height: 1.55;
   overflow-wrap: anywhere;
@@ -333,10 +338,13 @@ onBeforeUnmount(clearCommentPreview)
 }
 
 .comments-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   min-height: var(--touch-target);
-  margin-top: var(--space-3);
-  padding: 0 var(--space-2);
-  border: 0;
+  margin-top: var(--space-4);
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
   border-radius: var(--radius-small);
   background: transparent;
   color: var(--color-text-muted);
@@ -345,14 +353,16 @@ onBeforeUnmount(clearCommentPreview)
 }
 
 .comments-toggle:hover {
+  border-color: var(--color-border);
   background: var(--color-input);
   color: var(--color-text);
 }
 
 .group-comments {
   display: grid;
-  gap: var(--space-3);
-  padding-top: var(--space-3);
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+  padding-top: var(--space-4);
   border-top: 1px solid var(--color-border);
 }
 
@@ -360,7 +370,7 @@ onBeforeUnmount(clearCommentPreview)
   grid-template-columns: 2.25rem minmax(0, 1fr);
   padding: var(--space-3);
   border-radius: var(--radius-small);
-  background: var(--color-input);
+  background: rgb(31 36 64 / 55%);
 }
 
 .group-comment > img,
@@ -421,6 +431,7 @@ onBeforeUnmount(clearCommentPreview)
 
 .comment-form textarea:focus {
   border-color: var(--color-mint);
+  box-shadow: var(--focus-ring);
 }
 
 .comment-form__preview {
@@ -435,10 +446,14 @@ onBeforeUnmount(clearCommentPreview)
 .comment-form__actions {
   display: flex;
   gap: var(--space-2);
-  margin-top: var(--space-2);
+  margin-top: var(--space-3);
 }
 
 .comment-form button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
   min-height: var(--touch-target);
   padding: 0 var(--space-3);
   border: 1px solid var(--color-border);
@@ -450,10 +465,11 @@ onBeforeUnmount(clearCommentPreview)
   font-weight: 600;
 }
 
-.comment-form button:last-child {
+.comment-form .comment-submit {
   margin-left: auto;
-  border-color: var(--color-mint);
-  color: var(--color-mint);
+  border: 0;
+  background: var(--gradient-action);
+  color: white;
 }
 
 .comment-form button:disabled {
@@ -481,11 +497,14 @@ onBeforeUnmount(clearCommentPreview)
 }
 
 @media (max-width: 520px) {
+  .group-post-card { padding: var(--space-4); }
+  .group-post-card__header { grid-template-columns: var(--touch-target) minmax(0, 1fr); }
+  .delete-post-button { grid-column: 2; justify-self: start; }
   .comment-form__actions {
     flex-wrap: wrap;
   }
 
-  .comment-form button:last-child {
+  .comment-form .comment-submit {
     width: 100%;
     margin-left: 0;
   }
