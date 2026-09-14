@@ -8,6 +8,7 @@ import GroupActivity from '@/components/groups/GroupActivity.vue'
 import GroupPostCard from '@/components/groups/GroupPostCard.vue'
 import GroupPostComposer from '@/components/groups/GroupPostComposer.vue'
 import IconGlyph from '@/components/layout/IconGlyph.vue'
+import GroupChat from '@/components/chat/GroupChat.vue'
 
 const route = useRoute()
 const groupId = route.params.groupId
@@ -104,6 +105,8 @@ function removeGroupPost(postId) {
                 </section>
 
                 <GroupActivity v-if="group.isMember" :group-id="groupId" />
+
+                <GroupChat v-if="group.isMember" :group-id="groupId" />
 
                 <section v-if="group.isMember" class="group-feed orbit-surface">
                     <div class="group-feed__heading">

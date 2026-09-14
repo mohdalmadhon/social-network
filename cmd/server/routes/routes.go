@@ -50,6 +50,15 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("PATCH /api/notifications/{notificationID}/action", app.AuthMiddleware(app.ApplyNotificationAction))
 	mux.HandleFunc("PATCH /api/notifications/{notificationID}/read", app.AuthMiddleware(app.MarkNotificationRead))
 
+	//chats
+	mux.HandleFunc("GET /api/chats", app.AuthMiddleware(app.PrivateChats))
+	mux.HandleFunc("GET /api/chats/private-users", app.AuthMiddleware(app.PrivateChatUsers))
+	mux.HandleFunc("POST /api/chats/private", app.AuthMiddleware(app.OpenPrivateChat))
+	mux.HandleFunc("GET /api/chats/{chatID}/messages", app.AuthMiddleware(app.PrivateChatMessages))
+	mux.HandleFunc("POST /api/chats/{chatID}/messages", app.AuthMiddleware(app.PrivateChatMessages))
+	mux.HandleFunc("GET /api/groups/{id}/chat/messages", app.AuthMiddleware(app.GroupChatMessages))
+	mux.HandleFunc("POST /api/groups/{id}/chat/messages", app.AuthMiddleware(app.GroupChatMessages))
+
 	//groups
 	mux.HandleFunc("PATCH /api/events/{eventID}/rsvp", app.AuthMiddleware(app.EventRSVP))
 	mux.HandleFunc("DELETE /api/groups/{id}/events/{eventID}/rsvp", app.AuthMiddleware(app.RemoveEventRSVP))
