@@ -474,6 +474,64 @@ func TestAllUpMigrationsApplyToCleanDatabase(t *testing.T) {
 	assertColumn(t, db, "events", "starts_at", true)
 	assertTable(t, db, "group_posts", true)
 	assertTable(t, db, "group_post_comments", true)
+	assertColumn(t, db, "chats", "private_user_low_id", true)
+	assertColumn(t, db, "chats", "private_user_high_id", true)
+}
+
+func TestChatRoomMigrationPreservesAndDeduplicatesRooms(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.SetMaxOpenConns(1)
+	defer db.Close()
+	if _, err = db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		t.Fatal(err)
+	}
+
+	runMigrationFile(t, db, "001_init_users.up.sql")
+	runMigrationFile(t, db, "003_init_chats.up.sql")
+	_, err = db.Exec(`
+		INSERT INTO user (id, email, username, first_name, last_name, dob, password) VALUES
+			(1, 'alice@orbit.test', 'alice', 'Alice', 'Orbit', '2000-01-01', 'password'),
+			(2, 'bob@orbit.test', 'bob', 'Bob', 'Orbit', '2000-01-01', 'password');
+		INSERT INTO groups (id, title, description) VALUES (7, 'Design Guild', 'Design together');
+		INSERT INTO chats (id, type, group_id, num_of_members) VALUES
+			(10, 'private', NULL, 2),
+			(11, 'private', NULL, 2),
+			(20, 'group', 7, 2),
+			(21, 'group', 7, 2);
+		INSERT INTO chat_users (user_id, chat_id) VALUES
+			(1, 10), (2, 10), (1, 11), (2, 11),
+			(1, 20), (2, 20), (1, 21), (2, 21);
+		INSERT INTO messages (id, sender_id, chat_id, content) VALUES
+			(100, 1, 10, 'first private'),
+			(101, 2, 11, 'duplicate private'),
+			(102, 1, 20, 'first group'),
+			(103, 2, 21, 'duplicate group');
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runMigrationFile(t, db, "021_chat_rooms.up.sql")
+	assertColumn(t, db, "chats", "private_user_low_id", true)
+	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM chats WHERE type = 'private'", 1)
+	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM chats WHERE type = 'group' AND group_id = 7", 1)
+	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM messages WHERE chat_id = 10", 2)
+	assertMigrationRowCount(t, db, "SELECT COUNT(*) FROM messages WHERE chat_id = 20", 2)
+
+	if _, err = db.Exec(`INSERT INTO chats (type, group_id) VALUES ('group', 7)`); err == nil {
+		t.Fatal("duplicate group chat succeeded")
+	}
+	if _, err = db.Exec(`INSERT INTO chats (type, private_user_low_id, private_user_high_id) VALUES ('private', 1, 2)`); err == nil {
+		t.Fatal("duplicate private chat succeeded")
+	}
+
+	runMigrationFile(t, db, "021_chat_rooms.down.sql")
+	assertColumn(t, db, "chats", "private_user_low_id", false)
+	runMigrationFile(t, db, "021_chat_rooms.up.sql")
+	assertColumn(t, db, "chats", "private_user_low_id", true)
 }
 
 func insertLegacyPostData(t *testing.T, db *sql.DB) {

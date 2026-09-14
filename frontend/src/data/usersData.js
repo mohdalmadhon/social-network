@@ -13,6 +13,7 @@ export const userAbout = {
 
 export const profileData = {
     userInfo: {
+        id: null,
         firstName: '',
         lastName: '',
         userName: '',
