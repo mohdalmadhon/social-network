@@ -19,7 +19,8 @@ type PrivateChat struct {
 
 type Message struct {
 	ID        int
-	User      UserRegistration
-	Message   string
+	Sender    UserRegistration
+	GroupID   int
+	Content   string `json:"content"`
 	CreatedAt time.Time
 }

@@ -4,9 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"social/database/users"
 	"social/internal/app/tokens"
+
+	"golang.org/x/net/websocket"
 )
 
 func (app *App) AuthMiddleware(handler http.HandlerFunc) http.HandlerFunc {
@@ -57,5 +60,40 @@ func (app *App) AuthMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 		ctx := context.WithValue(r.Context(), "userID", payload.UserID)
 
 		handler.ServeHTTP(w, r.WithContext(ctx))
+	}
+}
+
+func (app *App) WSAuthMiddleware(handler websocket.Handler) websocket.Handler {
+	return func(ws *websocket.Conn) {
+		cookie, err := ws.Request().Cookie("token")
+		if err != nil {
+			log.Println("websocket: not authenticated")
+			ws.Close()
+			return
+		}
+
+		payload, err := tokens.VerifyToken(cookie.Value)
+		if err != nil {
+			log.Println("websocket: invalid or expired session")
+			ws.Close()
+			return
+		}
+
+		err = users.UserExists(app.DB, payload.UserID)
+		if err != nil {
+			log.Println("websocket: invalid user")
+			ws.Close()
+			return
+		}
+
+		ctx := context.WithValue(
+			ws.Request().Context(),
+			"userID",
+			payload.UserID,
+		)
+
+		*ws.Request() = *ws.Request().WithContext(ctx)
+
+		handler(ws)
 	}
 }

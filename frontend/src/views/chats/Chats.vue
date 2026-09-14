@@ -3,12 +3,19 @@ import ChatsSideBar from '@/components/chats/ChatsSideBar.vue';
 import ChatWindow from '@/components/chats/ChatWindow.vue';
 import SideNavigation from '@/components/layout/SideNavigation.vue';
 import TopNavigation from '@/components/layout/TopNavigation.vue';
+import { activePage } from '@/data/chatState';
 import { ref } from 'vue';
+
+activePage.value = 'chat:';
 
 const activeChat = ref(null);
 
 function handleSelectChat(chat) {
+    console.log(chat)
     activeChat.value = chat;
+    activePage.value = 'chat:' + chat.UserID;
+
+    console.log(activeChat.value);
 }
 </script>
 
@@ -21,7 +28,12 @@ function handleSelectChat(chat) {
 
             <main class="chats-page">
                 <ChatsSideBar @select-chat="handleSelectChat" />
-                <ChatWindow :chat="activeChat" />
+
+                <ChatWindow
+                    :chat="activeChat"
+                    :userID="activeChat?.UserID"
+                    :groupID="activeChat?.GroupID"
+                />
             </main>
         </div>
     </div>

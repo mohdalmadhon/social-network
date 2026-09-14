@@ -16,13 +16,17 @@ CREATE TABLE IF NOT EXISTS posts (
 );
 
 CREATE TABLE IF NOT EXISTS user_posts_groups (
-    id INTEGER PRIMARY KEY,
+    id INTEGER NOT NULL,
     name VARCHAR(15) NOT NULL,
     user_id INTEGER NOT NULL,
-    users TEXT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    users TEXT NOT NULL DEFAULT '',
+
+    PRIMARY KEY (user_id, id),
     UNIQUE (user_id, name),
-    UNIQUE (user_id, users)
+
+    FOREIGN KEY (user_id)
+        REFERENCES user(id)
+        ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS post_user_tags (
@@ -33,44 +37,36 @@ CREATE TABLE IF NOT EXISTS post_user_tags (
     FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
 );
 
-CREATE TRIGGER IF NOT EXISTS trg_increase_post
-AFTER
-INSERT
-    ON posts FOR EACH ROW BEGIN
-UPDATE
-    profile
-SET
-    num_of_posts = num_of_posts + 1
-WHERE
-    user_id = NEW.user_id;
 
+CREATE TRIGGER trg_increase_post
+AFTER INSERT ON posts
+FOR EACH ROW
+BEGIN
+    UPDATE profile
+    SET num_of_posts = num_of_posts + 1
+    WHERE user_id = NEW.user_id;
 END;
 
-CREATE TRIGGER IF NOT EXISTS trg_decrease_post
-AFTER
-    DELETE ON posts FOR EACH ROW BEGIN
-UPDATE
-    profile
-SET
-    num_of_posts = num_of_posts - 1
-WHERE
-    user_id = OLD.user_id;
+DROP TRIGGER IF EXISTS trg_decrease_post;
 
+CREATE TRIGGER trg_decrease_post
+AFTER DELETE ON posts
+FOR EACH ROW
+BEGIN
+    UPDATE profile
+    SET num_of_posts = num_of_posts - 1
+    WHERE user_id = OLD.user_id;
 END;
 
-CREATE TRIGGER IF NOT EXISTS trg_post_groups
-AFTER
-INSERT
-    ON user FOR EACH ROW BEGIN
-INSERT INTO
-    user_posts_groups (id, name, user_id, users)
-VALUES
-    (0, 'public', NULL, '');
+DROP TRIGGER IF EXISTS trg_post_groups;
 
-INSERT INTO
-    user_posts_groups (id, name, user_id, users)
-VALUES
-    (-1, 'private', NULL, '');
+CREATE TRIGGER trg_post_groups
+AFTER INSERT ON user
+FOR EACH ROW
+BEGIN
+    INSERT INTO user_posts_groups (id, name, user_id, users)
+    VALUES (-1, 'public', NEW.id, '');
 
+    INSERT INTO user_posts_groups (id, name, user_id, users)
+    VALUES (0, 'private', NEW.id, '');
 END;
-

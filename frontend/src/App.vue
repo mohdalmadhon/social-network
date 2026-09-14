@@ -6,6 +6,7 @@ import { connectToWS } from './api/socket/socket.js';
 onMounted(() => {
     connectToWS();
 });
+
 </script>
 
 <template>    

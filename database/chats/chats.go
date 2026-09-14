@@ -7,7 +7,6 @@ import (
 
 func GetMessages(db *sql.DB, userID, groupID, offset int) ([]models.Message, error) {
 	var messages []models.Message
-
 	var exists int
 
 	err := db.QueryRow(`
@@ -22,35 +21,47 @@ func GetMessages(db *sql.DB, userID, groupID, offset int) ([]models.Message, err
 	}
 
 	rows, err := db.Query(`
-		SELECT u.id, u.first_name, u.last_name, cp.avatar_path, m.content, m.created_at, m.id
+		SELECT
+			u.id,
+			u.first_name,
+			u.last_name,
+			p.avatar_path,
+			m.content,
+			m.created_at,
+			m.id
 		FROM messages m
 		JOIN user u ON u.id = m.sender_id
 		JOIN profile p ON p.user_id = u.id
 		WHERE m.group_id = ?
-		ORDER BY m.created_at ASC
-		LIMIT 30 OFFSET ?
+		ORDER BY m.created_at DESC, m.id DESC
+		LIMIT 20 OFFSET ?
 	`, groupID, offset)
 
 	if err != nil {
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	for rows.Next() {
 		var m models.Message
 
 		err := rows.Scan(
-			&m.User.ID,
-			&m.User.FirstName,
-			&m.User.LastName,
-			&m.User.Avatar,
-			&m.Message,
+			&m.Sender.ID,
+			&m.Sender.FirstName,
+			&m.Sender.LastName,
+			&m.Sender.Avatar,
+			&m.Content,
 			&m.CreatedAt,
 			&m.ID,
 		)
 
 		if err != nil {
 			return nil, err
+		}
+
+		if m.Sender.ID == userID {
+			m.Sender.ID = -1
 		}
 
 		messages = append(messages, m)
@@ -83,10 +94,43 @@ func ChatExists(db *sql.DB, groupID int) (bool, error) {
 	return true, nil
 }
 
+func HasPrivateChat(db *sql.DB, user1, user2 int) (int, error) {
+	var groupID int
+
+	err := db.QueryRow(`
+		SELECT g.id
+		FROM groups g
+		WHERE g.is_private_chat = 1
+		AND EXISTS (
+			SELECT 1
+			FROM groups_users gu1
+			WHERE gu1.group_id = g.id
+			AND gu1.user_id = ?
+		)
+		AND EXISTS (
+			SELECT 1
+			FROM groups_users gu2
+			WHERE gu2.group_id = g.id
+			AND gu2.user_id = ?
+		)
+		LIMIT 1
+	`, user1, user2).Scan(&groupID)
+
+	if err == sql.ErrNoRows {
+		return -1, nil
+	}
+
+	if err != nil {
+		return -1, err
+	}
+
+	return groupID, nil
+}
+
 func AddMessages(db *sql.DB, content string, userID, groupID int) error {
 	_, err := db.Exec(`
 		INSERT INTO MESSAGES (content, sender_id, group_id)
 		VALUES (?,?,?)
 	`, content, userID, groupID)
 	return err
-} 
+}

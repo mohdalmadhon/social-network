@@ -2,11 +2,12 @@ package chats
 
 import (
 	"database/sql"
+	"log"
 	"social/internal/models"
 )
 
 func GetPrivateChatsList(db *sql.DB, userID, offset int) ([]models.PrivateChat, error) {
-	var chats []models.PrivateChat
+	chats := make([]models.PrivateChat, 0)
 
 	rows, err := db.Query(`
 		SELECT
@@ -17,17 +18,27 @@ func GetPrivateChatsList(db *sql.DB, userID, offset int) ([]models.PrivateChat, 
 			g.id AS group_id
 		FROM groups g
 		JOIN groups_users gu1
-			ON g.id = gu1.group_id
+			ON gu1.group_id = g.id
+			AND gu1.user_id = ?
 		JOIN groups_users gu2
-			ON g.id = gu2.group_id
+			ON gu2.group_id = g.id
+			AND gu2.user_id != ?
 		JOIN user u
 			ON u.id = gu2.user_id
 		JOIN profile p
-			ON u.id = p.user_id
+			ON p.user_id = u.id
+		LEFT JOIN messages m
+			ON m.group_id = g.id
 		WHERE g.is_private_chat = 1
-			AND gu1.user_id = ?
-			AND gu2.user_id != ?
-		ORDER BY g.created_at DESC
+		GROUP BY
+			g.id,
+			u.id,
+			u.first_name,
+			u.last_name,
+			p.avatar_path
+		ORDER BY
+			MAX(m.created_at) DESC,
+			g.created_at DESC
 		LIMIT 20 OFFSET ?
 	`, userID, userID, offset)
 
@@ -58,6 +69,7 @@ func GetPrivateChatsList(db *sql.DB, userID, offset int) ([]models.PrivateChat, 
 		return nil, err
 	}
 
+	log.Println(len(chats))
 	return chats, nil
 }
 
@@ -166,12 +178,12 @@ func MakePrivateChat(db *sql.DB, userID, targetID int) (int, error) {
 	INSERT INTO groups (is_private_chat)
 	VALUES (1)`)
 	if err != nil {
-		return -1,err
+		return -1, err
 	}
 
 	groupID, err := res.LastInsertId()
 	if err != nil {
-		return -1,err
+		return -1, err
 	}
 
 	_, err = db.Exec(`
@@ -180,7 +192,7 @@ func MakePrivateChat(db *sql.DB, userID, targetID int) (int, error) {
 `, groupID, userID)
 
 	if err != nil {
-		return -1,err
+		return -1, err
 	}
 
 	_, err = db.Exec(`
@@ -189,8 +201,51 @@ func MakePrivateChat(db *sql.DB, userID, targetID int) (int, error) {
 `, groupID, targetID)
 
 	if err != nil {
-		return -1,err
+		return -1, err
 	}
 
 	return int(groupID), nil
+}
+
+func UserInGroup(db *sql.DB, userID, groupID int) (bool, error) {
+    var exists int
+
+    err := db.QueryRow(`
+        SELECT 1
+        FROM groups_users
+        WHERE user_id = ? AND group_id = ?
+        LIMIT 1
+    `, userID, groupID).Scan(&exists)
+
+    if err == sql.ErrNoRows {
+        return false, nil
+    }
+
+    if err != nil {
+        return false, err
+    }
+
+    return true, nil
+}
+
+func GetGroupMembersIds(db *sql.DB, groupID int) ([]int, error) {
+	var ids []int
+	rows, err := db.Query(`
+		SELECT user_id FROM groups_users WHERE group_id = ?
+	`, groupID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+
+		ids = append(ids, id)
+	}
+
+	return ids, nil
 }

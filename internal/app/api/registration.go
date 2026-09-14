@@ -16,8 +16,12 @@ import (
 
 type App struct {
 	DB *sql.DB
-	Conns map[int]*websocket.Conn
-	Mu sync.Mutex
+	H  *Hub
+}
+
+type Hub struct {
+	Conn map[int]*websocket.Conn
+	Mu   sync.RWMutex
 }
 
 func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
@@ -106,7 +110,7 @@ func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	userData.Password = hashedPassword
 
 	if err := users.RegisterUser(app.DB, &userData); err != nil {
-		log.Println(err)
+		log.Println("here1", err)
 
 		status, message := helpers.NormalizeSQLError(err)
 

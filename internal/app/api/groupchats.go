@@ -121,6 +121,7 @@ func (app *App) SearchPrivateChats(w http.ResponseWriter, r *http.Request) {
 
 func (app *App) AddMessages(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
+
 	if !ok {
 		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
 			"status":  false,
@@ -130,7 +131,6 @@ func (app *App) AddMessages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type request struct {
-		Private int    `json:"private"`
 		Offset  int    `json:"offset"`
 		GroupID int    `json:"groupID"`
 		UserID  int    `json:"userID"`
@@ -138,7 +138,8 @@ func (app *App) AddMessages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req request
-	if err := json.NewDecoder(r.Body).Decode(&r); err != nil {
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "invalid data",
@@ -146,52 +147,137 @@ func (app *App) AddMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Private == 1 {
-		if req.GroupID == -1 || req.UserID != -1 {
-			groupID, err := chats.MakePrivateChat(app.DB, userID, req.UserID)
-			if err != nil {
-				helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
-					"status":  false,
-					"message": "failed to make chat",
-				})
-				return
-			}
-			req.GroupID = groupID
-		} else {
-			exists, err := chats.PrivateChatExists(app.DB, req.GroupID)
-			if err != nil {
-				helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
-					"status":  false,
-					"message": "failed",
-				})
-				return
-			}
-			if !exists {
-				groupID, err := chats.MakePrivateChat(app.DB, userID, req.UserID)
-				if err != nil {
-					helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
-						"status":  false,
-						"message": "failed to make chat",
-					})
-					return
-				}
-				req.GroupID = groupID
-			}
-		}
-
-		err := chats.AddMessages(app.DB, req.Content, userID, req.GroupID)
-		if err != nil && err != sql.ErrNoRows {
-			helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
-				"status":  false,
-				"message": "could not get data",
-			})
-			return
-		}
-		
-		helpers.WriteJson(w, http.StatusOK, map[string]any{
-			"status":  true,
-			"message": "completed!",
+	if req.Content == "" {
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "message cannot be empty",
 		})
 		return
 	}
+
+	if req.GroupID != 1 {
+		// group message
+	}
+	log.Println(req.UserID)
+	groupID := req.GroupID
+
+	if groupID <= 0 {
+		existingGroupID, err := chats.HasPrivateChat(app.DB, userID, req.UserID)
+		if err != nil {
+			helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+				"status":  false,
+				"message": "could not verify chat",
+			})
+			return
+		}
+
+		if existingGroupID != -1 {
+			groupID = existingGroupID
+		} else {
+
+			groupID, err = chats.MakePrivateChat(app.DB, userID, req.UserID)
+			if err != nil {
+				helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+					"status":  false,
+					"message": "could not make chat",
+				})
+				return
+			}
+		}
+	}
+
+	err := chats.AddMessages(app.DB, req.Content, userID, groupID)
+	if err != nil {
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not send chat",
+		})
+		return
+	}
+
+	helpers.WriteJson(w, http.StatusOK, map[string]any{
+		"status":  true,
+		"message": "message sent",
+		"groupID": groupID,
+	})
+}
+
+func (app *App) GetMessages(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
+			"status":  false,
+			"message": "could not authorize user",
+		})
+		return
+	}
+
+	groupID, err := strconv.Atoi(r.URL.Query().Get("groupID"))
+	if err != nil {
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid groupID",
+		})
+		return
+	}
+
+	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+	if err != nil {
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid groupID",
+		})
+		return
+	}
+
+	exists, err := chats.ChatExists(app.DB, groupID)
+	if err != nil {
+		log.Println(err, "here1")
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not verify chat",
+		})
+		return
+	}
+
+	if !exists {
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid group",
+		})
+		return
+	}
+
+	userIN, err := chats.UserInGroup(app.DB, userID, groupID)
+	if err != nil {
+		log.Println(err, "here2")
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not verify group",
+		})
+		return
+	}
+
+	if !userIN {
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid request",
+		})
+		return
+	}
+
+	msgs, err := chats.GetMessages(app.DB, userID, groupID, offset)
+	if err != nil && err != sql.ErrNoRows {
+		log.Println(err, "here3")
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not get messages",
+		})
+		return
+	}
+
+	helpers.WriteJson(w, http.StatusOK, map[string]any{
+		"status": true,
+		"data":   msgs,
+	})
 }

@@ -13,10 +13,13 @@ import FollowersTab from '@/components/profile/FollowersTab.vue';
 import GroupTab from '@/components/personalProfile/group/GroupTab.vue';
 import { addNotification } from '@/data/notifications';
 import ProfilePostsTab from '@/components/profile/posts/ProfilePostsTab.vue';
+import { activePage } from '@/data/chatState';
 
 const activeTab = ref('personal');
 const loading = ref(true);
 const user = ref(null);
+
+activePage.value = 'personalProfile';
 
 async function getData() {
     try {

@@ -216,7 +216,8 @@ func (app *App) RequestFollow(w http.ResponseWriter, r *http.Request) {
 		})
 
 		if err == nil {
-			app.SendToUser(targetID, wsMessage)
+			println(wsMessage)
+			// app.SendToUser(targetID, wsMessage)
 		}
 	}
 
@@ -441,7 +442,8 @@ func (app *App) AcceptFollowRequest(w http.ResponseWriter, r *http.Request) {
 		})
 
 		if err == nil {
-			app.SendToUser(requesterID, wsMessage)
+			println(wsMessage)
+			// app.SendToUser(requesterID, wsMessage)
 		}
 	}
 

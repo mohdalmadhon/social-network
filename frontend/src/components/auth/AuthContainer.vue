@@ -221,7 +221,7 @@ async function loggUser(e) {
                                         Identifier
                                     </label>
 
-                                    <InputHolder id="login-email" type="text" name="Identifier" :minLength="5"
+                                    <InputHolder id="login-email" type="text" name="Identifier" :minLength="2"
                                         :maxLength="75" placeHolder="email@example.com" required />
 
                                     <span v-if="loginErrors.identifier" class="input-error-message">

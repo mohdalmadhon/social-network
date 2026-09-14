@@ -8,10 +8,13 @@ import EditAdditionalInfo from '@/components/ProfileEdit/EditAdditionalInfo.vue'
 import { onMounted, ref } from 'vue';
 import { getUserData } from '@/api/users/personalProfile';
 import { addNotification } from '@/data/notifications';
+import { activePage } from '@/data/chatState';
 
 const activeTab = ref('personal');
 const loading = ref(true);
 const user = ref(null);
+
+activePage.value = 'editProfile';
 
 async function getData() {
     try {

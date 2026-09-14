@@ -8,7 +8,7 @@ export async function getPrivateChatsLists(offset) {
     if (!resp.ok) {
         throw new Error(result.message || "coud not get data")
     }
-
+    
     return result;
 }
 
@@ -40,5 +40,19 @@ export async function sendMessage(data) {
     }
 
     console.log(result)
+    return result;
+}
+
+export async function getMessages(groupID, offset = 0) {
+    const resp = await fetch(`/api/chats?groupID=${groupID}&offset=${offset}`, {
+        method: "GET",
+        credentials: 'include'
+    });
+
+    const result = await resp.json();
+    if (!resp.ok) {
+        throw new Error(result.message || 'error hapened while sending message')
+    }
+
     return result;
 }

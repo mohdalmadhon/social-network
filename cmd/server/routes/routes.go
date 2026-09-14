@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"social/internal/app/api"
+	"sync"
 
 	"golang.org/x/net/websocket"
 )
@@ -17,9 +18,12 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	}
 	mux := http.NewServeMux()
 
-	app := api.App{
-		DB:    db,
-		Conns: make(map[int]*websocket.Conn),
+	app := &api.App{
+		DB: db,
+		H: &api.Hub{
+			Conn: make(map[int]*websocket.Conn),
+			Mu:   sync.RWMutex{},
+		},
 	}
 
 	//user
@@ -76,9 +80,10 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	// chats
 	mux.HandleFunc("GET /api/groups", app.AuthMiddleware(app.GetGroups))
 	mux.HandleFunc("POST /api/chats", app.AuthMiddleware(app.AddMessages))
+	mux.HandleFunc("GET /api/chats", app.AuthMiddleware(app.GetMessages))
 
 	//ws
-	mux.Handle("/api/ws", websocket.Handler(app.HandleWS))
+	mux.Handle("/api/ws", app.WSAuthMiddleware(websocket.Handler(app.HandleWS)))
 	mux.HandleFunc("/api/notifications", app.AuthMiddleware(app.GetNotification))
 	mux.HandleFunc("GET /api/notifications/unread", app.AuthMiddleware(app.GetUnreadNotificationCount))
 	mux.HandleFunc("POST /api/notifications/read", app.AuthMiddleware(app.MarkNotificationsRead))

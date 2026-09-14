@@ -15,8 +15,11 @@ import FollowersTab from '@/components/profile/FollowersTab.vue';
 import { addNotification } from '@/data/notifications';
 import { getFriends } from '@/api/common/friends';
 import ProfilePostsTab from '@/components/profile/posts/ProfilePostsTab.vue';
+import { activePage } from '@/data/chatState';
 
 const route = useRoute();
+const userID = route.query.id;
+activePage.value = `profile:${userID}`;
 
 const activeTab = ref('about');
 const loading = ref(true);

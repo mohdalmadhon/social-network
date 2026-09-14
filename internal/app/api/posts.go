@@ -153,7 +153,8 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		app.SendToUser(taggedUserID, wsMessage)
+		// app.SendToUser(taggedUserID, wsMessage)
+		println(wsMessage)
 	}
 
 	helpers.WriteJson(w, http.StatusCreated, map[string]any{
