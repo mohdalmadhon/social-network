@@ -73,6 +73,20 @@ func TestPrivateMessagesEnforceParticipantsRelationshipAndChronology(t *testing.
 	if !messages[0].IsOwn || messages[1].IsOwn {
 		t.Fatalf("message ownership is incorrect: %+v", messages)
 	}
+	latestPage, err := ListPrivateMessages(db, conversation.ID, 1, 1, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(latestPage) != 1 || latestPage[0].ID != second.ID {
+		t.Fatalf("latest message page = %+v, expected the newest message", latestPage)
+	}
+	olderPage, err := ListPrivateMessages(db, conversation.ID, 1, 1, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(olderPage) != 1 || olderPage[0].ID != first.ID {
+		t.Fatalf("older message page = %+v, expected the first message", olderPage)
+	}
 	if _, err = ListPrivateMessages(db, conversation.ID, 3); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("non-participant error = %v, expected %v", err, ErrForbidden)
 	}

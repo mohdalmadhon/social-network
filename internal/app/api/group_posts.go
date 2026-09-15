@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"mime/multipart"
@@ -90,25 +91,13 @@ func (app App) CreateGroupPostComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	form, err := parseGroupContentForm(w, r, maxCommentBodySize, maxCommentImageSize, 200, "comment")
+	content, err := parseTextComment(w, r)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"status": false, "message": err.Error()})
 		return
 	}
-	if form.file != nil {
-		defer form.file.Close()
-	}
 
-	imagePath := ""
-	if form.file != nil {
-		imagePath, err = helpers.SaveUploads(form.file, form.header, "comment")
-		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]any{"status": false, "message": "could not save comment image"})
-			return
-		}
-	}
-
-	comment, err := groupposts.CreateComment(app.DB, postID, userID, form.content, imagePath)
+	comment, err := groupposts.CreateComment(app.DB, postID, userID, content, "")
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"status": false, "message": "could not create group post comment"})
 		return
@@ -268,4 +257,25 @@ func parseGroupContentForm(w http.ResponseWriter, r *http.Request, maxBody, maxI
 		return groupContentForm{}, errors.New(kind + " needs text or an image, with text limited to " + strconv.Itoa(maxText) + " characters")
 	}
 	return form, nil
+}
+
+func parseTextComment(w http.ResponseWriter, r *http.Request) (string, error) {
+	if strings.HasPrefix(strings.ToLower(r.Header.Get("Content-Type")), "multipart/form-data") {
+		return "", errors.New("comment images are not supported; send text only")
+	}
+
+	var input struct {
+		Content string `json:"content"`
+	}
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxCommentBodySize))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&input); err != nil {
+		return "", errors.New("invalid comment body")
+	}
+
+	content := strings.TrimSpace(input.Content)
+	if content == "" || len([]rune(content)) > 200 {
+		return "", errors.New("comment text must contain 1 to 200 characters")
+	}
+	return content, nil
 }

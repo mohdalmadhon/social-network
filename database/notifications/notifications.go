@@ -37,7 +37,7 @@ func Create(db *sql.DB, userID int, request models.CreateNotificationRequest) (m
 	return GetByID(db, userID, id)
 }
 
-func List(db *sql.DB, userID int, category string) ([]models.Notification, error) {
+func List(db *sql.DB, userID int, category string, pagination ...int) ([]models.Notification, error) {
 	query := notificationSelect + ` WHERE n.user_id = ?`
 	args := []any{userID}
 
@@ -49,7 +49,13 @@ func List(db *sql.DB, userID int, category string) ([]models.Notification, error
 		args = append(args, category)
 	}
 
-	query += ` ORDER BY n.created_at DESC, n.id DESC LIMIT 100`
+	query += ` ORDER BY n.created_at DESC, n.id DESC`
+	if len(pagination) >= 2 {
+		query += ` LIMIT ? OFFSET ?`
+		args = append(args, pagination[0], pagination[1])
+	} else {
+		query += ` LIMIT 100`
+	}
 	rows, err := db.Query(query, args...)
 	if err != nil {
 		return nil, err

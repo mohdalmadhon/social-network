@@ -14,8 +14,12 @@ const search = ref('')
 const loadingPage = ref(true)
 const loadingMessages = ref(false)
 const sending = ref(false)
+const loadingOlderMessages = ref(false)
+const hasOlderMessages = ref(false)
+const messageOffset = ref(0)
 const openingUserId = ref(null)
 const error = ref('')
+const MESSAGE_PAGE_SIZE = 20
 
 const filteredCandidates = computed(() => {
   const value = search.value.trim().toLowerCase()
@@ -45,13 +49,36 @@ async function selectChat(chat) {
   loadingMessages.value = true
   error.value = ''
   try {
-    const result = await getPrivateMessages(chat.id)
+    const result = await getPrivateMessages(chat.id, { limit: MESSAGE_PAGE_SIZE, offset: 0 })
     messages.value = result?.messages || []
+    messageOffset.value = messages.value.length
+    hasOlderMessages.value = Boolean(result?.hasMore)
   } catch (err) {
     error.value = err.message
     messages.value = []
   } finally {
     loadingMessages.value = false
+  }
+}
+
+async function loadOlderMessages() {
+  if (!activeChat.value || loadingOlderMessages.value || !hasOlderMessages.value) return
+
+  loadingOlderMessages.value = true
+  error.value = ''
+  try {
+    const result = await getPrivateMessages(activeChat.value.id, {
+      limit: MESSAGE_PAGE_SIZE,
+      offset: messageOffset.value,
+    })
+    const olderMessages = result?.messages || []
+    messages.value = [...olderMessages, ...messages.value]
+    messageOffset.value += olderMessages.length
+    hasOlderMessages.value = Boolean(result?.hasMore)
+  } catch (err) {
+    error.value = err.message || 'Could not load older messages.'
+  } finally {
+    loadingOlderMessages.value = false
   }
 }
 
@@ -81,6 +108,7 @@ async function send(content, clear) {
   try {
     const result = await sendPrivateMessage(activeChat.value.id, content)
     messages.value.push(result.message)
+    messageOffset.value = messages.value.length
     activeChat.value.latestMessage = result.message.content
     activeChat.value.latestMessageTime = result.message.createdAt
     conversations.value = [activeChat.value, ...conversations.value.filter((chat) => chat.id !== activeChat.value.id)]
@@ -153,7 +181,11 @@ function shortTime(value) {
               <span class="user-avatar"><img v-if="activeChat.otherUser.avatarPath" :src="`/uploads/${activeChat.otherUser.avatarPath}`" alt="" /><span v-else>{{ initials(activeChat.otherUser) }}</span></span>
               <span><strong>{{ displayName(activeChat.otherUser) }}</strong><small>@{{ activeChat.otherUser.username || 'orbit member' }}</small></span>
             </header>
-            <MessageThread :messages="messages" :loading="loadingMessages" />
+            <button v-if="hasOlderMessages" class="load-older-messages" type="button"
+              :disabled="loadingOlderMessages" @click="loadOlderMessages">
+              {{ loadingOlderMessages ? 'Loading older messages...' : 'Load older messages' }}
+            </button>
+            <MessageThread :messages="messages" :loading="loadingMessages" :auto-scroll="!loadingOlderMessages" />
             <MessageComposer :sending="sending" @send="send" />
           </template>
           <div v-else class="thread-placeholder">
@@ -196,6 +228,9 @@ function shortTime(value) {
 .private-thread { display: flex; min-width: 0; flex-direction: column; }
 .private-thread__header { display: flex; min-height: 4.75rem; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--color-border); }
 .private-thread :deep(.message-thread) { flex: 1; max-height: none; }
+.load-older-messages { align-self: center; min-height: var(--touch-target); margin: var(--space-3) 0 0; padding: 0 var(--space-4); border: 1px solid var(--color-border); border-radius: 999px; background: transparent; color: var(--color-text-muted); cursor: pointer; font: inherit; font-size: .8125rem; }
+.load-older-messages:hover:not(:disabled), .load-older-messages:focus-visible { border-color: var(--color-violet); color: var(--color-text); }
+.load-older-messages:disabled { cursor: wait; opacity: .6; }
 .thread-placeholder { display: grid; margin: auto; justify-items: center; padding: var(--space-6); color: var(--color-text-faint); text-align: center; }
 .thread-placeholder h2 { margin: var(--space-3) 0 var(--space-2); color: var(--color-text); font-size: 1.25rem; }
 .thread-placeholder p { margin: 0; }

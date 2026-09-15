@@ -14,8 +14,10 @@ async function chatRequest(path, options = {}) {
 
 export const getPrivateChats = () => chatRequest('/api/chats')
 export const getPrivateChatUsers = () => chatRequest('/api/chats/private-users')
-export const getPrivateMessages = (chatId) => chatRequest(`/api/chats/${chatId}/messages`)
-export const getGroupMessages = (groupId) => chatRequest(`/api/groups/${groupId}/chat/messages`)
+export const getPrivateMessages = (chatId, { limit = 20, offset = 0 } = {}) =>
+  chatRequest(`/api/chats/${chatId}/messages?limit=${limit}&offset=${offset}`)
+export const getGroupMessages = (groupId, { limit = 20, offset = 0 } = {}) =>
+  chatRequest(`/api/groups/${groupId}/chat/messages?limit=${limit}&offset=${offset}`)
 
 export function openPrivateChat(userId) {
   return chatRequest('/api/chats/private', {

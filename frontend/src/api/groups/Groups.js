@@ -165,10 +165,11 @@ export function getGroupPostComments(groupID, postID) {
   return groupContentRequest(`/api/groups/${groupID}/posts/${postID}/comments`);
 }
 
-export function createGroupPostComment(groupID, postID, formData) {
+export function createGroupPostComment(groupID, postID, content) {
   return groupContentRequest(`/api/groups/${groupID}/posts/${postID}/comments`, {
     method: "POST",
-    body: formData,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content }),
   });
 }
 

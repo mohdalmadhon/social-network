@@ -9,18 +9,45 @@ const props = defineProps({ groupId: { type: [String, Number], required: true } 
 const messages = ref([])
 const loading = ref(true)
 const sending = ref(false)
+const loadingOlderMessages = ref(false)
+const hasOlderMessages = ref(false)
+const messageOffset = ref(0)
 const error = ref('')
+const MESSAGE_PAGE_SIZE = 20
 
 onMounted(async () => {
   try {
-    const result = await getGroupMessages(props.groupId)
+    const result = await getGroupMessages(props.groupId, { limit: MESSAGE_PAGE_SIZE, offset: 0 })
     messages.value = result?.messages || []
+    messageOffset.value = messages.value.length
+    hasOlderMessages.value = Boolean(result?.hasMore)
   } catch (err) {
     error.value = err.message
   } finally {
     loading.value = false
   }
 })
+
+async function loadOlderMessages() {
+  if (loadingOlderMessages.value || !hasOlderMessages.value) return
+
+  loadingOlderMessages.value = true
+  error.value = ''
+  try {
+    const result = await getGroupMessages(props.groupId, {
+      limit: MESSAGE_PAGE_SIZE,
+      offset: messageOffset.value,
+    })
+    const olderMessages = result?.messages || []
+    messages.value = [...olderMessages, ...messages.value]
+    messageOffset.value += olderMessages.length
+    hasOlderMessages.value = Boolean(result?.hasMore)
+  } catch (err) {
+    error.value = err.message || 'Could not load older messages.'
+  } finally {
+    loadingOlderMessages.value = false
+  }
+}
 
 async function send(content, clear) {
   if (sending.value) return
@@ -29,6 +56,7 @@ async function send(content, clear) {
   try {
     const result = await sendGroupMessage(props.groupId, content)
     messages.value.push(result.message)
+    messageOffset.value = messages.value.length
     clear()
   } catch (err) {
     error.value = err.message
@@ -48,7 +76,12 @@ async function send(content, clear) {
       </div>
     </header>
     <p v-if="error" class="group-chat__error" role="alert">{{ error }}</p>
-    <MessageThread :messages="messages" :loading="loading" empty-message="No group messages yet. Start the conversation." />
+    <button v-if="hasOlderMessages" class="load-older-messages" type="button"
+      :disabled="loadingOlderMessages" @click="loadOlderMessages">
+      {{ loadingOlderMessages ? 'Loading older messages...' : 'Load older messages' }}
+    </button>
+    <MessageThread :messages="messages" :loading="loading" :auto-scroll="!loadingOlderMessages"
+      empty-message="No group messages yet. Start the conversation." />
     <MessageComposer :sending="sending" @send="send" />
   </section>
 </template>
@@ -60,5 +93,8 @@ async function send(content, clear) {
 .group-chat .orbit-meta { margin: 0; }
 .group-chat h2 { margin: var(--space-1) 0 0; font-family: var(--font-display); font-size: 1.4rem; letter-spacing: 0; }
 .group-chat__error { margin: 0; padding: var(--space-3) var(--space-5); border-top: 1px solid var(--color-border); background: rgb(255 112 112 / 8%); color: var(--color-coral); }
+.load-older-messages { align-self: center; min-height: var(--touch-target); margin: var(--space-3) auto 0; padding: 0 var(--space-4); border: 1px solid var(--color-border); border-radius: 999px; background: transparent; color: var(--color-text-muted); cursor: pointer; font: inherit; font-size: .8125rem; }
+.load-older-messages:hover:not(:disabled), .load-older-messages:focus-visible { border-color: var(--color-violet); color: var(--color-text); }
+.load-older-messages:disabled { cursor: wait; opacity: .6; }
 @media (max-width: 520px) { .group-chat > header { padding: var(--space-4); } }
 </style>

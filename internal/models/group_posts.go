@@ -26,7 +26,7 @@ type GroupPostComment struct {
 	LastName   string    `json:"lastName"`
 	AvatarPath string    `json:"avatarPath"`
 	Content    string    `json:"content"`
-	ImagePath  string    `json:"imagePath"`
+	ImagePath  string    `json:"-"`
 	CreatedAt  time.Time `json:"createdAt"`
 	IsOwner    bool      `json:"isOwner"`
 }

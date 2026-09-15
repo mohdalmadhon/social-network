@@ -20,8 +20,13 @@ async function request(url, options = {}) {
   return result
 }
 
-export function getNotifications(category = 'all') {
-  return request(`/api/notifications?category=${encodeURIComponent(category)}`)
+export function getNotifications(category = 'all', { limit = 20, offset = 0 } = {}) {
+  const params = new URLSearchParams({
+    category,
+    limit: String(limit),
+    offset: String(offset),
+  })
+  return request(`/api/notifications?${params}`)
 }
 
 export function markNotificationRead(notificationId) {

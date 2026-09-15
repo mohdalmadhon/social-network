@@ -185,7 +185,16 @@ func (app App) listPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, err := posts.ListFeedPosts(app.DB, userID)
+	page, err := parsePage(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "limit must be between 1 and 50 and offset cannot be negative",
+		})
+		return
+	}
+
+	feedPosts, err := posts.ListFeedPosts(app.DB, userID, page.Limit+1, page.Offset)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
@@ -193,10 +202,13 @@ func (app App) listPosts(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	feedPosts, hasMore := trimPage(feedPosts, page, true)
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"status": true,
-		"posts":  posts,
+		"status":     true,
+		"posts":      feedPosts,
+		"hasMore":    hasMore,
+		"nextOffset": page.Offset + len(feedPosts),
 	})
 }
 

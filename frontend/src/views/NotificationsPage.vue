@@ -1,8 +1,7 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout.vue'
 import IconGlyph from '@/components/layout/IconGlyph.vue'
-import { useNotifications } from '@/helpers/useNotifications.js'
 import {
   applyNotificationAction,
   getNotifications,
@@ -20,18 +19,20 @@ const filters = [
 
 const notificationItems = ref([])
 const isLoading = ref(true)
+const isLoadingMore = ref(false)
+const hasMoreNotifications = ref(false)
+const unreadTotal = ref(0)
 const loadError = ref('')
+const NOTIFICATION_PAGE_SIZE = 20
 
 const activeFilter = ref('all')
-const { items: liveItems, refreshNotifications } = useNotifications()
-watch(liveItems, (items) => { notificationItems.value = items.map(notificationForDisplay) })
 
 const visibleNotifications = computed(() => {
   if (activeFilter.value === 'all') return notificationItems.value
   return notificationItems.value.filter((item) => item.type === activeFilter.value)
 })
 
-const unreadCount = computed(() => notificationItems.value.filter((item) => item.unread).length)
+const unreadCount = computed(() => unreadTotal.value)
 
 function formatNotificationTime(value) {
   const date = new Date(value)
@@ -104,17 +105,29 @@ function notificationForDisplay(notification) {
   }
 }
 
-async function loadNotifications() {
-  isLoading.value = true
+async function loadNotifications({ append = false } = {}) {
+  if (append) {
+    if (isLoadingMore.value || !hasMoreNotifications.value) return
+    isLoadingMore.value = true
+  } else {
+    isLoading.value = true
+  }
   loadError.value = ''
 
   try {
-    const result = await getNotifications('all')
-    notificationItems.value = (result?.notifications || []).map(notificationForDisplay)
+    const result = await getNotifications('all', {
+      limit: NOTIFICATION_PAGE_SIZE,
+      offset: append ? notificationItems.value.length : 0,
+    })
+    const nextItems = (result?.notifications || []).map(notificationForDisplay)
+    notificationItems.value = append ? [...notificationItems.value, ...nextItems] : nextItems
+    unreadTotal.value = result?.unreadCount || 0
+    hasMoreNotifications.value = Boolean(result?.hasMore)
   } catch (error) {
     loadError.value = error.message || 'Could not load notifications.'
   } finally {
     isLoading.value = false
+    isLoadingMore.value = false
   }
 }
 
@@ -124,7 +137,7 @@ async function markAsRead(item) {
   try {
     await markNotificationRead(item.id)
     item.unread = false
-    await refreshNotifications()
+    unreadTotal.value = Math.max(0, unreadTotal.value - 1)
   } catch (error) {
     loadError.value = error.message || 'Could not mark notification as read.'
   }
@@ -133,7 +146,7 @@ async function markAsRead(item) {
 async function markAllAsRead() {
   try {
     await markAllNotificationsRead()
-    await refreshNotifications()
+    unreadTotal.value = 0
     notificationItems.value.forEach((item) => {
       item.unread = false
     })
@@ -150,8 +163,8 @@ async function chooseAction(item, action) {
   try {
     await applyNotificationAction(item.id, action)
     item.action = action
+    if (item.unread) unreadTotal.value = Math.max(0, unreadTotal.value - 1)
     item.unread = false
-    await refreshNotifications()
   } catch (error) {
     item.action = previousAction
     loadError.value = error.message || 'Could not complete notification action.'
@@ -270,11 +283,21 @@ onMounted(loadNotifications)
             {{ actionLabel(item.action) }}
           </span>
         </article>
+
+        <button v-if="hasMoreNotifications" class="load-more-button" type="button" :disabled="isLoadingMore"
+          @click="loadNotifications({ append: true })">
+          {{ isLoadingMore ? 'Loading more updates...' : 'Load more updates' }}
+        </button>
       </div>
 
-      <p v-else class="notifications-empty">
-        Nothing here yet.
-      </p>
+      <div v-else class="notifications-empty">
+        <p>Nothing here yet.</p>
+
+        <button v-if="hasMoreNotifications" class="load-more-button" type="button" :disabled="isLoadingMore"
+          @click="loadNotifications({ append: true })">
+          {{ isLoadingMore ? 'Loading more updates...' : 'Load more updates' }}
+        </button>
+      </div>
       </section>
 
       <aside class="notification-legend orbit-surface" aria-labelledby="notification-legend-title">
@@ -394,6 +417,30 @@ onMounted(loadNotifications)
   display: grid;
   gap: var(--space-3);
   margin-top: var(--space-5);
+}
+
+.load-more-button {
+  min-height: var(--touch-target);
+  margin: var(--space-2) auto 0;
+  padding: 0 var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.load-more-button:hover:not(:disabled),
+.load-more-button:focus-visible {
+  border-color: var(--color-violet);
+  color: var(--color-text);
+}
+
+.load-more-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 .notification-item {

@@ -77,6 +77,12 @@ func ListPosts(db *sql.DB, groupID int64) ([]models.GroupPost, error) {
 
 func CreateComment(db *sql.DB, postID int64, userID int, content, imagePath string) (models.GroupPostComment, error) {
 	content = strings.TrimSpace(content)
+	if imagePath != "" {
+		return models.GroupPostComment{}, errors.New("comment images are not supported")
+	}
+	if content == "" || len([]rune(content)) > 200 {
+		return models.GroupPostComment{}, errors.New("comment text must contain 1 to 200 characters")
+	}
 	result, err := db.Exec(`
 		INSERT INTO group_post_comments (post_id, user_id, content, image_path)
 		VALUES (?, ?, ?, ?)

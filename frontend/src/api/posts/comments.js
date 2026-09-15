@@ -25,17 +25,6 @@ export async function getComments(postId) {
 }
 
 export async function createComment(postId, comment) {
-  if (comment.file) {
-    const formData = new FormData()
-    formData.append('content', comment.content)
-    formData.append('image', comment.file)
-
-    return requestComments(`/api/posts/${postId}/comments`, {
-      method: 'POST',
-      body: formData,
-    })
-  }
-
   return requestComments(`/api/posts/${postId}/comments`, {
     method: 'POST',
     headers: {

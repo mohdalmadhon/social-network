@@ -106,6 +106,37 @@ func TestUnreadCountCanBeLimitedToMessages(t *testing.T) {
 	}
 }
 
+func TestNotificationsCanLoadOnePageAtATime(t *testing.T) {
+	db := newNotificationTestDatabase(t)
+
+	for _, message := range []string{"one", "two", "three"} {
+		_, err := Create(db, 1, models.CreateNotificationRequest{
+			Category: "groups",
+			Type:     "group_update",
+			Message:  message,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	page, err := List(db, 1, "groups", 2, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page) != 2 {
+		t.Fatalf("first notification page length = %d, expected 2", len(page))
+	}
+
+	olderPage, err := List(db, 1, "groups", 2, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(olderPage) != 1 {
+		t.Fatalf("older notification page length = %d, expected 1", len(olderPage))
+	}
+}
+
 func TestMessageNotificationsCanBeMarkedReadForOneChat(t *testing.T) {
 	db := newNotificationTestDatabase(t)
 

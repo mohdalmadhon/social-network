@@ -85,15 +85,30 @@ func (app App) PrivateChatMessages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodGet {
-		messages, listErr := chatsdb.ListPrivateMessages(app.DB, chatID, userID)
+		page, err := parsePage(r)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "limit must be between 1 and 50 and offset cannot be negative",
+			})
+			return
+		}
+
+		messages, listErr := chatsdb.ListPrivateMessages(app.DB, chatID, userID, page.Limit+1, page.Offset)
 		if listErr != nil {
 			writeChatError(w, listErr)
 			return
 		}
+		messages, hasMore := trimPage(messages, page, false)
 		if readErr := notifications.MarkMessageNotificationsRead(app.DB, userID, chatID); readErr != nil {
 			log.Printf("mark private message notifications read: %v", readErr)
 		}
-		writeJSON(w, http.StatusOK, map[string]any{"status": true, "messages": messages})
+		writeJSON(w, http.StatusOK, map[string]any{
+			"status":     true,
+			"messages":   messages,
+			"hasMore":    hasMore,
+			"nextOffset": page.Offset + len(messages),
+		})
 		return
 	}
 
@@ -152,12 +167,27 @@ func (app App) GroupChatMessages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodGet {
-		messages, err := chatsdb.ListGroupMessages(app.DB, groupID, userID)
+		page, err := parsePage(r)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "limit must be between 1 and 50 and offset cannot be negative",
+			})
+			return
+		}
+
+		messages, err := chatsdb.ListGroupMessages(app.DB, groupID, userID, page.Limit+1, page.Offset)
 		if err != nil {
 			writeChatError(w, err)
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]any{"status": true, "messages": messages})
+		messages, hasMore := trimPage(messages, page, false)
+		writeJSON(w, http.StatusOK, map[string]any{
+			"status":     true,
+			"messages":   messages,
+			"hasMore":    hasMore,
+			"nextOffset": page.Offset + len(messages),
+		})
 		return
 	}
 

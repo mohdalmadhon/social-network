@@ -22,8 +22,9 @@ export async function createPost(formData) {
     return result
 }
 
-export async function getPosts() {
-    const response = await fetch('/api/posts', {
+export async function getPosts({ limit = 20, offset = 0 } = {}) {
+    const params = new URLSearchParams({ limit: String(limit), offset: String(offset) })
+    const response = await fetch(`/api/posts?${params}`, {
         method: 'GET',
         credentials: 'include',
     })

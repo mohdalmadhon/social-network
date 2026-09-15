@@ -33,8 +33,17 @@ func (app App) Notifications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	page, err := parsePage(r)
+	if err != nil {
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "limit must be between 1 and 50 and offset cannot be negative",
+		})
+		return
+	}
+
 	category := r.URL.Query().Get("category")
-	result, err := notifications.List(app.DB, userID, category)
+	result, err := notifications.List(app.DB, userID, category, page.Limit+1, page.Offset)
 	if errors.Is(err, notifications.ErrInvalidCategory) {
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
@@ -49,6 +58,7 @@ func (app App) Notifications(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	result, hasMore := trimPage(result, page, true)
 
 	unreadCount, err := notifications.UnreadCount(app.DB, userID, category)
 	if err != nil {
@@ -63,6 +73,8 @@ func (app App) Notifications(w http.ResponseWriter, r *http.Request) {
 		"status":        true,
 		"notifications": result,
 		"unreadCount":   unreadCount,
+		"hasMore":       hasMore,
+		"nextOffset":    page.Offset + len(result),
 	})
 }
 

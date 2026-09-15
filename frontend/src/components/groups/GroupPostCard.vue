@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, ref } from 'vue'
 import {
   createGroupPostComment,
   deleteGroupPost,
@@ -21,16 +21,12 @@ const props = defineProps({
 
 const emit = defineEmits(['post-deleted'])
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024
 const comments = ref([])
 const commentsVisible = ref(false)
 const commentsLoaded = ref(false)
 const commentsLoading = ref(false)
 const commentsError = ref('')
 const commentContent = ref('')
-const commentFile = ref(null)
-const commentPreviewUrl = ref('')
-const commentFileInput = ref(null)
 const isSubmittingComment = ref(false)
 const isDeletingPost = ref(false)
 const deletingCommentId = ref(null)
@@ -38,7 +34,7 @@ const postDeleteError = ref('')
 const localCommentCount = ref(props.post.commentCount || 0)
 
 const authorName = computed(() => `${props.post.firstName || ''} ${props.post.lastName || ''}`.trim() || props.post.username || 'Group member')
-const canComment = computed(() => commentContent.value.trim() !== '' || commentFile.value !== null)
+const canComment = computed(() => commentContent.value.trim() !== '')
 
 function assetUrl(path) {
   if (!path) return ''
@@ -67,50 +63,17 @@ async function toggleComments() {
   }
 }
 
-function selectCommentFile(event) {
-  clearCommentPreview()
-  const file = event.target.files?.[0] || null
-  if (file && file.size > MAX_FILE_SIZE) {
-    commentFile.value = null
-    event.target.value = ''
-    commentsError.value = 'Image must be smaller than 5 MB.'
-    return
-  }
-
-  commentFile.value = file
-  commentPreviewUrl.value = file ? URL.createObjectURL(file) : ''
-  commentsError.value = ''
-}
-
-function clearCommentPreview() {
-  if (commentPreviewUrl.value) {
-    URL.revokeObjectURL(commentPreviewUrl.value)
-    commentPreviewUrl.value = ''
-  }
-}
-
 function clearCommentForm() {
   commentContent.value = ''
-  removeCommentFile()
-}
-
-function removeCommentFile() {
-  commentFile.value = null
-  clearCommentPreview()
-  if (commentFileInput.value) commentFileInput.value.value = ''
 }
 
 async function submitComment() {
   if (!canComment.value || isSubmittingComment.value) return
 
-  const formData = new FormData()
-  formData.append('content', commentContent.value)
-  if (commentFile.value) formData.append('image', commentFile.value)
-
   isSubmittingComment.value = true
   commentsError.value = ''
   try {
-    const result = await createGroupPostComment(props.groupId, props.post.id, formData)
+    const result = await createGroupPostComment(props.groupId, props.post.id, commentContent.value.trim())
     if (!result?.comment) throw new Error('Could not create comment')
 
     comments.value.push(result.comment)
@@ -155,7 +118,6 @@ async function removeComment(comment) {
   }
 }
 
-onBeforeUnmount(clearCommentPreview)
 </script>
 
 <template>
@@ -210,24 +172,13 @@ onBeforeUnmount(clearCommentPreview)
             </button>
           </div>
           <p v-if="comment.content">{{ comment.content }}</p>
-          <img v-if="comment.imagePath" class="group-comment__image" :src="assetUrl(comment.imagePath)" alt="Image attached to this comment" />
         </div>
       </div>
 
       <form class="comment-form" @submit.prevent="submitComment">
         <label class="visually-hidden" :for="`group-comment-${post.id}`">Write a comment</label>
         <textarea :id="`group-comment-${post.id}`" v-model="commentContent" maxlength="200" rows="2" placeholder="Write a comment..."></textarea>
-        <img v-if="commentPreviewUrl" class="comment-form__preview" :src="commentPreviewUrl" alt="Preview of the selected comment image" />
         <div class="comment-form__actions">
-          <button type="button" @click="commentFileInput?.click()"><IconGlyph name="image" :size="16" /> Add image</button>
-          <input
-            ref="commentFileInput"
-            class="file-input"
-            type="file"
-            accept="image/jpeg,image/png,image/gif"
-            @change="selectCommentFile"
-          />
-          <button v-if="commentFile" type="button" @click="removeCommentFile"><IconGlyph name="close" :size="15" /> Remove</button>
           <button class="comment-submit" type="submit" :disabled="!canComment || isSubmittingComment">
             {{ isSubmittingComment ? 'Commenting...' : 'Comment' }}
           </button>
@@ -406,16 +357,6 @@ onBeforeUnmount(clearCommentPreview)
   white-space: pre-wrap;
 }
 
-.group-comment .group-comment__image {
-  display: block;
-  width: min(100%, 22rem);
-  height: auto;
-  max-height: 18rem;
-  margin-top: var(--space-2);
-  border-radius: var(--radius-small);
-  object-fit: contain;
-}
-
 .comment-form textarea {
   width: 100%;
   min-height: 4rem;
@@ -432,15 +373,6 @@ onBeforeUnmount(clearCommentPreview)
 .comment-form textarea:focus {
   border-color: var(--color-mint);
   box-shadow: var(--focus-ring);
-}
-
-.comment-form__preview {
-  display: block;
-  width: min(100%, 22rem);
-  max-height: 18rem;
-  margin-top: var(--space-2);
-  border-radius: var(--radius-small);
-  object-fit: contain;
 }
 
 .comment-form__actions {
@@ -475,14 +407,6 @@ onBeforeUnmount(clearCommentPreview)
 .comment-form button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
-}
-
-.file-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
 }
 
 .comments-state,

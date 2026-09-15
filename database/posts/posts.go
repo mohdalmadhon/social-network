@@ -108,8 +108,8 @@ func GetPostByID(db *sql.DB, postID int64) (models.Post, error) {
 	return post, err
 }
 
-func ListFeedPosts(db *sql.DB, viewerID int) ([]models.Post, error) {
-	rows, err := db.Query(`
+func ListFeedPosts(db *sql.DB, viewerID int, pagination ...int) ([]models.Post, error) {
+	query := `
 		SELECT
 			posts.id,
 			posts.user_id,
@@ -156,7 +156,14 @@ func ListFeedPosts(db *sql.DB, viewerID int) ([]models.Post, error) {
 			)
 		)
 		ORDER BY posts.created_at DESC, posts.id DESC
-	`, viewerID, viewerID, viewerID, viewerID, viewerID)
+	`
+	args := []any{viewerID, viewerID, viewerID, viewerID}
+	if len(pagination) >= 2 {
+		query += ` LIMIT ? OFFSET ?`
+		args = append(args, pagination[0], pagination[1])
+	}
+
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

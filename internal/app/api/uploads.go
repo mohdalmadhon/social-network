@@ -22,8 +22,6 @@ func (app App) ServeUpload(w http.ResponseWriter, r *http.Request) {
 		switch parts[0] {
 		case "posts":
 			err = app.DB.QueryRow(`SELECT id FROM posts WHERE image_path=?`, name).Scan(&postID)
-		case "comments":
-			err = app.DB.QueryRow(`SELECT post_id FROM comments WHERE image_path=?`, name).Scan(&postID)
 		default:
 			http.NotFound(w, r)
 			return

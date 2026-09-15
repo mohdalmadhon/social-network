@@ -132,6 +132,34 @@ func TestPostLikesAreIdempotentAndRespectPrivacy(t *testing.T) {
 	}
 }
 
+func TestFeedCanLoadOnePageAtATime(t *testing.T) {
+	db := newPostTestDatabase(t)
+	insertPostTestUser(t, db, 1, "author")
+
+	for _, content := range []string{"first", "second", "third"} {
+		createTestPost(t, db, models.CreatePostRequest{
+			Content: content,
+			Privacy: models.PostPrivacyPublic,
+		})
+	}
+
+	page, err := ListFeedPosts(db, 1, 3, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page) != 3 {
+		t.Fatalf("first page length = %d, expected 3", len(page))
+	}
+
+	olderPage, err := ListFeedPosts(db, 1, 3, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(olderPage) != 0 {
+		t.Fatalf("older page length = %d, expected 0", len(olderPage))
+	}
+}
+
 func createTestPost(t *testing.T, db *sql.DB, request models.CreatePostRequest) {
 	t.Helper()
 	if _, err := CreatePost(db, 1, request); err != nil {

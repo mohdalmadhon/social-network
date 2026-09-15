@@ -4,13 +4,14 @@ import { nextTick, ref, watch } from 'vue'
 const props = defineProps({
   messages: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
+  autoScroll: { type: Boolean, default: true },
   emptyMessage: { type: String, default: 'No messages yet. Say hello.' },
 })
 const thread = ref(null)
 
 watch(() => [props.loading, props.messages.length], async () => {
   await nextTick()
-  if (thread.value) thread.value.scrollTop = thread.value.scrollHeight
+  if (thread.value && props.autoScroll) thread.value.scrollTop = thread.value.scrollHeight
 })
 
 function senderName(message) {

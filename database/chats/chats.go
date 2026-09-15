@@ -187,11 +187,11 @@ func ListPrivateCandidates(db *sql.DB, userID int) ([]models.ChatCandidate, erro
 	return candidates, rows.Err()
 }
 
-func ListPrivateMessages(db *sql.DB, chatID int64, userID int) ([]models.ChatMessage, error) {
+func ListPrivateMessages(db *sql.DB, chatID int64, userID int, pagination ...int) ([]models.ChatMessage, error) {
 	if err := requirePrivateChatAccess(db, chatID, userID); err != nil {
 		return nil, err
 	}
-	return listMessages(db, chatID, userID)
+	return listMessages(db, chatID, userID, pagination...)
 }
 
 func SendPrivateMessage(db *sql.DB, chatID int64, userID int, content string) (models.ChatMessage, error) {
@@ -218,12 +218,12 @@ func SendPrivateMessage(db *sql.DB, chatID int64, userID int, content string) (m
 	return message, nil
 }
 
-func ListGroupMessages(db *sql.DB, groupID int64, userID int) ([]models.ChatMessage, error) {
+func ListGroupMessages(db *sql.DB, groupID int64, userID int, pagination ...int) ([]models.ChatMessage, error) {
 	chatID, err := EnsureGroupChat(db, groupID, userID)
 	if err != nil {
 		return nil, err
 	}
-	return listMessages(db, chatID, userID)
+	return listMessages(db, chatID, userID, pagination...)
 }
 
 func SendGroupMessage(db *sql.DB, groupID int64, userID int, content string) (models.ChatMessage, error) {
@@ -343,8 +343,8 @@ func requireFollowRelationship(db queryRower, firstUserID, secondUserID int) err
 	return nil
 }
 
-func listMessages(db messageQuerier, chatID int64, userID int) ([]models.ChatMessage, error) {
-	rows, err := db.Query(`
+func listMessages(db messageQuerier, chatID int64, userID int, pagination ...int) ([]models.ChatMessage, error) {
+	query := `
 		SELECT
 			m.id,
 			m.chat_id,
@@ -360,8 +360,15 @@ func listMessages(db messageQuerier, chatID int64, userID int) ([]models.ChatMes
 		JOIN user u ON u.id = m.sender_id
 		LEFT JOIN profile p ON p.user_id = u.id
 		WHERE m.chat_id = ?
-		ORDER BY m.created_at ASC, m.id ASC
-	`, userID, chatID)
+		ORDER BY m.created_at DESC, m.id DESC
+	`
+	args := []any{userID, chatID}
+	if len(pagination) >= 2 {
+		query += ` LIMIT ? OFFSET ?`
+		args = append(args, pagination[0], pagination[1])
+	}
+
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -385,7 +392,16 @@ func listMessages(db messageQuerier, chatID int64, userID int) ([]models.ChatMes
 		}
 		messages = append(messages, message)
 	}
-	return messages, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Paginated chat history is fetched newest-first so SQLite can stop at the
+	// requested window. Reverse it before returning so the UI stays chronological.
+	for left, right := 0, len(messages)-1; left < right; left, right = left+1, right-1 {
+		messages[left], messages[right] = messages[right], messages[left]
+	}
+	return messages, nil
 }
 
 func insertMessage(tx *sql.Tx, chatID int64, userID int, content string) (models.ChatMessage, error) {

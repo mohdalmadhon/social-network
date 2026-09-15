@@ -8,7 +8,10 @@ import { getPosts } from '@/api/posts/posts.js'
 
 const posts = ref([])
 const isLoading = ref(true)
+const isLoadingMore = ref(false)
+const hasMorePosts = ref(false)
 const feedError = ref('')
+const FEED_PAGE_SIZE = 20
 
 const avatarColors = ['#3ee6b0', '#ff6b8a', '#7c5cff', '#ffb84d', '#4cc3ff']
 
@@ -52,17 +55,28 @@ function toCardPost(post, index = 0) {
   }
 }
 
-async function loadPosts() {
-  isLoading.value = true
+async function loadPosts({ append = false } = {}) {
+  if (append) {
+    if (isLoadingMore.value || !hasMorePosts.value) return
+    isLoadingMore.value = true
+  } else {
+    isLoading.value = true
+  }
   feedError.value = ''
 
   try {
-    const result = await getPosts()
-    posts.value = (result?.posts || []).map(toCardPost)
+    const result = await getPosts({
+      limit: FEED_PAGE_SIZE,
+      offset: append ? posts.value.length : 0,
+    })
+    const nextPosts = (result?.posts || []).map(toCardPost)
+    posts.value = append ? [...posts.value, ...nextPosts] : nextPosts
+    hasMorePosts.value = Boolean(result?.hasMore)
   } catch (error) {
     feedError.value = error.message || 'Could not load your feed.'
   } finally {
     isLoading.value = false
+    isLoadingMore.value = false
   }
 }
 
@@ -93,7 +107,15 @@ onMounted(loadPosts)
           No posts yet. Share something with your orbit.
         </p>
 
-        <PostCard v-for="post in posts" v-else :key="post.id" :post="post" />
+        <template v-else>
+          <PostCard v-for="post in posts" :key="post.id" :post="post" />
+
+          <div v-if="hasMorePosts" class="feed-pagination">
+            <button type="button" :disabled="isLoadingMore" @click="loadPosts({ append: true })">
+              {{ isLoadingMore ? 'Loading more posts...' : 'Load more posts' }}
+            </button>
+          </div>
+        </template>
       </div>
       <FeedSidebar />
     </div>
@@ -134,6 +156,35 @@ onMounted(loadPosts)
   color: white;
   cursor: pointer;
   font-weight: 700;
+}
+
+.feed-pagination {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-2) 0 var(--space-3);
+}
+
+.feed-pagination button {
+  min-height: var(--touch-target);
+  padding: 0 var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.feed-pagination button:hover:not(:disabled),
+.feed-pagination button:focus-visible {
+  border-color: var(--color-violet);
+  color: var(--color-text);
+}
+
+.feed-pagination button:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 @media (min-width: 48rem) {
