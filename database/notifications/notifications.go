@@ -68,13 +68,28 @@ func List(db *sql.DB, userID int, category string) ([]models.Notification, error
 	return result, rows.Err()
 }
 
-func UnreadCount(db *sql.DB, userID int) (int, error) {
-	var count int
-	err := db.QueryRow(`
+func UnreadCount(db *sql.DB, userID int, categories ...string) (int, error) {
+	category := ""
+	if len(categories) > 0 {
+		category = categories[0]
+	}
+	if category != "" && category != "all" && !IsCategory(category) {
+		return 0, ErrInvalidCategory
+	}
+
+	query := `
 		SELECT COUNT(*)
 		FROM notifications
 		WHERE user_id = ? AND is_read = 0
-	`, userID).Scan(&count)
+	`
+	args := []any{userID}
+	if category != "" && category != "all" {
+		query += ` AND category = ?`
+		args = append(args, category)
+	}
+
+	var count int
+	err := db.QueryRow(query, args...).Scan(&count)
 	return count, err
 }
 

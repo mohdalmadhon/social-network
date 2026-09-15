@@ -1,5 +1,5 @@
 import { onMounted, onUnmounted, ref } from 'vue'
-import { getPrivateChats } from '@/api/chats.js'
+import { getNotifications } from '@/api/notifications.js'
 
 const chatCount = ref(0)
 const error = ref('')
@@ -12,8 +12,8 @@ export async function refreshChats() {
   pending = true
 
   try {
-    const result = await getPrivateChats()
-    chatCount.value = (result?.chats || []).length
+    const result = await getNotifications('messages')
+    chatCount.value = result?.unreadCount || 0
     error.value = ''
   } catch (failure) {
     error.value = failure.message || 'Could not load chats.'

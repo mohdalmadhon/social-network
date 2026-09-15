@@ -50,7 +50,7 @@ func (app App) Notifications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	unreadCount, err := notifications.UnreadCount(app.DB, userID)
+	unreadCount, err := notifications.UnreadCount(app.DB, userID, category)
 	if err != nil {
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,

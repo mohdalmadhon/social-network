@@ -83,6 +83,29 @@ func TestMessageNotificationIsSupported(t *testing.T) {
 	}
 }
 
+func TestUnreadCountCanBeLimitedToMessages(t *testing.T) {
+	db := newNotificationTestDatabase(t)
+
+	_, err := db.Exec(`
+		INSERT INTO notifications (user_id, category, type, message, is_read)
+		VALUES
+			(1, 'messages', 'new_message', 'Unread chat', 0),
+			(1, 'groups', 'group_update', 'Unread group update', 0),
+			(1, 'messages', 'new_message', 'Read chat', 1)
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	count, err := UnreadCount(db, 1, "messages")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("message unread count = %d, expected 1", count)
+	}
+}
+
 func TestMessageNotificationsCanBeMarkedReadForOneChat(t *testing.T) {
 	db := newNotificationTestDatabase(t)
 

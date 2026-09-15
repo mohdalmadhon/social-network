@@ -34,7 +34,7 @@ const { chatCount } = useChatCount()
     </form>
 
     <nav class="top-actions" aria-label="Account shortcuts">
-      <a class="icon-link orbit-touch-target" href="/chats" aria-label="Messages" :title="`${chatCount} active chat${chatCount === 1 ? '' : 's'}`">
+      <a class="icon-link orbit-touch-target" href="/chats" aria-label="Messages" :title="`${chatCount} unread message${chatCount === 1 ? '' : 's'}`">
         <IconGlyph name="chat" :size="19" />
         <span v-if="chatCount" class="badge badge--message">{{ chatCount }}</span>
       </a>
