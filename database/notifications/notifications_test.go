@@ -83,6 +83,43 @@ func TestMessageNotificationIsSupported(t *testing.T) {
 	}
 }
 
+func TestMessageNotificationsCanBeMarkedReadForOneChat(t *testing.T) {
+	db := newNotificationTestDatabase(t)
+
+	_, err := db.Exec(`
+		INSERT INTO notifications (user_id, category, type, message, related_id, is_read)
+		VALUES
+			(1, 'messages', 'new_message', 'Chat one', 10, 0),
+			(1, 'messages', 'new_message', 'Chat two', 11, 0),
+			(1, 'groups', 'group_update', 'Keep this unread', 10, 0)
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := MarkMessageNotificationsRead(db, 1, 10); err != nil {
+		t.Fatal(err)
+	}
+
+	var read, otherChat, otherCategory int
+	err = db.QueryRow("SELECT is_read FROM notifications WHERE category = 'messages' AND related_id = 10").Scan(&read)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = db.QueryRow("SELECT is_read FROM notifications WHERE category = 'messages' AND related_id = 11").Scan(&otherChat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = db.QueryRow("SELECT is_read FROM notifications WHERE category = 'groups' AND related_id = 10").Scan(&otherCategory)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if read != 1 || otherChat != 0 || otherCategory != 0 {
+		t.Fatalf("read states = %d, %d, %d; wanted 1, 0, 0", read, otherChat, otherCategory)
+	}
+}
+
 func TestJoinRequestNotificationUsesSpecificRequest(t *testing.T) {
 	db := newNotificationTestDatabase(t)
 

@@ -96,6 +96,20 @@ func MarkAllRead(db *sql.DB, userID int) error {
 	return err
 }
 
+// MarkMessageNotificationsRead clears message alerts for one private chat.
+// Other notification categories and other conversations stay unread.
+func MarkMessageNotificationsRead(db *sql.DB, userID int, chatID int64) error {
+	_, err := db.Exec(`
+		UPDATE notifications
+		SET is_read = 1
+		WHERE user_id = ?
+		  AND category = 'messages'
+		  AND type = 'new_message'
+		  AND related_id = ?
+	`, userID, chatID)
+	return err
+}
+
 func GetByID(db *sql.DB, userID int, notificationID int64) (models.Notification, error) {
 	return scanNotification(
 		db.QueryRow(

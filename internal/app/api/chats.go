@@ -90,6 +90,9 @@ func (app App) PrivateChatMessages(w http.ResponseWriter, r *http.Request) {
 			writeChatError(w, listErr)
 			return
 		}
+		if readErr := notifications.MarkMessageNotificationsRead(app.DB, userID, chatID); readErr != nil {
+			log.Printf("mark private message notifications read: %v", readErr)
+		}
 		writeJSON(w, http.StatusOK, map[string]any{"status": true, "messages": messages})
 		return
 	}
