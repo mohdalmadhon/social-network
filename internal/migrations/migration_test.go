@@ -478,6 +478,84 @@ func TestAllUpMigrationsApplyToCleanDatabase(t *testing.T) {
 	assertColumn(t, db, "chats", "private_user_high_id", true)
 }
 
+func TestFollowerCounterMigrationIgnoresPendingRequests(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.SetMaxOpenConns(1)
+	defer db.Close()
+
+	runMigrationFile(t, db, "001_init_users.up.sql")
+	runMigrationFile(t, db, "002_init_posts.up.sql")
+	runMigrationFile(t, db, "003_init_chats.up.sql")
+	runMigrationFile(t, db, "004_create_triggers.up.sql")
+
+	_, err = db.Exec(`
+		INSERT INTO user (id, email, username, first_name, last_name, dob, password)
+		VALUES
+			(1, 'one@orbit.test', 'one', 'One', 'Orbit', '2000-01-01', 'password'),
+			(2, 'two@orbit.test', 'two', 'Two', 'Orbit', '2000-01-01', 'password'),
+			(3, 'three@orbit.test', 'three', 'Three', 'Orbit', '2000-01-01', 'password');
+
+		INSERT INTO user_followers (follower_id, target_id, status)
+		VALUES (2, 1, 0), (3, 1, 1), (1, 2, 1);
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runMigrationFile(t, db, "022_fix_follower_counts.up.sql")
+	assertProfileCounts(t, db, 1, 1, 1)
+	assertProfileCounts(t, db, 2, 1, 0)
+	assertProfileCounts(t, db, 3, 0, 1)
+
+	_, err = db.Exec(`
+		INSERT INTO user_followers (follower_id, target_id, status) VALUES (2, 3, 0);
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertProfileCounts(t, db, 2, 1, 0)
+	assertProfileCounts(t, db, 3, 0, 1)
+
+	_, err = db.Exec(`
+		UPDATE user_followers SET status = 1
+		WHERE follower_id = 2 AND target_id = 3;
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertProfileCounts(t, db, 2, 1, 1)
+	assertProfileCounts(t, db, 3, 1, 1)
+
+	_, err = db.Exec(`
+		DELETE FROM user_followers
+		WHERE follower_id = 2 AND target_id = 3;
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertProfileCounts(t, db, 2, 1, 0)
+	assertProfileCounts(t, db, 3, 0, 1)
+}
+
+func assertProfileCounts(t *testing.T, db *sql.DB, userID, followers, following int) {
+	t.Helper()
+	var actualFollowers, actualFollowing int
+	err := db.QueryRow(`
+		SELECT num_of_followers, num_of_following
+		FROM profile
+		WHERE user_id = ?
+	`, userID).Scan(&actualFollowers, &actualFollowing)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if actualFollowers != followers || actualFollowing != following {
+		t.Fatalf("user %d counts = followers:%d following:%d, want followers:%d following:%d", userID, actualFollowers, actualFollowing, followers, following)
+	}
+}
+
 func TestChatRoomMigrationPreservesAndDeduplicatesRooms(t *testing.T) {
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
