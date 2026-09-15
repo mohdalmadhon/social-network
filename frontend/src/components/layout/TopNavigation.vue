@@ -1,6 +1,7 @@
 <script setup>
 import OrbitLogo from './OrbitLogo.vue'
 import { useNotifications } from '@/helpers/useNotifications.js'
+import { useChatCount } from '@/helpers/useChats.js'
 import { logout } from '@/api/auth/auth.js'
 import { ref } from 'vue'
 import { router } from '@/router/router.js'
@@ -17,6 +18,7 @@ async function signOut() {
   try { await logout() } catch { logoutError.value = 'Could not log out. Please try again.' }
 }
 const { unreadCount: notificationUnreadCount } = useNotifications()
+const { chatCount } = useChatCount()
 </script>
 
 <template>
@@ -32,8 +34,9 @@ const { unreadCount: notificationUnreadCount } = useNotifications()
     </form>
 
     <nav class="top-actions" aria-label="Account shortcuts">
-      <a class="icon-link orbit-touch-target" href="/chats" aria-label="Messages">
+      <a class="icon-link orbit-touch-target" href="/chats" aria-label="Messages" :title="`${chatCount} active chat${chatCount === 1 ? '' : 's'}`">
         <IconGlyph name="chat" :size="19" />
+        <span v-if="chatCount" class="badge badge--message">{{ chatCount }}</span>
       </a>
       <a class="icon-link orbit-touch-target" href="/notifications" aria-label="Notifications">
         <IconGlyph name="bell" :size="19" />

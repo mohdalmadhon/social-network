@@ -2,6 +2,7 @@
 import { logout } from '@/api/auth/auth'
 import { addNotification } from '@/data/notifications'
 import { useNotifications } from '@/helpers/useNotifications.js'
+import { useChatCount } from '@/helpers/useChats.js'
 import { getGroups } from '@/api/groups/Groups'
 import { onMounted, ref } from 'vue'
 import IconGlyph from './IconGlyph.vue'
@@ -33,6 +34,7 @@ const links = [
 ]
 
 const { unreadCount: notificationUnreadCount } = useNotifications()
+const { chatCount } = useChatCount()
 
 async function logoutHandler() {
     try {
@@ -54,11 +56,11 @@ async function logoutHandler() {
         <span class="navigation-link__icon"><IconGlyph :name="link.icon" :size="18" /></span>
         <span class="navigation-link__label">{{ link.label }}</span>
         <span
-          v-if="link.name === 'notifications' ? notificationUnreadCount : link.badge"
+          v-if="link.name === 'notifications' ? notificationUnreadCount : link.name === 'chats' ? chatCount : link.badge"
           class="navigation-link__badge"
           :class="`navigation-link__badge--${link.badgeType}`"
         >
-          {{ link.name === 'notifications' ? notificationUnreadCount : link.badge }}
+          {{ link.name === 'notifications' ? notificationUnreadCount : link.name === 'chats' ? chatCount : link.badge }}
         </span>
       </a>
     </nav>
