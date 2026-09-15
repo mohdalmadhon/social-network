@@ -3,16 +3,95 @@ import OrbitLogo from './OrbitLogo.vue'
 import { useNotifications } from '@/helpers/useNotifications.js'
 import { useChatCount } from '@/helpers/useChats.js'
 import { logout } from '@/api/auth/auth.js'
-import { ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { router } from '@/router/router.js'
 import IconGlyph from './IconGlyph.vue'
+import { getSearchResults } from '@/api/search.js'
 const logoutError = ref('')
 const searchText = ref('')
+const suggestions = ref({ users: [], groups: [], posts: [] })
+const searchOpen = ref(false)
+const searchLoading = ref(false)
+let suggestionTimer
+let suggestionRequestID = 0
 
-function submitSearch() {
-  const search = searchText.value.trim()
+const hasSuggestions = computed(() =>
+  suggestions.value.users.length > 0 ||
+  suggestions.value.groups.length > 0 ||
+  suggestions.value.posts.length > 0,
+)
+
+function navigateToSearch(value) {
+  const search = value.trim()
   router.push(search ? { path: '/search', query: { q: search } } : '/search')
 }
+
+function avatarUrl(path) {
+  if (!path) return ''
+  return path.startsWith('/') ? path : `/uploads/${path}`
+}
+
+function clearSuggestions() {
+  suggestions.value = { users: [], groups: [], posts: [] }
+  searchOpen.value = false
+  searchLoading.value = false
+}
+
+function scheduleSuggestions(value) {
+  clearTimeout(suggestionTimer)
+  const search = value.trim()
+  suggestionRequestID += 1
+
+  if (!search) {
+    clearSuggestions()
+    return
+  }
+
+  searchOpen.value = true
+  suggestionTimer = setTimeout(async () => {
+    const requestID = suggestionRequestID
+    searchLoading.value = true
+    try {
+      const result = await getSearchResults(search)
+      if (requestID !== suggestionRequestID) return
+      suggestions.value = {
+        users: (result?.users || []).slice(0, 5),
+        groups: (result?.groups || []).slice(0, 3),
+        posts: (result?.posts || []).slice(0, 3),
+      }
+    } catch {
+      if (requestID === suggestionRequestID) suggestions.value = { users: [], groups: [], posts: [] }
+    } finally {
+      if (requestID === suggestionRequestID) searchLoading.value = false
+    }
+  }, 350)
+}
+
+function submitSearch() {
+  clearTimeout(suggestionTimer)
+  clearSuggestions()
+  navigateToSearch(searchText.value)
+}
+
+function openSuggestion(type, item) {
+  clearTimeout(suggestionTimer)
+  clearSuggestions()
+
+  if (type === 'users') {
+    router.push(`/user?id=${item.id}`)
+    return
+  }
+
+  if (type === 'groups') {
+    router.push(`/groups/${item.id}`)
+    return
+  }
+
+  router.push({ path: '/search', query: { q: searchText.value.trim(), type: 'posts' } })
+}
+
+watch(searchText, scheduleSuggestions)
+onBeforeUnmount(() => clearTimeout(suggestionTimer))
 
 async function signOut() {
   try { await logout() } catch { logoutError.value = 'Could not log out. Please try again.' }
@@ -28,10 +107,48 @@ const { chatCount } = useChatCount()
       <span>orbit</span>
     </a>
 
-    <form class="search" role="search" @submit.prevent="submitSearch">
-      <IconGlyph name="search" :size="16" />
-      <input v-model="searchText" type="search" placeholder="Search people, groups, posts…" aria-label="Search" />
-    </form>
+    <div class="search-shell">
+      <form class="search" role="search" @submit.prevent="submitSearch">
+        <IconGlyph name="search" :size="16" />
+        <input v-model="searchText" autocomplete="off" type="search" placeholder="Search people, groups, posts…" aria-label="Search" @focus="searchOpen = Boolean(searchText.trim())" />
+      </form>
+
+      <div v-if="searchOpen && searchText.trim()" class="search-suggestions" role="dialog" aria-label="Search suggestions">
+        <p v-if="searchLoading" class="search-suggestions__state">Looking around your orbit…</p>
+
+        <template v-else-if="hasSuggestions">
+          <section v-if="suggestions.users.length" class="search-suggestions__section">
+            <p class="search-suggestions__label">People</p>
+            <button v-for="user in suggestions.users" :key="`user-${user.id}`" type="button" class="search-suggestion" @click="openSuggestion('users', user)">
+              <span class="search-suggestion__avatar">
+                <img v-if="avatarUrl(user.avatarPath)" :src="avatarUrl(user.avatarPath)" :alt="`${user.firstName} ${user.lastName}`" />
+                <span v-else>{{ `${user.firstName || ''}${user.lastName || ''}`.trim().slice(0, 2).toUpperCase() || '?' }}</span>
+              </span>
+              <span class="search-suggestion__copy"><strong>{{ user.firstName }} {{ user.lastName }}</strong><small>@{{ user.username || 'orbit member' }}</small></span>
+            </button>
+          </section>
+
+          <section v-if="suggestions.groups.length" class="search-suggestions__section">
+            <p class="search-suggestions__label">Groups</p>
+            <button v-for="group in suggestions.groups" :key="`group-${group.id}`" type="button" class="search-suggestion" @click="openSuggestion('groups', group)">
+              <span class="search-suggestion__icon"><IconGlyph name="groups" :size="17" /></span>
+              <span class="search-suggestion__copy"><strong>{{ group.title }}</strong><small>{{ group.memberCount }} members</small></span>
+            </button>
+          </section>
+
+          <section v-if="suggestions.posts.length" class="search-suggestions__section">
+            <p class="search-suggestions__label">Posts</p>
+            <button v-for="post in suggestions.posts" :key="`post-${post.id}`" type="button" class="search-suggestion" @click="openSuggestion('posts', post)">
+              <span class="search-suggestion__icon"><IconGlyph name="image" :size="17" /></span>
+              <span class="search-suggestion__copy"><strong>{{ post.author }}</strong><small>{{ post.content }}</small></span>
+            </button>
+          </section>
+        </template>
+
+        <p v-else class="search-suggestions__state">No matches yet.</p>
+        <button v-if="!searchLoading" type="button" class="search-suggestions__all" @click="submitSearch">See all results for “{{ searchText.trim() }}”</button>
+      </div>
+    </div>
 
     <nav class="top-actions" aria-label="Account shortcuts">
       <a class="icon-link orbit-touch-target" href="/chats" aria-label="Messages" :title="`${chatCount} unread message${chatCount === 1 ? '' : 's'}`">
@@ -90,6 +207,47 @@ const { chatCount } = useChatCount()
   border-radius: 999px;
   color: var(--color-text-faint);
 }
+
+.search-shell {
+  display: none;
+  position: relative;
+  width: min(100%, 28.5rem);
+}
+
+.search-shell .search {
+  width: 100%;
+}
+
+.search-suggestions {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  left: 0;
+  z-index: 30;
+  display: grid;
+  gap: var(--space-2);
+  max-height: min(32rem, calc(100vh - 6rem));
+  overflow-y: auto;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: rgb(20 24 43 / 98%);
+  box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 28%);
+}
+
+.search-suggestions__section { display: grid; gap: .2rem; }
+.search-suggestions__label { margin: var(--space-2) var(--space-2) .2rem; color: var(--color-text-faint); font-family: var(--font-meta); font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; }
+.search-suggestions__state { margin: 0; padding: var(--space-4); color: var(--color-text-muted); text-align: center; }
+.search-suggestion { display: grid; width: 100%; grid-template-columns: 2.25rem minmax(0, 1fr); align-items: center; gap: var(--space-3); padding: var(--space-2); border: 0; border-radius: var(--radius-small); background: transparent; color: var(--color-text); cursor: pointer; text-align: left; }
+.search-suggestion:hover, .search-suggestion:focus-visible { background: var(--color-surface-teal); }
+.search-suggestion__avatar, .search-suggestion__icon { display: grid; width: 2.25rem; height: 2.25rem; aspect-ratio: 1; place-items: center; overflow: hidden; border-radius: 50%; background: var(--gradient-action); color: white; font-size: .72rem; font-weight: 700; }
+.search-suggestion__avatar img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.search-suggestion__icon { background: rgb(62 230 176 / 14%); color: var(--color-mint); }
+.search-suggestion__copy { display: grid; min-width: 0; gap: .1rem; }
+.search-suggestion__copy strong, .search-suggestion__copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-suggestion__copy small { color: var(--color-text-muted); font-size: .75rem; }
+.search-suggestions__all { min-height: var(--touch-target); margin-top: var(--space-1); border: 1px solid var(--color-border); border-radius: 999px; background: transparent; color: var(--color-violet-soft); cursor: pointer; font: inherit; font-size: .8125rem; font-weight: 700; }
+.search-suggestions__all:hover, .search-suggestions__all:focus-visible { border-color: var(--color-violet); color: var(--color-text); }
 
 .top-actions {
   display: flex;
@@ -163,7 +321,12 @@ const { chatCount } = useChatCount()
     padding-inline: var(--space-5);
   }
 
-  .search {
+  .search-shell {
+    display: flex;
+    justify-self: center;
+  }
+
+  .search-shell .search {
     display: flex;
   }
 

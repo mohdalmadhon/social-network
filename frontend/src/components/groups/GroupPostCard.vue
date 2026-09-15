@@ -211,10 +211,14 @@ async function removeComment(comment) {
 
 .group-post-card__header > img,
 .group-post-card__avatar {
+  aspect-ratio: 1;
   width: var(--touch-target);
   height: var(--touch-target);
+  flex: 0 0 var(--touch-target);
+  overflow: hidden;
   border-radius: 50%;
   object-fit: cover;
+  object-position: center;
 }
 
 .group-post-card__avatar,
@@ -326,10 +330,14 @@ async function removeComment(comment) {
 
 .group-comment > img,
 .group-comment__avatar {
+  aspect-ratio: 1;
   width: 2.25rem;
   height: 2.25rem;
+  flex: 0 0 2.25rem;
+  overflow: hidden;
   border-radius: 50%;
   object-fit: cover;
+  object-position: center;
 }
 
 .group-comment strong,

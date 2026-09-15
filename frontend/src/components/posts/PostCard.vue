@@ -215,12 +215,16 @@ function initials(author) {
 
 .post-card__avatar {
   display: grid;
+  flex: 0 0 var(--touch-target);
   width: var(--touch-target);
   height: var(--touch-target);
   place-items: center;
+  aspect-ratio: 1;
+  overflow: hidden;
   border-radius: 50%;
   color: #0b0d17;
   font-weight: 700;
+  background: var(--color-input);
 }
 
 .post-card__avatar img {
@@ -228,6 +232,7 @@ function initials(author) {
   height: 100%;
   border-radius: inherit;
   object-fit: cover;
+  object-position: center;
 }
 
 .post-card__author {

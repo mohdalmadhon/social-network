@@ -45,8 +45,11 @@ function initials(author) {
   display: grid;
   width: 2.25rem;
   height: 2.25rem;
+  aspect-ratio: 1;
   place-items: center;
+  overflow: hidden;
   border-radius: 50%;
+  background: var(--color-input);
   color: var(--color-text);
   font-size: 0.8125rem;
   font-weight: 700;
@@ -57,6 +60,7 @@ function initials(author) {
   height: 100%;
   border-radius: inherit;
   object-fit: cover;
+  object-position: center;
 }
 
 .comment-preview__body {

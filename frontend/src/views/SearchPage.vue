@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout.vue'
 import IconGlyph from '@/components/layout/IconGlyph.vue'
@@ -8,14 +8,24 @@ import { requestFollow } from '@/api/users/profiles.js'
 
 const route = useRoute()
 const router = useRouter()
+const SEARCH_TABS = [
+  { id: 'all', label: 'All' },
+  { id: 'users', label: 'People' },
+  { id: 'groups', label: 'Groups' },
+  { id: 'posts', label: 'Posts' },
+]
 const query = ref(typeof route.query.q === 'string' ? route.query.q : '')
 const results = ref({ users: [], groups: [], posts: [] })
 const isLoading = ref(false)
 const error = ref('')
-const activeTab = ref('all')
+const initialTab = typeof route.query.type === 'string' && SEARCH_TABS.some((tab) => tab.id === route.query.type)
+  ? route.query.type
+  : 'all'
+const activeTab = ref(initialTab)
 const busyUsers = ref(new Set())
-
-const hasResults = computed(() => results.value.users.length || results.value.groups.length || results.value.posts.length)
+const SEARCH_DEBOUNCE_MS = 350
+let searchTimer
+let searchRequestID = 0
 
 const visibleSections = computed(() => {
   const sections = [
@@ -27,6 +37,8 @@ const visibleSections = computed(() => {
   if (activeTab.value === 'all') return sections.filter((section) => section.items.length)
   return sections.filter((section) => section.id === activeTab.value && section.items.length)
 })
+
+const hasVisibleResults = computed(() => visibleSections.value.length > 0)
 
 const counts = computed(() => ({
   all: results.value.users.length + results.value.groups.length + results.value.posts.length,
@@ -51,32 +63,55 @@ function formatTime(value) {
 
 async function performSearch() {
   const cleanQuery = query.value.trim()
+  const requestID = ++searchRequestID
   error.value = ''
-  activeTab.value = 'all'
-
   if (!cleanQuery) {
     results.value = { users: [], groups: [], posts: [] }
+    isLoading.value = false
     return
   }
 
   isLoading.value = true
   try {
     const result = await getSearchResults(cleanQuery)
+    if (requestID !== searchRequestID) return
     results.value = {
       users: result?.users || [],
       groups: result?.groups || [],
       posts: result?.posts || [],
     }
   } catch (searchError) {
+    if (requestID !== searchRequestID) return
     error.value = searchError.message || 'Could not search Orbit.'
   } finally {
-    isLoading.value = false
+    if (requestID === searchRequestID) isLoading.value = false
   }
 }
 
+function updateSearchRoute(cleanQuery) {
+  const nextQuery = {}
+  if (cleanQuery) nextQuery.q = cleanQuery
+  if (cleanQuery && activeTab.value !== 'all') nextQuery.type = activeTab.value
+  router.replace({ path: '/search', query: nextQuery })
+}
+
+function scheduleSearch({ updateRoute = true } = {}) {
+  clearTimeout(searchTimer)
+  const cleanQuery = query.value.trim()
+  if (updateRoute) updateSearchRoute(cleanQuery)
+
+  searchTimer = setTimeout(() => performSearch(), SEARCH_DEBOUNCE_MS)
+}
+
 function submitSearch() {
-  router.push({ path: '/search', query: query.value.trim() ? { q: query.value.trim() } : {} })
+  clearTimeout(searchTimer)
+  updateSearchRoute(query.value.trim())
   performSearch()
+}
+
+function selectTab(tabID) {
+  activeTab.value = tabID
+  updateSearchRoute(query.value.trim())
 }
 
 function openUser(userID) {
@@ -104,12 +139,20 @@ async function toggleFollow(user) {
   }
 }
 
-watch(() => route.query.q, (value) => {
-  query.value = typeof value === 'string' ? value : ''
-  performSearch()
+watch(query, () => scheduleSearch())
+
+watch(() => [route.query.q, route.query.type], ([value, type]) => {
+  const nextQuery = typeof value === 'string' ? value : ''
+  const nextTab = SEARCH_TABS.some((tab) => tab.id === type) ? type : 'all'
+  if (query.value !== nextQuery) {
+    query.value = nextQuery
+    scheduleSearch({ updateRoute: false })
+  }
+  if (activeTab.value !== nextTab) activeTab.value = nextTab
 })
 
 onMounted(performSearch)
+onBeforeUnmount(() => clearTimeout(searchTimer))
 </script>
 
 <template>
@@ -130,19 +173,14 @@ onMounted(performSearch)
       </header>
 
       <nav v-if="query.trim()" class="search-tabs" aria-label="Search result types">
-        <button v-for="tab in [
-          { id: 'all', label: 'All' },
-          { id: 'users', label: 'People' },
-          { id: 'groups', label: 'Groups' },
-          { id: 'posts', label: 'Posts' },
-        ]" :key="tab.id" type="button" :class="{ 'search-tab--active': activeTab === tab.id }" @click="activeTab = tab.id">
+        <button v-for="tab in SEARCH_TABS" :key="tab.id" type="button" :class="{ 'search-tab--active': activeTab === tab.id }" @click="selectTab(tab.id)">
           {{ tab.label }} <span>{{ counts[tab.id] }}</span>
         </button>
       </nav>
 
       <p v-if="isLoading" class="search-state orbit-surface">Searching your orbit…</p>
       <p v-else-if="error" class="search-state search-state--error orbit-surface">{{ error }}</p>
-      <p v-else-if="query.trim() && !hasResults" class="search-state orbit-surface">No matches yet. Try a different name or phrase.</p>
+      <p v-else-if="query.trim() && !hasVisibleResults" class="search-state orbit-surface">No {{ SEARCH_TABS.find((tab) => tab.id === activeTab)?.label.toLowerCase() || 'matching' }} found. Try another filter or phrase.</p>
       <p v-else-if="!query.trim()" class="search-state search-state--empty orbit-surface">Start with a name, group, or post phrase.</p>
 
       <div v-else class="search-results">
@@ -228,8 +266,8 @@ onMounted(performSearch)
 .search-user-card__identity > span:last-child { min-width: 0; display: grid; gap: .2rem; }
 .search-user-card strong, .search-post-card strong, .search-result-card strong { color: var(--color-text); }
 .search-user-card small, .search-post-card small, .search-result-card small { color: var(--color-text-muted); font-size: .75rem; }
-.search-avatar { display: grid; flex: 0 0 2.75rem; width: 2.75rem; height: 2.75rem; place-items: center; overflow: hidden; border-radius: 50%; background: var(--gradient-action); color: white; font-weight: 700; }
-.search-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.search-avatar { display: grid; flex: 0 0 2.75rem; width: 2.75rem; height: 2.75rem; aspect-ratio: 1; place-items: center; overflow: hidden; border-radius: 50%; background: var(--gradient-action); color: white; font-weight: 700; }
+.search-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
 .search-avatar--small { width: 2.25rem; height: 2.25rem; flex-basis: 2.25rem; font-size: .75rem; }
 .search-follow-button:disabled { opacity: .6; cursor: wait; }
 .search-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--space-3); }
