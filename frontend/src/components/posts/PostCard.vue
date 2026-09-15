@@ -4,6 +4,7 @@ import CommentInput from '@/components/comments/CommentInput.vue'
 import CommentPreview from '@/components/comments/CommentPreview.vue'
 import IconGlyph from '@/components/layout/IconGlyph.vue'
 import { createComment, getComments } from '@/api/posts/comments.js'
+import { setPostLike } from '@/api/posts/posts.js'
 
 const props = defineProps({
   post: {
@@ -19,6 +20,10 @@ const isLoadingComments = ref(false)
 const areCommentsOpen = ref(false)
 const commentsLoaded = ref(false)
 const isSubmittingComment = ref(false)
+const isLiked = ref(Boolean(props.post.liked))
+const likeCount = ref(Number(props.post.likes) || 0)
+const isLikePending = ref(false)
+const likeError = ref('')
 
 const commentCount = computed(() => Math.max(props.post.comments, comments.value.length))
 
@@ -64,6 +69,28 @@ async function addComment(comment) {
     commentsError.value = error.message || 'Could not create comment.'
   } finally {
     isSubmittingComment.value = false
+  }
+}
+
+async function toggleLike() {
+  if (isLikePending.value) return
+
+  const nextLiked = !isLiked.value
+  isLikePending.value = true
+  likeError.value = ''
+
+  try {
+    const result = await setPostLike(props.post.id, nextLiked)
+    if (!result?.status) {
+      throw new Error('Could not update the like')
+    }
+
+    isLiked.value = Boolean(result.liked)
+    likeCount.value = Number(result.likeCount) || 0
+  } catch (error) {
+    likeError.value = error.message || 'Could not update the like.'
+  } finally {
+    isLikePending.value = false
   }
 }
 
@@ -114,14 +141,18 @@ function initials(author) {
     </div>
 
     <footer class="post-card__actions">
-      <span
+      <button
         class="post-action"
+        :class="{ 'post-action--liked': isLiked }"
+        type="button"
+        :aria-pressed="isLiked"
+        :aria-label="isLiked ? 'Unlike this post' : 'Like this post'"
+        :disabled="isLikePending"
+        @click="toggleLike"
       >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z" />
-        </svg>
-        <span>{{ post.likes }} likes</span>
-      </span>
+        <IconGlyph name="heart" :size="21" />
+        <span>{{ likeCount }} likes</span>
+      </button>
 
       <button
         class="post-action post-action--comments"
@@ -135,6 +166,8 @@ function initials(author) {
         <span class="post-action__hint">{{ areCommentsOpen ? 'Hide' : 'View' }}</span>
       </button>
     </footer>
+
+    <p v-if="likeError" class="post-action-error" role="alert">{{ likeError }}</p>
 
     <section v-if="areCommentsOpen" :id="`comments-${post.id}`" class="comments-panel" aria-label="Comments">
       <header class="comments-panel__header">
@@ -430,7 +463,7 @@ function initials(author) {
   font-size: 0.875rem;
 }
 
-.post-action svg {
+.post-action :deep(.icon-glyph) {
   width: 1.35rem;
   fill: none;
   stroke: currentColor;
@@ -443,8 +476,19 @@ function initials(author) {
   color: var(--color-coral);
 }
 
-.post-action--liked svg {
+.post-action--liked :deep(.icon-glyph) {
   fill: currentColor;
+}
+
+.post-action:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.post-action-error {
+  margin: var(--space-2) 0 0;
+  color: var(--color-coral);
+  font-size: 0.8125rem;
 }
 
 @media (min-width: 48rem) {

@@ -120,6 +120,13 @@ func ListFeedPosts(db *sql.DB, viewerID int) ([]models.Post, error) {
 			posts.privacy,
 			posts.created_at,
 			posts.like_count,
+			EXISTS (
+				SELECT 1
+				FROM post_reactions AS viewer_reactions
+				WHERE viewer_reactions.post_id = posts.id
+				AND viewer_reactions.user_id = ?
+				AND viewer_reactions.value = 1
+			) AS liked,
 			posts.comment_count
 		FROM posts
 		JOIN user AS users ON users.id = posts.user_id
@@ -149,7 +156,7 @@ func ListFeedPosts(db *sql.DB, viewerID int) ([]models.Post, error) {
 			)
 		)
 		ORDER BY posts.created_at DESC, posts.id DESC
-	`, viewerID, viewerID, viewerID)
+	`, viewerID, viewerID, viewerID, viewerID, viewerID)
 	if err != nil {
 		return nil, err
 	}
@@ -168,6 +175,7 @@ func ListFeedPosts(db *sql.DB, viewerID int) ([]models.Post, error) {
 			&post.Privacy,
 			&post.CreatedAt,
 			&post.LikeCount,
+			&post.Liked,
 			&post.CommentCount,
 		)
 		if err != nil {

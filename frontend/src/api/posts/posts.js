@@ -41,3 +41,22 @@ export async function getPosts() {
 
     return result
 }
+
+export async function setPostLike(postId, liked) {
+    const response = await fetch(`/api/posts/${postId}/like`, {
+        method: liked ? 'PUT' : 'DELETE',
+        credentials: 'include',
+    })
+
+    if (!checkSessionResponse(response)) {
+        router.replace('/login')
+        return
+    }
+
+    const result = await response.json()
+    if (!response.ok) {
+        throw new Error(result.message || 'Could not update the like')
+    }
+
+    return result
+}

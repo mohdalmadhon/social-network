@@ -44,6 +44,7 @@ function toCardPost(post, index = 0) {
     privacy: privacyLabel(post.privacy),
     content: post.content,
     likes: post.likeCount || 0,
+    liked: Boolean(post.liked),
     comments: post.commentCount || 0,
     imagePath: post.imagePath || '',
     hasMedia: false,
