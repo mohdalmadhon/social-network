@@ -35,7 +35,7 @@ func (app *App) Search(w http.ResponseWriter, r *http.Request) {
 
 	pattern := "%" + query + "%"
 	excludeGroupID, _ := strconv.Atoi(r.URL.Query().Get("excludeGroupId"))
-	users, err := searchUsers(app.DB, userID, pattern, excludeGroupID)
+	users, err := searchUsers(app.DB, userID, query, excludeGroupID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"status": false, "message": "could not search people"})
 		return
@@ -62,7 +62,7 @@ func (app *App) Search(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func searchUsers(db *sql.DB, currentUserID int, pattern string, excludeGroupID int) ([]map[string]any, error) {
+func searchUsers(db *sql.DB, currentUserID int, query string, excludeGroupID int) ([]map[string]any, error) {
 	groupFilter := ""
 	args := []any{currentUserID, currentUserID}
 	if excludeGroupID > 0 {
@@ -73,7 +73,10 @@ func searchUsers(db *sql.DB, currentUserID int, pattern string, excludeGroupID i
 		  )`
 		args = append(args, excludeGroupID)
 	}
-	args = append(args, pattern, pattern, pattern, pattern)
+	// People search is prefix-based, so typing "o" starts with accounts whose
+	// username or display name starts with "o" instead of unrelated contains matches.
+	prefixPattern := query + "%"
+	args = append(args, prefixPattern, prefixPattern, prefixPattern, prefixPattern)
 
 	rows, err := db.Query(`
 		SELECT
