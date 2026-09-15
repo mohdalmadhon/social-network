@@ -62,6 +62,27 @@ func TestNotificationRejectsInvalidCategory(t *testing.T) {
 	}
 }
 
+func TestMessageNotificationIsSupported(t *testing.T) {
+	db := newNotificationTestDatabase(t)
+
+	created, err := Create(db, 1, models.CreateNotificationRequest{
+		Category: "messages",
+		Type:     "new_message",
+		Message:  "A new message is waiting",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	items, err := List(db, 1, "messages")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].ID != created.ID || items[0].Category != "messages" {
+		t.Fatalf("unexpected message notification list: %+v", items)
+	}
+}
+
 func TestJoinRequestNotificationUsesSpecificRequest(t *testing.T) {
 	db := newNotificationTestDatabase(t)
 

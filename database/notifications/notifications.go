@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var ErrInvalidCategory = errors.New("notification category must be requests, groups, or events")
+var ErrInvalidCategory = errors.New("notification category must be requests, groups, events, or messages")
 
 func Create(db *sql.DB, userID int, request models.CreateNotificationRequest) (models.Notification, error) {
 	if userID <= 0 || !IsCategory(request.Category) {
@@ -109,6 +109,8 @@ func GetByID(db *sql.DB, userID int, notificationID int64) (models.Notification,
 func IsCategory(category string) bool {
 	switch category {
 	case "requests", "groups", "events":
+		return true
+	case "messages":
 		return true
 	default:
 		return false

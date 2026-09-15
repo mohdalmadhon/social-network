@@ -15,6 +15,7 @@ const filters = [
   { id: 'requests', label: 'Requests' },
   { id: 'groups', label: 'Groups' },
   { id: 'events', label: 'Events' },
+  { id: 'messages', label: 'Messages' },
 ]
 
 const notificationItems = ref([])
@@ -54,6 +55,7 @@ function notificationForDisplay(notification) {
     requests: { icon: 'profile', color: '#7c5cff' },
     groups: { icon: 'groups', color: '#3ee6b0' },
     events: { icon: 'calendar', color: '#ffb84d' },
+    messages: { icon: 'chat', color: '#55b7ff' },
   }
 
   const style =

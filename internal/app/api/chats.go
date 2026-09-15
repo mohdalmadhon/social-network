@@ -6,8 +6,11 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	chatsdb "social/database/chats"
+	"social/database/notifications"
+	"social/internal/models"
 )
 
 type chatMessageInput struct {
@@ -100,7 +103,43 @@ func (app App) PrivateChatMessages(w http.ResponseWriter, r *http.Request) {
 		writeChatError(w, err)
 		return
 	}
+	app.notifyPrivateMessage(chatID, userID, message)
 	writeJSON(w, http.StatusCreated, map[string]any{"status": true, "message": message})
+}
+
+func (app App) notifyPrivateMessage(chatID int64, senderID int, message models.ChatMessage) {
+	var recipientID int
+	err := app.DB.QueryRow(`
+		SELECT CASE
+			WHEN private_user_low_id = ? THEN private_user_high_id
+			ELSE private_user_low_id
+		END
+		FROM chats
+		WHERE id = ? AND type = 'private'
+	`, senderID, chatID).Scan(&recipientID)
+	if err != nil || recipientID <= 0 || recipientID == senderID {
+		if err != nil {
+			log.Printf("find private message recipient: %v", err)
+		}
+		return
+	}
+
+	senderName := strings.TrimSpace(strings.TrimSpace(message.FirstName) + " " + strings.TrimSpace(message.LastName))
+	if senderName == "" {
+		senderName = "Someone"
+	}
+	actorID := senderID
+	relatedID := chatID
+	if _, err = notifications.Create(app.DB, recipientID, models.CreateNotificationRequest{
+		ActorID:   &actorID,
+		Category:  "messages",
+		Type:      "new_message",
+		Message:   senderName + " sent you a message",
+		RelatedID: &relatedID,
+	}); err != nil {
+		// A notification failure should not make a successfully sent message look failed.
+		log.Printf("create private message notification: %v", err)
+	}
 }
 
 func (app App) GroupChatMessages(w http.ResponseWriter, r *http.Request) {
