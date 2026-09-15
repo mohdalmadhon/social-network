@@ -2,7 +2,13 @@
 import { ref, onMounted } from 'vue'
 import { router } from '@/router/router.js'
 import { useRoute } from 'vue-router'
-import { getGroup, deleteGroupApi, getGroupPosts } from '@/api/groups/Groups.js'
+import {
+    getGroup,
+    deleteGroupApi,
+    getGroupPosts,
+    groupJoinRequest,
+    undoJoinGroup,
+} from '@/api/groups/Groups.js'
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout.vue'
 import GroupActivity from '@/components/groups/GroupActivity.vue'
 import GroupPostCard from '@/components/groups/GroupPostCard.vue'
@@ -19,6 +25,8 @@ const loading = ref(true)
 const error = ref(null)
 const isDeletingGroup = ref(false)
 const deleteError = ref('')
+const isJoinPending = ref(false)
+const joinError = ref('')
 
 onMounted(async () => {
     try {
@@ -63,6 +71,29 @@ function addGroupPost(post) {
 function removeGroupPost(postId) {
     groupPosts.value = groupPosts.value.filter((post) => post.id !== postId)
 }
+
+async function toggleJoinRequest() {
+    if (!group.value || group.value.isMember || isJoinPending.value) return
+
+    isJoinPending.value = true
+    joinError.value = ''
+
+    try {
+        const result = group.value.isRequested
+            ? await undoJoinGroup(groupId)
+            : await groupJoinRequest(groupId)
+
+        if (!result?.status) {
+            throw new Error('Could not update your join request.')
+        }
+
+        group.value.isRequested = !group.value.isRequested
+    } catch (err) {
+        joinError.value = err.message || 'Could not update your join request.'
+    } finally {
+        isJoinPending.value = false
+    }
+}
 </script>
 
 <template>
@@ -80,28 +111,76 @@ function removeGroupPost(postId) {
 
             <template v-else-if="group">
                 <header class="group-header orbit-surface">
-                    <div class="group-header__copy">
-                        <p class="orbit-meta">Community</p>
-                        <h1>{{ group.title }}</h1>
-                        <p>{{ group.description }}</p>
+                    <div class="group-header__art" aria-hidden="true">
+                        <span class="group-header__art-orbit group-header__art-orbit--outer"></span>
+                        <span class="group-header__art-orbit group-header__art-orbit--inner"></span>
+                        <span class="group-header__art-star"></span>
+                        <span class="group-header__art-label">ORBIT / COMMUNITY</span>
                     </div>
 
-                    <button v-if="group.isCreator" class="group-header__delete" :disabled="isDeletingGroup" @click="deleteGroup">
-                        {{ isDeletingGroup ? 'Deleting...' : 'Delete group' }}
-                    </button>
-                    <p v-if="deleteError" class="group-header__error" role="alert">{{ deleteError }}</p>
+                    <div class="group-header__copy">
+                        <p class="orbit-meta">A place to gather</p>
+                        <div class="group-header__title-row">
+                            <h1>{{ group.title }}</h1>
+                            <span class="group-header__badge">Community</span>
+                        </div>
+                        <p>{{ group.description }}</p>
+                        <div class="group-header__signals">
+                            <span>
+                                <IconGlyph name="groups" :size="17" />
+                                {{ group.memberCount }} {{ group.memberCount === 1 ? 'member' : 'members' }}
+                            </span>
+                            <span>
+                                <span class="group-header__signal-dot"></span>
+                                Shared space for thoughtful conversations
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="group-header__aside">
+                        <button
+                            v-if="!group.isMember"
+                            class="group-header__join"
+                            type="button"
+                            :disabled="isJoinPending"
+                            @click="toggleJoinRequest"
+                        >
+                            <span>{{ isJoinPending ? 'Updating...' : group.isRequested ? 'Request sent' : 'Request to join' }}</span>
+                            <IconGlyph :name="group.isRequested ? 'check' : 'arrowRight'" :size="17" />
+                        </button>
+
+                        <p v-if="group.isMember" class="group-header__member-state">
+                            <IconGlyph name="check" :size="17" />
+                            You are part of this orbit
+                        </p>
+
+                        <button v-if="group.isCreator" class="group-header__delete" :disabled="isDeletingGroup" @click="deleteGroup">
+                            {{ isDeletingGroup ? 'Deleting...' : 'Delete group' }}
+                        </button>
+                    </div>
+                    <p v-if="joinError || deleteError" class="group-header__error" role="alert">{{ joinError || deleteError }}</p>
                 </header>
 
                 <section class="group-membership" aria-label="Group membership">
                     <div>
                         <IconGlyph name="groups" :size="19" />
-                        <strong>{{ group.memberCount }}</strong>
-                        <span>{{ group.memberCount === 1 ? 'member' : 'members' }}</span>
+                        <span>People who make this space what it is</span>
                     </div>
-                    <p v-if="group.isMember" class="group-membership__status">
-                        <IconGlyph name="check" :size="16" />
-                        Member
-                    </p>
+                    <span class="group-membership__count">{{ group.memberCount }} total</span>
+                </section>
+
+                <section v-if="!group.isMember" class="group-welcome orbit-surface" aria-labelledby="group-welcome-title">
+                    <div>
+                        <p class="orbit-meta">Before you join</p>
+                        <h2 id="group-welcome-title">Bring your perspective into the circle.</h2>
+                        <p>
+                            This is a member-led space. Read the description, get a feel for the conversation, and request access when it feels like your kind of orbit.
+                        </p>
+                    </div>
+                    <div class="group-welcome__details">
+                        <span><IconGlyph name="lock" :size="17" /> Membership is approved</span>
+                        <span><IconGlyph name="chat" :size="17" /> Posts and chats unlock after joining</span>
+                    </div>
                 </section>
 
                 <GroupActivity v-if="group.isMember" :group-id="groupId" />
@@ -148,36 +227,208 @@ function removeGroupPost(postId) {
     width: 100%;
     max-width: 64rem;
     margin: 0 auto;
-    gap: var(--space-7);
+    gap: var(--space-5);
 }
 
 .group-header {
+    position: relative;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: end;
-    gap: var(--space-5);
-    padding: var(--space-6);
+    gap: var(--space-4);
+    overflow: hidden;
+    padding: var(--space-4);
+    background:
+        linear-gradient(135deg, rgb(21 24 46 / 98%), rgb(13 15 30 / 98%)),
+        var(--color-surface);
 }
 
-.group-header__copy { min-width: 0; }
-.group-header .orbit-meta { margin: 0 0 var(--space-2); color: var(--color-violet-soft); }
+.group-header::after {
+    position: absolute;
+    right: -6rem;
+    bottom: -7rem;
+    width: 16rem;
+    height: 16rem;
+    border: 1px solid rgb(124 92 255 / 22%);
+    border-radius: 50%;
+    content: '';
+    pointer-events: none;
+}
+
+.group-header__art {
+    position: relative;
+    min-height: 8rem;
+    overflow: hidden;
+    border: 1px solid rgb(124 92 255 / 28%);
+    border-radius: var(--radius-small);
+    background:
+        radial-gradient(circle at 18% 26%, rgb(255 107 138 / 82%) 0 0.25rem, transparent 0.3rem),
+        radial-gradient(circle at 78% 68%, rgb(62 230 176 / 75%) 0 0.2rem, transparent 0.25rem),
+        linear-gradient(145deg, rgb(124 92 255 / 22%), rgb(255 107 138 / 10%));
+}
+
+.group-header__art-orbit {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border: 1px solid rgb(172 159 255 / 45%);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) rotate(-18deg);
+}
+
+.group-header__art-orbit--outer {
+    width: 13rem;
+    height: 5.5rem;
+}
+
+.group-header__art-orbit--inner {
+    width: 7rem;
+    height: 3rem;
+    border-color: rgb(62 230 176 / 60%);
+    transform: translate(-50%, -50%) rotate(35deg);
+}
+
+.group-header__art-star {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1.15rem;
+    height: 1.15rem;
+    border: 3px solid var(--color-text);
+    border-radius: 50%;
+    background: var(--color-coral);
+    box-shadow: 0 0 0 0.45rem rgb(255 107 138 / 15%), 0 0 2rem rgb(255 107 138 / 45%);
+    transform: translate(-50%, -50%);
+}
+
+.group-header__art-label {
+    position: absolute;
+    right: var(--space-3);
+    bottom: var(--space-3);
+    color: rgb(235 232 255 / 78%);
+    font-family: var(--font-meta);
+    font-size: 0.625rem;
+    letter-spacing: 0.12em;
+}
+
+.group-header__copy {
+    min-width: 0;
+}
+
+.group-header .orbit-meta {
+    margin: 0 0 var(--space-2);
+    color: var(--color-violet-soft);
+}
+
+.group-header__title-row {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+}
 
 .group-header h1 {
     margin: 0;
     color: var(--color-text);
     font-family: var(--font-display);
-    font-size: 2.25rem;
+    font-size: clamp(1.75rem, 7vw, 2.5rem);
     font-weight: 700;
     line-height: 1.15;
     letter-spacing: 0;
 }
 
+.group-header__badge {
+    margin-top: 0.25rem;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid rgb(62 230 176 / 30%);
+    border-radius: 999px;
+    background: rgb(62 230 176 / 9%);
+    color: var(--color-mint);
+    font-family: var(--font-meta);
+    font-size: 0.625rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
 .group-header__copy > p:last-child {
-    max-width: 700px;
+    max-width: 52ch;
     margin: var(--space-3) 0 0;
     color: var(--color-text-muted);
-    font-size: 1rem;
+    font-size: 0.9375rem;
     line-height: 1.65;
+}
+
+.group-header__signals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    margin-top: var(--space-4);
+    color: var(--color-text-faint);
+    font-size: 0.8125rem;
+}
+
+.group-header__signals span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.group-header__signals :deep(.icon-glyph) { color: var(--color-violet-soft); }
+
+.group-header__signal-dot {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: var(--color-mint);
+    box-shadow: 0 0 0 0.25rem rgb(62 230 176 / 12%);
+}
+
+.group-header__aside {
+    display: grid;
+    align-items: start;
+    gap: var(--space-3);
+}
+
+.group-header__join {
+    display: inline-flex;
+    min-width: 100%;
+    min-height: var(--touch-target);
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-4);
+    border: 0;
+    border-radius: var(--radius-small);
+    background: var(--gradient-action);
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.group-header__join:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.group-header__join:disabled {
+    cursor: wait;
+    opacity: 0.7;
+}
+
+.group-header__member-state {
+    display: inline-flex;
+    min-height: var(--touch-target);
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0 var(--space-3);
+    border: 1px solid rgb(62 230 176 / 25%);
+    border-radius: var(--radius-small);
+    background: rgb(62 230 176 / 8%);
+    color: var(--color-mint);
+    font-size: 0.8125rem;
+    font-weight: 600;
 }
 
 .group-header__delete {
@@ -210,23 +461,76 @@ function removeGroupPost(postId) {
     align-items: center;
     justify-content: space-between;
     gap: var(--space-4);
-    margin-top: calc(var(--space-5) * -1);
-    padding: 0 var(--space-2) var(--space-5);
+    padding: 0 var(--space-1) var(--space-4);
     border-bottom: 1px solid var(--color-border);
     color: var(--color-text-muted);
 }
-.group-membership > div,
-.group-membership__status {
+
+.group-membership > div {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.875rem;
+}
+
+.group-membership > div :deep(.icon-glyph) {
+    color: var(--color-violet-soft);
+}
+
+.group-membership__count {
+    color: var(--color-text);
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+}
+
+.group-welcome {
+    display: grid;
+    gap: var(--space-5);
+    padding: var(--space-5);
+    border-color: rgb(124 92 255 / 30%);
+    background:
+        linear-gradient(135deg, rgb(124 92 255 / 11%), transparent 58%),
+        var(--color-surface);
+}
+
+.group-welcome .orbit-meta {
+    margin: 0 0 var(--space-2);
+    color: var(--color-violet-soft);
+}
+
+.group-welcome h2 {
+    max-width: 25ch;
+    margin: 0;
+    color: var(--color-text);
+    font-family: var(--font-display);
+    font-size: clamp(1.25rem, 4vw, 1.75rem);
+    line-height: 1.2;
+}
+
+.group-welcome > div:first-child > p:last-child {
+    max-width: 58ch;
+    margin: var(--space-3) 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.9375rem;
+    line-height: 1.65;
+}
+
+.group-welcome__details {
+    display: grid;
+    align-content: center;
+    gap: var(--space-3);
+    color: var(--color-text-soft);
+    font-size: 0.8125rem;
+}
+
+.group-welcome__details span {
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
 }
-.group-membership strong { color: var(--color-text); }
-.group-membership__status {
-    margin: 0;
+
+.group-welcome__details :deep(.icon-glyph) {
     color: var(--color-mint);
-    font-size: 0.875rem;
-    font-weight: 600;
 }
 
 .group-feed {
@@ -283,18 +587,34 @@ function removeGroupPost(postId) {
 }
 .group-page__state--error { color: var(--color-coral); }
 
-@media (max-width: 700px) {
-    .group-container { gap: var(--space-6); }
+@media (min-width: 48rem) {
+    .group-container { gap: var(--space-7); }
     .group-header {
-        grid-template-columns: 1fr;
-        align-items: start;
+        grid-template-columns: minmax(10rem, 0.35fr) minmax(0, 1fr) auto;
+        align-items: center;
+        gap: var(--space-6);
         padding: var(--space-5);
     }
-    .group-header h1 { font-size: 1.875rem; }
+
+    .group-header__art { min-height: 10rem; }
+
+    .group-header__aside {
+        min-width: 12rem;
+        justify-items: stretch;
+    }
+
+    .group-header__join { min-width: 0; }
+
     .group-header__delete {
         width: 100%;
     }
-    .group-membership { margin-top: calc(var(--space-4) * -1); }
+
+    .group-welcome {
+        grid-template-columns: minmax(0, 1fr) minmax(15rem, 0.55fr);
+        align-items: center;
+        padding: var(--space-6);
+    }
+
     .group-feed { padding-top: var(--space-5); }
     .group-feed__heading { align-items: start; }
     .group-feed__heading h2 { font-size: 1.5rem; }
