@@ -39,5 +39,25 @@ export async function getUserPosts(userID = "", offset = 0) {
         throw new Error('Error: ' + (result.message || 'could not get data'))
     }
 
+    console.log(result)
+    return result;
+}
+
+export async function viewPost(postID) {
+    const resp = await fetch('/api/posts/seen', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(postID)
+    });
+
+    const result = await resp.json();
+
+    if (!resp.ok) {
+        throw new Error(result.message || 'Could not mark post as seen');
+    }
+    
     return result;
 }

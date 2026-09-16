@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"social/database/users"
 	"social/internal/helpers"
 	"social/internal/models"
 	"strconv"
@@ -36,7 +37,9 @@ func GetGroups(db *sql.DB, userID int) ([]models.Group, error) {
 		if err != nil {
 			return nil, err
 		}
-
+		if group.ID == -1 || group.ID == 0 {
+			continue
+		}
 		log.Println(users)
 		if users != "" {
 			usersIDsStr := strings.Split(users, ":")
@@ -59,7 +62,7 @@ func GetGroups(db *sql.DB, userID int) ([]models.Group, error) {
 
 		groups = append(groups, group)
 	}
-	
+
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -82,7 +85,7 @@ func DeleteGroup(db *sql.DB, groupID, userID int) error {
 
 func UpdateGroup(db *sql.DB, group models.NewGroup) error {
 	var current string
-	err := db.QueryRow(`select users from user_posts_groups where user_id = ? AND name = ?`, 
+	err := db.QueryRow(`select users from user_posts_groups where user_id = ? AND name = ?`,
 		group.UserID, group.Name).Scan(&current)
 	if err != nil {
 		return err
@@ -102,4 +105,279 @@ func UpdateGroup(db *sql.DB, group models.NewGroup) error {
 		return err
 	}
 	return nil
-} 
+}
+
+func MakeNewGroup(db *sql.DB, g models.Group, userIDs []int) error {
+	result, err := db.Exec(`
+		INSERT INTO groups (
+			is_private_chat,
+			owner_id,
+			name,
+			description,
+			avatar
+		)
+		VALUES (?, ?, ?, ?, ?)
+	`,
+		0,
+		g.UserID,
+		g.Title,
+		g.Description,
+		g.Avatar,
+	)
+	if err != nil {
+		return err
+	}
+
+	groupID, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+
+	g.ID = int(groupID)
+
+	_, err = db.Exec(`
+		INSERT INTO groups_users (group_id, user_id, status)
+		VALUES (?, ?, 1)
+	`, groupID, g.UserID)
+	if err != nil {
+		return err
+	}
+
+	log.Println(userIDs)
+	for _, userID := range userIDs {
+		if userID == g.UserID {
+			continue
+		}
+
+		isFriend, err := users.IsFriend(db, g.UserID, userID)
+		if err != nil {
+			return err
+		}
+
+		status := 0
+
+		if isFriend {
+			status = 1
+		}
+
+		_, err = db.Exec(`
+			INSERT INTO groups_users (group_id, user_id, status)
+			VALUES (?, ?, ?)
+		`, groupID, userID, status)
+		if err != nil {
+			return err
+		}
+
+		if !isFriend {
+			if err := SendInvites(db, userID, g); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func AddMembers(db *sql.DB, groupID, userID int) error {
+	_, err := db.Exec(`
+			INSERT INTO groups_users (group_id, user_id)
+			VALUES (?,?)		
+		`, groupID, userID)
+	return err
+}
+
+func SearchInvites(db *sql.DB, userID, groupID int, searchValue string) ([]models.UserRegistration, error) {
+	if groupID != -1 {
+	}
+
+	search := "%" + searchValue + "%"
+	users := make([]models.UserRegistration, 0)
+
+	rows, err := db.Query(`
+		SELECT
+			u.id,
+			u.first_name,
+			u.last_name,
+			p.avatar_path
+		FROM user u
+		JOIN profile p ON p.user_id = u.id
+		WHERE u.id != ?
+			AND (
+				u.username LIKE ?
+				OR u.first_name LIKE ?
+				OR u.last_name LIKE ?
+			)
+		ORDER BY
+			CASE
+				WHEN EXISTS (
+					SELECT 1
+					FROM user_followers uf1
+					WHERE uf1.follower_id = ?
+						AND uf1.target_id = u.id
+				)
+				AND EXISTS (
+					SELECT 1
+					FROM user_followers uf2
+					WHERE uf2.follower_id = u.id
+						AND uf2.target_id = ?
+				)
+				THEN 0
+				ELSE 1
+			END,
+			u.first_name,
+			u.last_name
+		LIMIT 10
+	`, userID, search, search, search, userID, userID)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var u models.UserRegistration
+
+		if err := rows.Scan(
+			&u.ID,
+			&u.FirstName,
+			&u.LastName,
+			&u.Avatar,
+		); err != nil {
+			return nil, err
+		}
+
+		users = append(users, u)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func GetGroupChats(db *sql.DB, userID, offset int) ([]models.Group, error) {
+	groups := make([]models.Group, 0)
+
+	rows, err := db.Query(`
+		SELECT 
+			g.id,
+			g.name,
+			g.avatar,
+			(
+				SELECT COUNT(*)
+				FROM groups_users gu2
+				WHERE gu2.group_id = g.id
+			)
+		FROM groups g
+		WHERE EXISTS (
+			SELECT 1
+			FROM groups_users gu
+			WHERE gu.group_id = g.id
+			  AND gu.user_id = ?
+		)
+		AND g.is_private_chat = 0
+		ORDER BY g.name, g.id
+		LIMIT 12 OFFSET ?
+	`, userID, offset)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var g models.Group
+
+		if err := rows.Scan(
+			&g.ID,
+			&g.Title,
+			&g.Avatar,
+			&g.Count,
+		); err != nil {
+			return nil, err
+		}
+
+		groups = append(groups, g)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return groups, nil
+}
+
+func DiscoverGroups(db *sql.DB, userID, offset int, search string) ([]models.Group, error) {
+	groups := make([]models.Group, 0)
+
+	query := `
+		SELECT
+			g.id,
+			g.name,
+			g.description,
+			g.avatar,
+			(
+				SELECT COUNT(*)
+				FROM groups_users gu2
+				WHERE gu2.group_id = g.id
+			) AS members_count
+		FROM groups g
+		WHERE NOT EXISTS (
+			SELECT 1
+			FROM groups_users gu
+			WHERE gu.group_id = g.id
+			  AND gu.user_id = ?
+		)
+		AND g.is_private_chat = 0
+	`
+
+	args := []any{userID}
+
+	if search != "" {
+		query += `
+			AND (
+				g.name LIKE ?
+				OR g.description LIKE ?
+			)
+		`
+
+		searchPattern := "%" + search + "%"
+		args = append(args, searchPattern, searchPattern)
+	}
+
+	query += `
+		ORDER BY g.created_at
+		LIMIT 12 OFFSET ?
+	`
+
+	args = append(args, offset)
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var g models.Group
+
+		if err := rows.Scan(
+			&g.ID,
+			&g.Title,
+			&g.Description,
+			&g.Avatar,
+			&g.Count,
+		); err != nil {
+			return nil, err
+		}
+
+		groups = append(groups, g)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return groups, nil
+}

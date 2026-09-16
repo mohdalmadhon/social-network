@@ -13,6 +13,7 @@ import (
 
 const AVATAR_PATH = "uploads/avatars"
 const POSTS_PATH = "uploads/posts"
+const AVATARS_GROUPS_PATH = "uploads/groups/avatars"
 
 func SaveUploads(file multipart.File, header *multipart.FileHeader, Type string) (string, error) {
 	var path string
@@ -21,6 +22,8 @@ func SaveUploads(file multipart.File, header *multipart.FileHeader, Type string)
 		path = POSTS_PATH
 	} else if Type == "avatar" {
 		path = AVATAR_PATH
+	} else if Type == "group/avatar" {
+		path = AVATARS_GROUPS_PATH
 	} else {
 		return "", fmt.Errorf("invalid upload type")
 	}

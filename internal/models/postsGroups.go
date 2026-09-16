@@ -1,10 +1,14 @@
 package models
 
 type Group struct {
-	ID     int
-	UserID int
-	Name   string
-	Users  []UserRegistration
+	ID          int
+	UserID      int
+	Name        string `json:"name"`
+	Count       int
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Avatar      string `json:"avatar"`
+	Users       []UserRegistration
 }
 
 type NewGroup struct {

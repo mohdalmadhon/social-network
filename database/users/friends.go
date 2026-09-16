@@ -261,3 +261,28 @@ func GetFollowing(db *sql.DB, userID, limit, offset int) ([]models.UserRegistrat
 
 	return following, nil
 }
+
+func IsFriend(db *sql.DB, userID, targetID int) (bool, error) {
+	var exists int
+
+	err := db.QueryRow(`
+		SELECT 1
+		FROM user_followers uf1
+		JOIN user_followers uf2
+			ON uf1.follower_id = uf2.target_id
+			AND uf1.target_id = uf2.follower_id
+		WHERE uf1.follower_id = ?
+		  AND uf1.target_id = ?
+		LIMIT 1
+	`, userID, targetID).Scan(&exists)
+
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}

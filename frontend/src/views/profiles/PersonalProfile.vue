@@ -1,11 +1,9 @@
 <script setup>
 import { onMounted, ref } from 'vue';
-
+import { useRoute } from 'vue-router';
 import { getUserData } from '@/api/users/personalProfile';
-
 import SideNavigation from '@/components/layout/SideNavigation.vue';
 import TopNavigation from '@/components/layout/TopNavigation.vue';
-
 import ProfileHeader from '@/components/personalProfile/ProfileHeader.vue';
 import ProfileTabs from '@/components/personalProfile/ProfileTabs.vue';
 import AboutTab from '@/components/profile/AboutTab.vue';
@@ -15,10 +13,11 @@ import { addNotification } from '@/data/notifications';
 import ProfilePostsTab from '@/components/profile/posts/ProfilePostsTab.vue';
 import { activePage } from '@/data/chatState';
 
-const activeTab = ref('personal');
+const route = useRoute();
+
 const loading = ref(true);
 const user = ref(null);
-
+const activeTab = ref('personal');
 activePage.value = 'personalProfile';
 
 async function getData() {
@@ -32,7 +31,13 @@ async function getData() {
     }
 }
 
-onMounted(getData);
+onMounted(() => {
+    getData();
+    activeTab.value = ref(
+        route.query.tab === 'posts' ? 'posts' : 'personal'
+    );
+    
+});
 </script>
 
 <template>
@@ -48,11 +53,10 @@ onMounted(getData);
                 </div>
 
                 <template v-else-if="user">
-                    <ProfileHeader :first-name="user.firstName"
-                        :last-name="user.lastName" :username="user.username"
-                        :add-edit="true" :bio="user.Profile.About?.bio"
-                        :avatar-path="`/uploads/${user.Profile.avatar}`" :num-of-posts="user.Profile.numOfPosts"
-                        :num-of-following="user.Profile.numOfFollowing" :num-of-followers="user.Profile.numOfFollowers" />
+                    <ProfileHeader :first-name="user.firstName" :last-name="user.lastName" :username="user.username"
+                        :add-edit="true" :bio="user.Profile.About?.bio" :avatar-path="`/uploads/${user.Profile.avatar}`"
+                        :num-of-posts="user.Profile.numOfPosts" :num-of-following="user.Profile.numOfFollowing"
+                        :num-of-followers="user.Profile.numOfFollowers" />
 
                     <ProfileTabs type="personal" @change-tab="activeTab = $event" />
 

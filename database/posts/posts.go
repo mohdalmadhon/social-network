@@ -202,6 +202,10 @@ func GetHomePosts(db *sql.DB, userID, offset int) ([]models.Post, error) {
 	}
 
 	runGroupsQuery := func(unviewedOnly bool, limit int) error {
+		if limit <= 0 {
+			return nil
+		}
+
 		exClause, exArgs := excludeClause()
 
 		viewClause := ""
@@ -272,7 +276,7 @@ func GetHomePosts(db *sql.DB, userID, offset int) ([]models.Post, error) {
 	}
 
 	runUserPostsQuery := func(userIDs []int, groupIDs []int, unviewedOnly bool, limit int) error {
-		if len(userIDs) == 0 || limit <= 0 {
+		if len(userIDs) == 0 || len(groupIDs) == 0 || limit <= 0 {
 			return nil
 		}
 
@@ -460,59 +464,110 @@ func GetHomePosts(db *sql.DB, userID, offset int) ([]models.Post, error) {
 		return nil, err
 	}
 
-	if err := runUserPostsQuery(friendIDs, []int{0, -1}, true, 4); err != nil {
-		return nil, err
-	}
+	if len(posts) < 9 {
+		remaining := 9 - len(posts)
 
-	if err := runUserPostsQuery(followingIDs, []int{-1}, true, 3); err != nil {
-		return nil, err
-	}
-
-	if len(posts) == 0 {
-		if err := runGroupsQuery(false, 5); err != nil {
-			return nil, err
+		if remaining > 4 {
+			remaining = 4
 		}
 
-		if err := runUserPostsQuery(friendIDs, []int{0, -1}, false, 4); err != nil {
-			return nil, err
-		}
-
-		if err := runUserPostsQuery(followingIDs, []int{-1}, false, 3); err != nil {
+		if err := runUserPostsQuery(
+			friendIDs,
+			[]int{0, -1},
+			true,
+			remaining,
+		); err != nil {
 			return nil, err
 		}
 	}
 
-	if len(posts) == 0 {
+	if len(posts) < 12 {
+		remaining := 12 - len(posts)
+
+		if remaining > 3 {
+			remaining = 3
+		}
+
+		if err := runUserPostsQuery(
+			followingIDs,
+			[]int{-1},
+			true,
+			remaining,
+		); err != nil {
+			return nil, err
+		}
+	}
+
+	if len(posts) < 13 {
+		remaining := 13 - len(posts)
+
 		excluded := append(
 			append([]int{}, friendIDs...),
 			followingIDs...,
 		)
 
-		if err := runRandomQuery(excluded, true, 13, true); err != nil {
+		if err := runRandomQuery(
+			excluded,
+			true,
+			remaining,
+			false,
+		); err != nil {
 			return nil, err
 		}
+	}
 
-		if err := attachGroupOwnerNames(db, posts); err != nil {
+	if len(posts) < 13 {
+		remaining := 13 - len(posts)
+
+		if err := runGroupsQuery(false, remaining); err != nil {
 			return nil, err
 		}
+	}
 
-		if err := attachTaggedPeople(db, posts, tagsByPostIndex); err != nil {
+	if len(posts) < 13 {
+		remaining := 13 - len(posts)
+
+		if err := runUserPostsQuery(
+			friendIDs,
+			[]int{0, -1},
+			false,
+			remaining,
+		); err != nil {
 			return nil, err
 		}
-
-		return posts, nil
 	}
 
-	randomLimit := 13 - len(posts)
+	if len(posts) < 13 {
+		remaining := 13 - len(posts)
 
-	if randomLimit < 1 {
-		randomLimit = 1
+		if err := runUserPostsQuery(
+			followingIDs,
+			[]int{-1},
+			false,
+			remaining,
+		); err != nil {
+			return nil, err
+		}
 	}
 
-	if err := runRandomQuery(nil, true, randomLimit, false); err != nil {
-		return nil, err
-	}
+	if len(posts) < 13 {
+		remaining := 13 - len(posts)
 
+		excluded := append(
+			append([]int{}, friendIDs...),
+			followingIDs...,
+		)
+
+		if err := runRandomQuery(
+			excluded,
+			false,
+			remaining,
+			true,
+		); err != nil {
+			return nil, err
+		}
+	}
+	
 	if err := attachGroupOwnerNames(db, posts); err != nil {
 		return nil, err
 	}
@@ -747,4 +802,12 @@ func GetUserPosts(db *sql.DB, targetID, offset int) ([]models.Post, error) {
 	}
 
 	return posts, nil
+}
+
+func ViewPost(db *sql.DB, postID, userID int) error {
+	_, err := db.Exec(`
+		INSERT INTO post_views (user_id, post_id)
+		VALUES (?,?)
+	`, postID, userID)
+	return err
 }

@@ -56,3 +56,17 @@ export async function getMessages(groupID, offset = 0) {
 
     return result;
 }
+
+export async function getGroupChats(offset) {
+    const resp = await fetch(`/api/groups?offset=${offset}&private=0`, {
+        method: "GET",
+        credentials: 'include'
+    });
+
+    const result = await resp.json();
+    if (!resp.ok) {
+        throw new Error(result.message || "coud not get data")
+    }
+    
+    return result;
+}

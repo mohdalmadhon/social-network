@@ -35,10 +35,10 @@ async function loadMorePosts() {
     error.value = '';
 
     try {
-        const response = await getUserPosts(props.userId, offset.value);
+        const response = await getUserPosts("", offset.value);
         const rawPosts = response?.data || [];
         const normalized = rawPosts.map(normalizeProfilePost);
-
+        console.log(response)
         posts.value.push(...normalized);
         offset.value += BATCH_SIZE;
 

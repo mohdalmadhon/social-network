@@ -3,7 +3,6 @@ import { addNotification } from '@/data/notifications';
 import { handleIncomingNotification } from '@/data/notificationCount';
 
 let ws = null;
-
 const notificationDebounce = new Map();
 
 export function connectToWS() {
@@ -12,7 +11,7 @@ export function connectToWS() {
     }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-
+    
     ws = new WebSocket(`${protocol}//${window.location.host}/api/ws`);
 
     ws.onopen = () => {
@@ -21,7 +20,6 @@ export function connectToWS() {
 
     ws.onmessage = (event) => {
         const payload = JSON.parse(event.data);
-
         switch (payload.type) {
             case 'notification':
                 console.log('Notification:', payload.data);

@@ -1,3 +1,22 @@
+<script setup>
+import { getUserData } from '@/api/users/personalProfile';
+import { addNotification } from '@/data/notifications';
+import { onMounted, ref } from 'vue';
+
+const avatar = ref('');
+
+async function getData() {
+    try {
+        const result = await getUserData()
+        avatar.value = result.Profile.avatar;
+    } catch (err) {
+        addNotification(err.message || 'error', 'error')
+    }
+
+}
+onMounted(getData)
+</script>
+
 <template>
     <header class="top-navigation">
         <div class="nav-left">
@@ -10,18 +29,15 @@
         </div>
 
         <nav class="nav-links">
-            <a href="/">Home</a>
-            <a href="/friends">Friends</a>
-            <a href="/groups">Groups</a>
+            <a href="/home">Home</a>
         </nav>
 
         <div class="nav-right">
-            <button class="nav-button">+</button>
-            <button class="nav-button">♧</button>
+            <a href="/post/new"><button class="nav-button">+</button></a>
             <button class="nav-button">☼</button>
 
-            <a href="/profile" class="nav-avatar">
-                A
+            <a href="/me" class="nav-avatar">
+                <img :src="`/uploads/${avatar}`" alt="">
             </a>
         </div>
     </header>
@@ -146,18 +162,38 @@
 
 .nav-avatar {
     flex-shrink: 0;
-    width: 38px;
-    height: 38px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-left: 5px;
+    padding: 0;
     border: 2px solid var(--main-color);
     border-radius: 50%;
     background: var(--input-focus);
-    color: white;
-    font-family: "JetBrains Mono", monospace;
-    font-weight: 600;
+    overflow: hidden;
+    box-sizing: border-box;
+    box-shadow: 3px 3px var(--main-color);
+    transition: transform 0.15s ease;
+}
+
+.nav-avatar img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    border-radius: 50%;
+}
+
+.nav-avatar:hover {
+    transform: translateY(-2px);
+}
+
+.nav-avatar:active {
+    transform: translate(3px, 3px);
+    box-shadow: none;
 }
 
 @media (max-width: 900px) {
@@ -177,9 +213,8 @@
         display: none;
     }
 
-    .nav-button:nth-of-type(2) {
+    .nav-right > .nav-button {
         display: none;
     }
 }
-
 </style>

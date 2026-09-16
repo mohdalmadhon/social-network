@@ -261,9 +261,7 @@ func (app *App) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	targetIDStr := r.URL.Query().Get("targetID")
-
 	targetID := 0
-
 	if targetIDStr != "" {
 		var err error
 
@@ -276,6 +274,8 @@ func (app *App) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
+	} else {
+		targetID = userID
 	}
 
 	offsetStr := r.URL.Query().Get("offset")
@@ -295,7 +295,7 @@ func (app *App) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	
+
 	userPosts, err := posts.GetUserPosts(app.DB, targetID, offset)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -328,5 +328,38 @@ func (app *App) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 	helpers.WriteJson(w, http.StatusOK, map[string]any{
 		"status": true,
 		"data":   userPosts,
+	})
+}
+
+func (app *App) ViewPost(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
+			"status":  false,
+			"message": "could not authorize user",
+		})
+		return
+	}
+
+	var postID int
+	if err := json.NewDecoder(r.Body).Decode(&postID); err != nil {
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid post id",
+		})
+		return
+	}
+
+	if err := posts.ViewPost(app.DB, postID, userID); err != nil {
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not add post",
+		})
+		return
+	}
+
+	helpers.WriteJson(w, http.StatusOK, map[string]any{
+		"status":  true,
+		"message": "all good",
 	})
 }

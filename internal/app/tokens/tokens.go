@@ -120,7 +120,6 @@ func VerifyToken(token string) (*payLoad, error) {
 	}
 
 	var body payLoad
-
 	err = json.Unmarshal(payloadJSON, &body)
 	if err != nil {
 		return nil, errors.New("invalid payload")

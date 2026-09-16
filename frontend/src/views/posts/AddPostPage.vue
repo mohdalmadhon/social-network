@@ -13,6 +13,7 @@ import ImageContainer from '@/components/addPost/ImageContainer.vue';
 import { addPost } from '@/api/posts/posts';
 import { addNotification } from '@/data/notifications';
 import { validatePost } from '@/helpers/validators/posts';
+import { router } from '@/router/router';
 
 const post = reactive({
     title: '',
@@ -105,6 +106,7 @@ async function handleSubmit() {
             return;
         }
 
+        router.push("/me?tab=posts")
         console.log(result);
     } catch (err) {
         addNotification(

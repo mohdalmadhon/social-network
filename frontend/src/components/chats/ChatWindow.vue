@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
+
 import { addNotification } from '@/data/notifications';
 import { Message } from '@/models/chats';
 import { sendWS } from '@/api/socket/socket';
@@ -39,33 +40,74 @@ const loading = ref(false);
 const loadingMore = ref(false);
 const hasMore = ref(true);
 const offset = ref(0);
-
 const messagesContainer = ref(null);
-
+const inviteStatus = ref({});
 let fetchTimer = null;
 let requestID = 0;
 
+function parseInvite(content) {
+    if (typeof content !== 'string') {
+        return null;
+    }
+
+    try {
+        const data = JSON.parse(content);
+
+        if (data?.type !== 'invite' || !data.group || !data.user) {
+            return null;
+        }
+
+        return {
+            group: {
+                id: data.group.id,
+                name: data.group.name,
+                avatar: data.group.avatar
+            },
+            user: {
+                id: data.user.id,
+                firstName: data.user.firstName,
+                lastName: data.user.lastName,
+                avatar: data.user.avatar
+            }
+        };
+    } catch {
+        return null;
+    }
+}
+
 function formatMessage(msg) {
+    const content = msg.Content ?? msg.content;
+    const invite = parseInvite(content);
+
     return {
         id: msg.ID ?? msg.id,
-        content: msg.Content ?? msg.content,
+        content,
         createdAt: msg.CreatedAt ?? msg.createdAt,
         sender: {
-            id: msg.Sender?.ID ?? msg.sender?.id,
+            id:
+                msg.Sender?.ID ??
+                msg.Sender?.id ??
+                msg.sender?.ID ??
+                msg.sender?.id,
             firstName:
                 msg.Sender?.FirstName ??
                 msg.Sender?.firstName ??
+                msg.sender?.FirstName ??
                 msg.sender?.firstName,
             lastName:
                 msg.Sender?.LastName ??
                 msg.Sender?.lastName ??
+                msg.sender?.LastName ??
                 msg.sender?.lastName,
             avatar:
                 msg.Sender?.Avatar ??
                 msg.Sender?.avatar ??
+                msg.sender?.Avatar ??
                 msg.sender?.avatar
         },
-        groupID: msg.GroupID ?? msg.groupID
+        groupID: msg.GroupID ?? msg.groupID,
+        invite,
+        inviteStatus: invite ? inviteStatus.value[invite.group.id] ?? null : null
     };
 }
 
@@ -194,7 +236,8 @@ async function fetchOlderMessages() {
         await nextTick();
 
         container.scrollTop =
-            oldScrollTop + (container.scrollHeight - oldScrollHeight);
+            oldScrollTop +
+            (container.scrollHeight - oldScrollHeight);
     } catch (err) {
         if (currentRequestID !== requestID) {
             return;
@@ -245,6 +288,47 @@ function handleScroll() {
     }
 }
 
+async function respondToInvite(msg, status) {
+    if (!msg.invite || msg.invite.responding) return;
+
+    msg.invite.responding = true;
+
+    try {
+        const response = await fetch('/api/groups/status', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                status,
+                groupID: msg.invite.group.id,
+                senderID: msg.invite.user.id,
+                content: msg.rawContent
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.status) {
+            throw new Error(result.message || 'Could not update invite');
+        }
+
+        messages.value = messages.value.filter(message => message !== msg);
+
+        addNotification(
+            status === 1 ? 'Invite accepted' : 'Invite rejected',
+            'success'
+        );
+    } catch (err) {
+        msg.invite.responding = false;
+        addNotification(
+            err.message || 'Could not update invite',
+            'error'
+        );
+    }
+}
+
 function receiveMessage(event) {
     const incoming = event.detail;
 
@@ -255,26 +339,15 @@ function receiveMessage(event) {
         return;
     }
 
-    const senderID = incoming.Sender.ID;
-    const ownMessage = senderID
+    const formatted = formatMessage(incoming);
+
+    const senderID = formatted.sender.id;
 
     messages.value.push({
-        id: incoming.Sender.ID,
-        content: incoming.content,
-        createdAt: incoming.CreatedAt ?? incoming.createdAt,
-        sender: {
-            id: senderID,
-            firstName:
-                incoming.Sender?.FirstName ??
-                incoming.Sender?.firstName,
-            lastName:
-                incoming.Sender?.LastName ??
-                incoming.Sender?.lastName,
-            avatar:
-                incoming.Sender?.Avatar ??
-                incoming.Sender?.avatar
-        },
-        groupID: incoming.GroupID
+        ...formatted,
+        inviteStatus: formatted.invite
+            ? inviteStatus.value[formatted.invite.group.id] ?? null
+            : null
     });
 
     nextTick(() => {
@@ -288,6 +361,8 @@ function receiveMessage(event) {
             container.scrollHeight -
             container.scrollTop -
             container.clientHeight;
+
+        const ownMessage = senderID === props.userID;
 
         if (ownMessage || distanceFromBottom < 150) {
             container.scrollTop = container.scrollHeight;
@@ -372,11 +447,17 @@ watch(
     messagesContainer,
     (newEl, oldEl) => {
         if (oldEl) {
-            oldEl.removeEventListener('scroll', handleScroll);
+            oldEl.removeEventListener(
+                'scroll',
+                handleScroll
+            );
         }
 
         if (newEl) {
-            newEl.addEventListener('scroll', handleScroll);
+            newEl.addEventListener(
+                'scroll',
+                handleScroll
+            );
         }
     },
     { immediate: true }
@@ -416,11 +497,7 @@ onUnmounted(() => {
         <template v-if="chat">
             <header class="chat-window-header">
                 <div class="avatar">
-                    <img
-                        v-if="chat.Avatar"
-                        :src="`/uploads/${chat.Avatar}`"
-                        alt=""
-                    />
+                    <img v-if="chat.Avatar" :src="`/uploads/${chat.Avatar}`" alt="" />
                 </div>
 
                 <div class="chat-user-info">
@@ -430,42 +507,28 @@ onUnmounted(() => {
                 </div>
             </header>
 
-            <div
-                ref="messagesContainer"
-                class="messages"
-            >
-                <div
-                    v-if="loadingMore"
-                    class="loading-more"
-                >
+            <div ref="messagesContainer" class="messages">
+                <div v-if="loadingMore" class="loading-more">
                     <div class="small-loader"></div>
                     <span>Loading older messages...</span>
                 </div>
 
-                <div
-                    v-if="loading"
-                    class="loading-state"
-                >
+                <div v-if="loading" class="loading-state">
                     <div class="loader"></div>
                     <p>Loading messages...</p>
                 </div>
 
                 <template v-else>
-                    <div
-                        v-for="(msg, index) in messages"
-                        :key="msg.id ?? index"
-                        class="message"
-                        :class="msg.sender?.id === -1 ? 'sent' : 'received'"
-                    >
-                        <div
-                            v-if="msg.sender?.id !== -1"
-                            class="message-avatar"
-                        >
-                            <img
-                                v-if="msg.sender?.avatar"
-                                :src="`/uploads/${msg.sender.avatar}`"
-                                alt=""
-                            />
+                    <div v-for="(msg, index) in messages" :key="msg.id ?? index" class="message" :class="[
+                        msg.sender?.id === -1
+                            ? 'sent'
+                            : 'received',
+                        msg.invite
+                            ? 'invite-message'
+                            : ''
+                    ]">
+                        <div v-if="msg.sender?.id !== -1" class="message-avatar">
+                            <img v-if="msg.sender?.avatar" :src="`/uploads/${msg.sender.avatar}`" alt="" />
 
                             <span v-else>
                                 {{ msg.sender?.firstName?.[0] }}
@@ -473,11 +536,75 @@ onUnmounted(() => {
                             </span>
                         </div>
 
-                        <div class="message-body">
-                            <span
-                                v-if="msg.sender?.id !== -1"
-                                class="message-sender-name"
-                            >
+                        <div v-if="msg.invite" class="invite-card">
+                            <div class="invite-group">
+                                <div class="invite-group-avatar">
+                                    <img v-if="msg.invite.group.avatar" :src="`/uploads/${msg.invite.group.avatar}`"
+                                        alt="" />
+
+                                    <span v-else>
+                                        {{ msg.invite.group.name?.[0] }}
+                                    </span>
+                                </div>
+
+                                <div class="invite-group-info">
+                                    <span class="invite-label">
+                                        Group invite
+                                    </span>
+
+                                    <strong>
+                                        {{ msg.invite.group.name }}
+                                    </strong>
+                                </div>
+                            </div>
+
+                            <div class="invite-from">
+                                <div class="invite-user-avatar">
+                                    <img v-if="msg.invite.user.avatar" :src="`/uploads/${msg.invite.user.avatar}`"
+                                        alt="" />
+
+                                    <span v-else>
+                                        {{ msg.invite.user.firstName?.[0] }}
+                                        {{ msg.invite.user.lastName?.[0] }}
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <span class="invite-label">
+                                        Invite from
+                                    </span>
+
+                                    <strong>
+                                        {{ msg.invite.user.firstName }}
+                                        {{ msg.invite.user.lastName }}
+                                    </strong>
+                                </div>
+                            </div>
+
+                            <div v-if="msg.inviteStatus === null || msg.inviteStatus === undefined"
+                                class="invite-actions">
+                                <button type="button" class="invite-accept" @click="respondToInvite(msg, 1)">
+                                    Accept
+                                </button>
+
+                                <button type="button" class="invite-reject" @click="respondToInvite(msg, -1)">
+                                    Reject
+                                </button>
+                            </div>
+
+                            <div v-else class="invite-result">
+                                <span v-if="msg.inviteStatus === 1">
+                                    Invite accepted
+                                </span>
+
+                                <span v-else>
+                                    Invite rejected
+                                </span>
+                            </div>
+                        </div>
+
+                        <div v-else class="message-body">
+                            <span v-if="msg.sender?.id !== -1" class="message-sender-name">
                                 {{ msg.sender?.firstName }}
                                 {{ msg.sender?.lastName }}
                             </span>
@@ -486,39 +613,22 @@ onUnmounted(() => {
                         </div>
                     </div>
 
-                    <div
-                        v-if="messages.length === 0"
-                        class="no-messages"
-                    >
+                    <div v-if="messages.length === 0" class="no-messages">
                         <p>No messages yet</p>
                     </div>
                 </template>
             </div>
 
-            <form
-                class="composer"
-                @submit.prevent="send"
-            >
-                <input
-                    v-model="message"
-                    type="text"
-                    placeholder="Type a message..."
-                    :disabled="loading"
-                />
+            <form class="composer" @submit.prevent="send">
+                <input v-model="message" type="text" placeholder="Type a message..." :disabled="loading" />
 
-                <button
-                    type="submit"
-                    :disabled="sending || loading"
-                >
+                <button type="submit" :disabled="sending || loading">
                     {{ sending ? 'Sending...' : 'Send' }}
                 </button>
             </form>
         </template>
 
-        <div
-            v-else
-            class="empty-state"
-        >
+        <div v-else class="empty-state">
             <p class="eyebrow">
                 NO CHAT SELECTED
             </p>
@@ -533,7 +643,6 @@ onUnmounted(() => {
         </div>
     </section>
 </template>
-
 
 <style scoped>
 .chat-window {
@@ -719,6 +828,163 @@ onUnmounted(() => {
     box-shadow: 3px 3px var(--main-color);
 }
 
+.invite-message {
+    max-width: 360px;
+}
+
+.invite-card {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 15px;
+    border: 2px solid var(--main-color);
+    border-radius: 10px;
+    background: var(--bg-color);
+    box-shadow: 3px 3px var(--main-color);
+}
+
+.invite-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--main-color);
+}
+
+.invite-group-avatar {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--main-color);
+    border-radius: 8px;
+    background: var(--main-color);
+    color: white;
+    font-family: "Liter", serif;
+    font-size: 18px;
+    overflow: hidden;
+}
+
+.invite-group-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.invite-group-info {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.invite-group-info strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 15px;
+}
+
+.invite-label {
+    display: block;
+    color: var(--font-color-sub);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.invite-from {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 13px;
+}
+
+.invite-from>div:last-child {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.invite-from strong {
+    font-size: 11px;
+}
+
+.invite-user-avatar {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--main-color);
+    border-radius: 50%;
+    background: var(--main-color);
+    color: white;
+    font-size: 10px;
+    overflow: hidden;
+}
+
+.invite-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.invite-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.invite-actions button {
+    flex: 1;
+    padding: 9px 12px;
+    border: 2px solid var(--main-color);
+    border-radius: 5px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.invite-accept {
+    background: var(--input-focus);
+    color: white;
+    box-shadow: 3px 3px var(--main-color);
+}
+
+.invite-reject {
+    background: var(--bg-color);
+    color: var(--main-color);
+    box-shadow: 3px 3px var(--main-color);
+}
+
+.invite-actions button:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px var(--main-color);
+}
+
+.invite-actions button:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px var(--main-color);
+}
+
+.invite-result {
+    margin-top: 15px;
+    padding: 9px;
+    border: 2px solid var(--main-color);
+    border-radius: 5px;
+    text-align: center;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9px;
+    font-weight: 700;
+}
+
 .composer {
     flex-shrink: 0;
     display: flex;
@@ -817,6 +1083,10 @@ onUnmounted(() => {
 
     .message {
         max-width: 80%;
+    }
+
+    .invite-message {
+        max-width: 90%;
     }
 }
 </style>
