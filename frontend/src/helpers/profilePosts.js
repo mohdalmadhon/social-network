@@ -22,6 +22,7 @@ export function profilePosts(posts, profile) {
     ))
     .map((post, index) => ({
       id: post.id,
+      authorId: post.userId,
       author: post.author || fullName || 'Orbit member',
       avatarColor: avatarColors[index % avatarColors.length],
       avatarPath: post.avatarPath || '',

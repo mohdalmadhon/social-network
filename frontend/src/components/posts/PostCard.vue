@@ -116,15 +116,34 @@ function initials(author) {
 <template>
   <article class="post-card orbit-surface">
     <header class="post-card__header">
-      <div class="post-card__avatar" :style="{ background: post.avatarColor }" aria-hidden="true">
-        <img v-if="post.avatarPath" :src="imageUrl(post.avatarPath)" alt="" />
-        <span v-else>{{ initials(post.author) }}</span>
-      </div>
+      <RouterLink
+        v-if="post.authorId"
+        class="post-card__author-link"
+        :to="{ path: '/user', query: { id: post.authorId } }"
+        :aria-label="`View ${post.author}'s profile`"
+      >
+        <div class="post-card__avatar" :style="{ background: post.avatarColor }" aria-hidden="true">
+          <img v-if="post.avatarPath" :src="imageUrl(post.avatarPath)" alt="" />
+          <span v-else>{{ initials(post.author) }}</span>
+        </div>
 
-      <div class="post-card__author">
-        <h2>{{ post.author }}</h2>
-        <p>{{ post.time }} <span aria-hidden="true">•</span> {{ post.privacy }}</p>
-      </div>
+        <div class="post-card__author">
+          <h2>{{ post.author }}</h2>
+          <p>{{ post.time }} <span aria-hidden="true">•</span> {{ post.privacy }}</p>
+        </div>
+      </RouterLink>
+
+      <template v-else>
+        <div class="post-card__avatar" :style="{ background: post.avatarColor }" aria-hidden="true">
+          <img v-if="post.avatarPath" :src="imageUrl(post.avatarPath)" alt="" />
+          <span v-else>{{ initials(post.author) }}</span>
+        </div>
+
+        <div class="post-card__author">
+          <h2>{{ post.author }}</h2>
+          <p>{{ post.time }} <span aria-hidden="true">•</span> {{ post.privacy }}</p>
+        </div>
+      </template>
 
     </header>
 
@@ -208,9 +227,24 @@ function initials(author) {
 
 .post-card__header {
   display: grid;
-  grid-template-columns: var(--touch-target) minmax(0, 1fr) var(--touch-target);
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   gap: var(--space-3);
+}
+
+.post-card__author-link {
+  display: grid;
+  grid-template-columns: var(--touch-target) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.post-card__author-link:hover .post-card__author h2,
+.post-card__author-link:focus-visible .post-card__author h2 {
+  color: var(--color-violet-soft);
 }
 
 .post-card__avatar {

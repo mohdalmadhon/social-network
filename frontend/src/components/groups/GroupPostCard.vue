@@ -123,12 +123,28 @@ async function removeComment(comment) {
 <template>
   <article class="group-post-card">
     <header class="group-post-card__header">
-      <img v-if="post.avatarPath" :src="assetUrl(post.avatarPath)" :alt="`${authorName}'s avatar`" />
-      <span v-else class="group-post-card__avatar" aria-hidden="true">{{ authorName.charAt(0) }}</span>
-      <div>
-        <h3>{{ authorName }}</h3>
-        <p>@{{ post.username }} <span aria-hidden="true">&middot;</span> {{ formatDate(post.createdAt) }}</p>
+      <RouterLink
+        v-if="post.userId"
+        class="group-post-card__author-link"
+        :to="{ path: '/user', query: { id: post.userId } }"
+        :aria-label="`View ${authorName}'s profile`"
+      >
+        <img v-if="post.avatarPath" :src="assetUrl(post.avatarPath)" :alt="`${authorName}'s avatar`" />
+        <span v-else class="group-post-card__avatar" aria-hidden="true">{{ authorName.charAt(0) }}</span>
+        <span>
+          <h3>{{ authorName }}</h3>
+          <p>@{{ post.username }} <span aria-hidden="true">&middot;</span> {{ formatDate(post.createdAt) }}</p>
+        </span>
+      </RouterLink>
+
+      <div v-else class="group-post-card__author-link">
+        <span class="group-post-card__avatar" aria-hidden="true">{{ authorName.charAt(0) }}</span>
+        <span>
+          <h3>{{ authorName }}</h3>
+          <p>@{{ post.username }} <span aria-hidden="true">&middot;</span> {{ formatDate(post.createdAt) }}</p>
+        </span>
       </div>
+
       <button
         v-if="post.isOwner"
         type="button"
@@ -206,10 +222,25 @@ async function removeComment(comment) {
 }
 
 .group-post-card__header {
-  grid-template-columns: var(--touch-target) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
-.group-post-card__header > img,
+.group-post-card__author-link {
+  display: grid;
+  grid-template-columns: var(--touch-target) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.group-post-card__author-link:hover h3,
+.group-post-card__author-link:focus-visible h3 {
+  color: var(--color-violet-soft);
+}
+
+.group-post-card__author-link > img,
 .group-post-card__avatar {
   aspect-ratio: 1;
   width: var(--touch-target);
@@ -430,7 +461,7 @@ async function removeComment(comment) {
 
 @media (max-width: 520px) {
   .group-post-card { padding: var(--space-4); }
-  .group-post-card__header { grid-template-columns: var(--touch-target) minmax(0, 1fr); }
+  .group-post-card__header { grid-template-columns: minmax(0, 1fr) auto; }
   .delete-post-button { grid-column: 2; justify-self: start; }
   .comment-form__actions {
     flex-wrap: wrap;

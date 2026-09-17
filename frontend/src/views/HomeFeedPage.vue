@@ -40,6 +40,7 @@ function privacyLabel(value) {
 function toCardPost(post, index = 0) {
   return {
     id: post.id,
+    authorId: post.userId,
     author: post.author || 'Orbit member',
     avatarColor: avatarColors[index % avatarColors.length],
     avatarPath: post.avatarPath || '',
