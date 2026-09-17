@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"log"
@@ -12,10 +13,6 @@ import (
 	"social/database/notifications"
 	"social/internal/models"
 )
-
-type chatMessageInput struct {
-	Content string `json:"content"`
-}
 
 func (app App) PrivateChats(w http.ResponseWriter, r *http.Request) {
 	userID, err := authenticatedUserID(r)
@@ -84,48 +81,33 @@ func (app App) PrivateChatMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Method == http.MethodGet {
-		page, err := parsePage(r)
-		if err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]any{
-				"status":  false,
-				"message": "limit must be between 1 and 50 and offset cannot be negative",
-			})
-			return
-		}
-
-		messages, listErr := chatsdb.ListPrivateMessages(app.DB, chatID, userID, page.Limit+1, page.Offset)
-		if listErr != nil {
-			writeChatError(w, listErr)
-			return
-		}
-		messages, hasMore := trimPage(messages, page, false)
-		if readErr := notifications.MarkMessageNotificationsRead(app.DB, userID, chatID); readErr != nil {
-			log.Printf("mark private message notifications read: %v", readErr)
-		}
-		writeJSON(w, http.StatusOK, map[string]any{
-			"status":     true,
-			"messages":   messages,
-			"hasMore":    hasMore,
-			"nextOffset": page.Offset + len(messages),
+	page, err := parsePage(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "limit must be between 1 and 50 and offset cannot be negative",
 		})
 		return
 	}
 
-	input, ok := decodeMessageInput(w, r)
-	if !ok {
+	messages, listErr := chatsdb.ListPrivateMessages(app.DB, chatID, userID, page.Limit+1, page.Offset)
+	if listErr != nil {
+		writeChatError(w, listErr)
 		return
 	}
-	message, err := chatsdb.SendPrivateMessage(app.DB, chatID, userID, input.Content)
-	if err != nil {
-		writeChatError(w, err)
-		return
+	messages, hasMore := trimPage(messages, page, false)
+	if readErr := notifications.MarkMessageNotificationsRead(app.DB, userID, chatID); readErr != nil {
+		log.Printf("mark private message notifications read: %v", readErr)
 	}
-	app.notifyPrivateMessage(chatID, userID, message)
-	writeJSON(w, http.StatusCreated, map[string]any{"status": true, "message": message})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":     true,
+		"messages":   messages,
+		"hasMore":    hasMore,
+		"nextOffset": page.Offset + len(messages),
+	})
 }
 
-func (app App) notifyPrivateMessage(chatID int64, senderID int, message models.ChatMessage) {
+func (app *App) notifyPrivateMessage(chatID int64, senderID int, message models.ChatMessage) {
 	var recipientID int
 	err := app.DB.QueryRow(`
 		SELECT CASE
@@ -135,10 +117,14 @@ func (app App) notifyPrivateMessage(chatID int64, senderID int, message models.C
 		FROM chats
 		WHERE id = ? AND type = 'private'
 	`, senderID, chatID).Scan(&recipientID)
-	if err != nil || recipientID <= 0 || recipientID == senderID {
-		if err != nil {
-			log.Printf("find private message recipient: %v", err)
-		}
+	if errors.Is(err, sql.ErrNoRows) {
+		return
+	}
+	if err != nil {
+		log.Printf("find private message recipient: %v", err)
+		return
+	}
+	if recipientID <= 0 || recipientID == senderID {
 		return
 	}
 
@@ -148,16 +134,19 @@ func (app App) notifyPrivateMessage(chatID int64, senderID int, message models.C
 	}
 	actorID := senderID
 	relatedID := chatID
-	if _, err = notifications.Create(app.DB, recipientID, models.CreateNotificationRequest{
+	notification, err := notifications.Create(app.DB, recipientID, models.CreateNotificationRequest{
 		ActorID:   &actorID,
 		Category:  "messages",
 		Type:      "new_message",
 		Message:   senderName + " sent you a message",
 		RelatedID: &relatedID,
-	}); err != nil {
+	})
+	if err != nil {
 		// A notification failure should not make a successfully sent message look failed.
 		log.Printf("create private message notification: %v", err)
+		return
 	}
+	app.deliverNotification(notification)
 }
 
 func (app App) GroupChatMessages(w http.ResponseWriter, r *http.Request) {
@@ -166,50 +155,28 @@ func (app App) GroupChatMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Method == http.MethodGet {
-		page, err := parsePage(r)
-		if err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]any{
-				"status":  false,
-				"message": "limit must be between 1 and 50 and offset cannot be negative",
-			})
-			return
-		}
-
-		messages, err := chatsdb.ListGroupMessages(app.DB, groupID, userID, page.Limit+1, page.Offset)
-		if err != nil {
-			writeChatError(w, err)
-			return
-		}
-		messages, hasMore := trimPage(messages, page, false)
-		writeJSON(w, http.StatusOK, map[string]any{
-			"status":     true,
-			"messages":   messages,
-			"hasMore":    hasMore,
-			"nextOffset": page.Offset + len(messages),
+	page, err := parsePage(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "limit must be between 1 and 50 and offset cannot be negative",
 		})
 		return
 	}
 
-	input, ok := decodeMessageInput(w, r)
-	if !ok {
-		return
-	}
-	message, err := chatsdb.SendGroupMessage(app.DB, groupID, userID, input.Content)
+	messages, chatID, err := chatsdb.ListGroupMessagesWithChatID(app.DB, groupID, userID, page.Limit+1, page.Offset)
 	if err != nil {
 		writeChatError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]any{"status": true, "message": message})
-}
-
-func decodeMessageInput(w http.ResponseWriter, r *http.Request) (chatMessageInput, bool) {
-	var input chatMessageInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"status": false, "message": "invalid request body"})
-		return chatMessageInput{}, false
-	}
-	return input, true
+	messages, hasMore := trimPage(messages, page, false)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":     true,
+		"chatId":     chatID,
+		"messages":   messages,
+		"hasMore":    hasMore,
+		"nextOffset": page.Offset + len(messages),
+	})
 }
 
 func parseChatPathID(r *http.Request, key string) (int64, error) {

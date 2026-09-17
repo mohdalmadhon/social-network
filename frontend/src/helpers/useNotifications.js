@@ -1,12 +1,26 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { getNotifications } from '@/api/notifications.js'
+import { subscribeRealtime } from '@/services/realtime.js'
 
 const items = ref([])
 const unreadCount = ref(0)
 const error = ref('')
-let timer
 let subscribers = 0
 let pending = false
+let stopNotificationListener
+let stopConnectionListener
+
+function receiveNotification(event) {
+  const notification = event?.notification
+  if (!notification?.id) return
+  const index = items.value.findIndex(item => item.id === notification.id)
+  if (index >= 0) {
+    items.value[index] = notification
+    return
+  }
+  items.value.unshift(notification)
+  if (!notification.isRead) unreadCount.value += 1
+}
 
 export async function refreshNotifications() {
   if (pending) return
@@ -23,19 +37,25 @@ export async function refreshNotifications() {
   }
 }
 
-// One shared timer, even when the header, sidebar and page all subscribe.
+// The header and sidebar share one initial HTTP load and one realtime listener.
 export function useNotifications() {
   onMounted(() => {
     subscribers += 1
     if (subscribers === 1) {
       refreshNotifications()
-      timer = window.setInterval(refreshNotifications, 5000)
+      stopNotificationListener = subscribeRealtime('notification', receiveNotification)
+      stopConnectionListener = subscribeRealtime('connection', event => {
+        if (event.status === 'connected') refreshNotifications()
+      })
     }
   })
   onUnmounted(() => {
     subscribers -= 1
     if (subscribers === 0) {
-      window.clearInterval(timer)
+      stopNotificationListener?.()
+      stopConnectionListener?.()
+      stopNotificationListener = null
+      stopConnectionListener = null
       items.value = []
       unreadCount.value = 0
     }

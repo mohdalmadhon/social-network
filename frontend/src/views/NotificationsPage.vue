@@ -8,6 +8,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '@/api/notifications.js'
+import { subscribeRealtime } from '@/services/realtime.js'
 
 const filters = [
   { id: 'all', label: 'All' },
@@ -26,6 +27,8 @@ const loadError = ref('')
 const notificationSentinel = ref(null)
 const NOTIFICATION_PAGE_SIZE = 20
 let notificationObserver
+let stopNotificationListener
+let stopConnectionListener
 
 const activeFilter = ref('all')
 
@@ -105,6 +108,19 @@ function notificationForDisplay(notification) {
     unread: !notification.isRead,
     action,
   }
+}
+
+function receiveRealtimeNotification(event) {
+  const notification = event?.notification
+  if (!notification?.id) return
+  const item = notificationForDisplay(notification)
+  const index = notificationItems.value.findIndex(existing => existing.id === item.id)
+  if (index >= 0) {
+    notificationItems.value[index] = { ...notificationItems.value[index], ...item }
+    return
+  }
+  notificationItems.value.unshift(item)
+  if (item.unread) unreadTotal.value += 1
 }
 
 async function loadNotifications({ append = false } = {}) {
@@ -191,12 +207,18 @@ function observeNotificationEnd() {
 }
 
 onMounted(async () => {
+  stopNotificationListener = subscribeRealtime('notification', receiveRealtimeNotification)
+  stopConnectionListener = subscribeRealtime('connection', event => {
+    if (event.status === 'connected' && !isLoading.value) loadNotifications()
+  })
   observeNotificationEnd()
   await loadNotifications()
 })
 
 onBeforeUnmount(() => {
   notificationObserver?.disconnect()
+  stopNotificationListener?.()
+  stopConnectionListener?.()
 })
 </script>
 

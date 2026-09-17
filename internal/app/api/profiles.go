@@ -2,8 +2,10 @@ package api
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 	"net/http"
+	"social/database/notifications"
 	"social/database/profiles"
 	"social/database/users"
 	"social/internal/helpers"
@@ -172,6 +174,21 @@ func (app *App) RequestFollow(w http.ResponseWriter, r *http.Request) {
 	} else {
 		requestCode = 1
 	}
+	var previousNotificationID int64
+	if requestCode == 0 {
+		previousNotification, notificationErr := notifications.GetLatestForActor(
+			app.DB,
+			targetID,
+			"requests",
+			"follow_request",
+			followerID,
+		)
+		if notificationErr == nil {
+			previousNotificationID = previousNotification.ID
+		} else if !errors.Is(notificationErr, sql.ErrNoRows) {
+			log.Printf("load previous follow request notification: %v", notificationErr)
+		}
+	}
 
 	if err := profiles.SendFollowRequest(app.DB, targetID, followerID, requestCode); err != nil {
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
@@ -179,6 +196,20 @@ func (app *App) RequestFollow(w http.ResponseWriter, r *http.Request) {
 			"message": "request to follow failed",
 		})
 		return
+	}
+	if requestCode == 0 {
+		notification, notificationErr := notifications.GetLatestForActor(
+			app.DB,
+			targetID,
+			"requests",
+			"follow_request",
+			followerID,
+		)
+		if notificationErr != nil && !errors.Is(notificationErr, sql.ErrNoRows) {
+			log.Printf("load follow request notification: %v", notificationErr)
+		} else if notificationErr == nil && notification.ID != previousNotificationID {
+			app.deliverNotification(notification)
+		}
 	}
 
 	helpers.WriteJson(w, http.StatusOK, map[string]any{

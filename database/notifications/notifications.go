@@ -141,6 +141,53 @@ func GetByID(db *sql.DB, userID int, notificationID int64) (models.Notification,
 	)
 }
 
+func GetLatestForActor(db *sql.DB, userID int, category, notificationType string, actorID int) (models.Notification, error) {
+	return scanNotification(
+		db.QueryRow(
+			notificationSelect+`
+				WHERE n.user_id = ?
+				  AND n.category = ?
+				  AND n.type = ?
+				  AND n.actor_id = ?
+				ORDER BY n.id DESC
+				LIMIT 1
+			`,
+			userID,
+			category,
+			notificationType,
+			actorID,
+		),
+	)
+}
+
+func ListByRelatedID(db *sql.DB, category, notificationType string, relatedID int64) ([]models.Notification, error) {
+	rows, err := db.Query(
+		notificationSelect+`
+			WHERE n.category = ?
+			  AND n.type = ?
+			  AND n.related_id = ?
+			ORDER BY n.id
+		`,
+		category,
+		notificationType,
+		relatedID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make([]models.Notification, 0)
+	for rows.Next() {
+		notification, err := scanNotification(rows)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, notification)
+	}
+	return result, rows.Err()
+}
+
 func IsCategory(category string) bool {
 	switch category {
 	case "requests", "groups", "events":

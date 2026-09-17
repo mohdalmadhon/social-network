@@ -195,51 +195,58 @@ func ListPrivateMessages(db *sql.DB, chatID int64, userID int, pagination ...int
 }
 
 func SendPrivateMessage(db *sql.DB, chatID int64, userID int, content string) (models.ChatMessage, error) {
-	content, err := normalizeMessage(content)
-	if err != nil {
-		return models.ChatMessage{}, err
-	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return models.ChatMessage{}, err
-	}
-	defer tx.Rollback()
-	if err = requirePrivateChatAccess(tx, chatID, userID); err != nil {
-		return models.ChatMessage{}, err
-	}
-	message, err := insertMessage(tx, chatID, userID, content)
-	if err != nil {
-		return models.ChatMessage{}, err
-	}
-	if err = tx.Commit(); err != nil {
-		return models.ChatMessage{}, err
-	}
-	return message, nil
+	return sendMessage(db, chatID, userID, content, "private")
 }
 
 func ListGroupMessages(db *sql.DB, groupID int64, userID int, pagination ...int) ([]models.ChatMessage, error) {
+	messages, _, err := ListGroupMessagesWithChatID(db, groupID, userID, pagination...)
+	return messages, err
+}
+
+func ListGroupMessagesWithChatID(db *sql.DB, groupID int64, userID int, pagination ...int) ([]models.ChatMessage, int64, error) {
 	chatID, err := EnsureGroupChat(db, groupID, userID)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return listMessages(db, chatID, userID, pagination...)
+	messages, err := listMessages(db, chatID, userID, pagination...)
+	return messages, chatID, err
 }
 
 func SendGroupMessage(db *sql.DB, groupID int64, userID int, content string) (models.ChatMessage, error) {
+	chatID, err := EnsureGroupChat(db, groupID, userID)
+	if err != nil {
+		return models.ChatMessage{}, err
+	}
+	return sendMessage(db, chatID, userID, content, "group")
+}
+
+// SendMessage is the single realtime insertion path for private and group
+// chats. Authorization is derived from the stored chat type, never from a
+// client-provided sender or chat kind.
+func SendMessage(db *sql.DB, chatID int64, userID int, content string) (models.ChatMessage, error) {
+	return sendMessage(db, chatID, userID, content, "")
+}
+
+func sendMessage(db *sql.DB, chatID int64, userID int, content, expectedType string) (models.ChatMessage, error) {
 	content, err := normalizeMessage(content)
 	if err != nil {
 		return models.ChatMessage{}, err
 	}
+
 	tx, err := db.Begin()
 	if err != nil {
 		return models.ChatMessage{}, err
 	}
 	defer tx.Rollback()
-	chatID, err := ensureGroupChat(tx, groupID, userID)
+
+	chatType, err := requireChatAccess(tx, chatID, userID)
 	if err != nil {
 		return models.ChatMessage{}, err
 	}
+	if expectedType != "" && chatType != expectedType {
+		return models.ChatMessage{}, ErrChatNotFound
+	}
+
 	message, err := insertMessage(tx, chatID, userID, content)
 	if err != nil {
 		return models.ChatMessage{}, err
@@ -248,6 +255,46 @@ func SendGroupMessage(db *sql.DB, groupID int64, userID int, content string) (mo
 		return models.ChatMessage{}, err
 	}
 	return message, nil
+}
+
+func GetChatParticipants(db *sql.DB, chatID int64) ([]int, error) {
+	var chatType string
+	var groupID sql.NullInt64
+	err := db.QueryRow(`SELECT type, group_id FROM chats WHERE id = ?`, chatID).Scan(&chatType, &groupID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrChatNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	query := `SELECT user_id FROM chat_users WHERE chat_id = ? ORDER BY user_id`
+	args := []any{chatID}
+	if chatType == "group" {
+		if !groupID.Valid {
+			return nil, ErrChatNotFound
+		}
+		query = `SELECT user_id FROM group_members WHERE group_id = ? ORDER BY user_id`
+		args = []any{groupID.Int64}
+	} else if chatType != "private" {
+		return nil, ErrChatNotFound
+	}
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	participants := make([]int, 0)
+	for rows.Next() {
+		var userID int
+		if err = rows.Scan(&userID); err != nil {
+			return nil, err
+		}
+		participants = append(participants, userID)
+	}
+	return participants, rows.Err()
 }
 
 func EnsureGroupChat(db *sql.DB, groupID int64, userID int) (int64, error) {
@@ -319,6 +366,44 @@ func requirePrivateChatAccess(db queryRower, chatID int64, userID int) error {
 		return ErrForbidden
 	}
 	return requireFollowRelationship(db, lowID, highID)
+}
+
+func requireChatAccess(db queryRower, chatID int64, userID int) (string, error) {
+	var chatType string
+	var groupID sql.NullInt64
+	err := db.QueryRow(`SELECT type, group_id FROM chats WHERE id = ?`, chatID).Scan(&chatType, &groupID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrChatNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+
+	switch chatType {
+	case "private":
+		if err = requirePrivateChatAccess(db, chatID, userID); err != nil {
+			return "", err
+		}
+	case "group":
+		if !groupID.Valid {
+			return "", ErrChatNotFound
+		}
+		var isMember bool
+		if err = db.QueryRow(`
+			SELECT EXISTS(
+				SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?
+			)
+		`, groupID.Int64, userID).Scan(&isMember); err != nil {
+			return "", err
+		}
+		if !isMember {
+			return "", ErrForbidden
+		}
+	default:
+		return "", ErrChatNotFound
+	}
+
+	return chatType, nil
 }
 
 func requireFollowRelationship(db queryRower, firstUserID, secondUserID int) error {

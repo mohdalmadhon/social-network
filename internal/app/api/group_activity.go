@@ -158,10 +158,16 @@ func (app App) InviteGroupMember(w http.ResponseWriter, r *http.Request) {
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{"status": false, "message": "could not save notification"})
 		return
 	}
+	notificationID, err := notificationResult.LastInsertId()
+	if err != nil {
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{"status": false, "message": "could not save notification"})
+		return
+	}
 	if tx.Commit() != nil {
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{"status": false, "message": "could not finish invitation"})
 		return
 	}
+	app.deliverNotificationByID(input.UserID, notificationID)
 	helpers.WriteJson(w, http.StatusCreated, map[string]any{"status": true, "invitationId": invitationID})
 }
 
@@ -327,6 +333,7 @@ func (app App) GroupEvents(w http.ResponseWriter, r *http.Request) {
 		helpers.WriteJson(w, 500, map[string]any{"message": "could not finish event"})
 		return
 	}
+	app.deliverNotificationsByRelatedID("events", "event_created", id)
 	helpers.WriteJson(w, http.StatusCreated, map[string]any{
 		"status": true,
 		"id":     id,

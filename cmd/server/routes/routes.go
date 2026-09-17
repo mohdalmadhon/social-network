@@ -4,12 +4,13 @@ import (
 	"database/sql"
 	"net/http"
 	"social/internal/app/api"
+	"social/internal/realtime"
 )
 
 func StartServer(db *sql.DB) *http.ServeMux {
 	mux := http.NewServeMux()
 
-	app := api.App{DB: db}
+	app := api.App{DB: db, Realtime: realtime.NewHub()}
 
 	//user
 	mux.HandleFunc("GET /api/user", app.AuthMiddleware(app.GetUserData))
@@ -57,9 +58,7 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("GET /api/chats/private-users", app.AuthMiddleware(app.PrivateChatUsers))
 	mux.HandleFunc("POST /api/chats/private", app.AuthMiddleware(app.OpenPrivateChat))
 	mux.HandleFunc("GET /api/chats/{chatID}/messages", app.AuthMiddleware(app.PrivateChatMessages))
-	mux.HandleFunc("POST /api/chats/{chatID}/messages", app.AuthMiddleware(app.PrivateChatMessages))
 	mux.HandleFunc("GET /api/groups/{id}/chat/messages", app.AuthMiddleware(app.GroupChatMessages))
-	mux.HandleFunc("POST /api/groups/{id}/chat/messages", app.AuthMiddleware(app.GroupChatMessages))
 
 	//groups
 	mux.HandleFunc("PATCH /api/events/{eventID}/rsvp", app.AuthMiddleware(app.EventRSVP))
@@ -84,7 +83,7 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("DELETE /api/groups/{id}/join-requests", app.AuthMiddleware(app.UndoJoinRequest))
 
 	//Websocket
-	//mux.HandleFunc("", app.AuthMiddleware(app.WsHandler))
+	mux.HandleFunc("GET /ws", app.AuthMiddleware(app.WsHandler))
 
 	//folder handlers
 	mux.HandleFunc("GET /uploads/", app.AuthMiddleware(app.ServeUpload))

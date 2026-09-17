@@ -26,14 +26,3 @@ export function openPrivateChat(userId) {
     body: JSON.stringify({ userId }),
   })
 }
-
-function sendMessage(path, content) {
-  return chatRequest(path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content }),
-  })
-}
-
-export const sendPrivateMessage = (chatId, content) => sendMessage(`/api/chats/${chatId}/messages`, content)
-export const sendGroupMessage = (groupId, content) => sendMessage(`/api/groups/${groupId}/chat/messages`, content)

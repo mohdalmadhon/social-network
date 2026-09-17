@@ -204,7 +204,6 @@ func (app App) CreateGroup(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
 	err = tx.Commit()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{
@@ -482,7 +481,7 @@ func (app App) JoinRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = tx.Exec(`
+	notificationResult, err := tx.Exec(`
 	INSERT INTO notifications (
 		user_id,
 		actor_id,
@@ -508,6 +507,14 @@ func (app App) JoinRequest(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	notificationID, err := notificationResult.LastInsertId()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "failed to notify group creator",
+		})
+		return
+	}
 
 	if err = tx.Commit(); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{
@@ -516,6 +523,7 @@ func (app App) JoinRequest(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	app.deliverNotificationByID(creatorID, notificationID)
 
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"status":  true,

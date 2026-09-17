@@ -7,13 +7,14 @@ import (
 	database "social/database/users"
 	"social/internal/helpers"
 	"social/internal/models"
+	"social/internal/realtime"
 	"social/internal/validation"
 	"time"
-
 )
 
 type App struct {
-	DB *sql.DB
+	DB       *sql.DB
+	Realtime *realtime.Hub
 }
 
 func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
@@ -50,7 +51,7 @@ func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		DOB:       dob,
 		Avatar:    "",
 	}
-	
+
 	err = validation.ValidateRegisterData(&userData)
 	if err != nil {
 		log.Println(err)

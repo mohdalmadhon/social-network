@@ -96,6 +96,11 @@ func (app *App) AuthorizeSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) DeleteSession(w http.ResponseWriter, r *http.Request) {
+	if cookie, err := r.Cookie("token"); err == nil {
+		if payload, verifyErr := tokens.VerifyToken(cookie.Value); verifyErr == nil && app.Realtime != nil {
+			app.Realtime.DisconnectUser(payload.UserID)
+		}
+	}
 
 	http.SetCookie(w, &http.Cookie{
 		Name:   "token",

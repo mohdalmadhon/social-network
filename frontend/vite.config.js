@@ -24,6 +24,11 @@ export default defineConfig({
             '/uploads': {
                 target: process.env.ORBIT_API_URL || 'http://localhost:4000',
                 changeOrigin: true
+            },
+            '/ws': {
+                target: process.env.ORBIT_API_URL || 'http://localhost:4000',
+                changeOrigin: true,
+                ws: true
             }
         }
     }

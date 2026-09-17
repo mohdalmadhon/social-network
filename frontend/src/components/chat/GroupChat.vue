@@ -1,7 +1,9 @@
 <script setup>
-import { onMounted, ref } from 'vue'
-import { getGroupMessages, sendGroupMessage } from '@/api/chats.js'
+import { onMounted, onUnmounted, ref } from 'vue'
+import { getGroupMessages } from '@/api/chats.js'
 import IconGlyph from '@/components/layout/IconGlyph.vue'
+import { appendUniqueMessage, normalizeChatMessage, normalizeChatMessages } from '@/helpers/chatMessages.js'
+import { sendChatMessage, subscribeRealtime } from '@/services/realtime.js'
 import MessageComposer from './MessageComposer.vue'
 import MessageThread from './MessageThread.vue'
 
@@ -13,12 +15,42 @@ const loadingOlderMessages = ref(false)
 const hasOlderMessages = ref(false)
 const messageOffset = ref(0)
 const error = ref('')
+const chatId = ref(null)
 const MESSAGE_PAGE_SIZE = 20
+let stopMessageListener
+let stopErrorListener
+let stopConnectionListener
+const pendingRealtimeMessages = []
+
+function handleRealtimeMessage(event) {
+  const message = normalizeChatMessage(event)
+  if (!chatId.value) {
+    pendingRealtimeMessages.push(event)
+    return
+  }
+  if (message.chatId !== Number(chatId.value)) return
+  const nextMessages = appendUniqueMessage(messages.value, message)
+  if (nextMessages !== messages.value) {
+    messages.value = nextMessages
+    messageOffset.value += 1
+  }
+  if (message.isOwn) sending.value = false
+}
 
 onMounted(async () => {
+  stopMessageListener = subscribeRealtime('message', handleRealtimeMessage)
+  stopErrorListener = subscribeRealtime('error', event => {
+    sending.value = false
+    error.value = event.message || 'Could not send message.'
+  })
+  stopConnectionListener = subscribeRealtime('connection', event => {
+    if (event.status === 'disconnected') sending.value = false
+  })
   try {
     const result = await getGroupMessages(props.groupId, { limit: MESSAGE_PAGE_SIZE, offset: 0 })
-    messages.value = result?.messages || []
+    chatId.value = Number(result?.chatId)
+    messages.value = normalizeChatMessages(result?.messages)
+    pendingRealtimeMessages.splice(0).forEach(handleRealtimeMessage)
     messageOffset.value = messages.value.length
     hasOlderMessages.value = Boolean(result?.hasMore)
   } catch (err) {
@@ -26,6 +58,12 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+})
+
+onUnmounted(() => {
+  stopMessageListener?.()
+  stopErrorListener?.()
+  stopConnectionListener?.()
 })
 
 async function loadOlderMessages() {
@@ -38,7 +76,7 @@ async function loadOlderMessages() {
       limit: MESSAGE_PAGE_SIZE,
       offset: messageOffset.value,
     })
-    const olderMessages = result?.messages || []
+    const olderMessages = normalizeChatMessages(result?.messages)
     messages.value = [...olderMessages, ...messages.value]
     messageOffset.value += olderMessages.length
     hasOlderMessages.value = Boolean(result?.hasMore)
@@ -49,18 +87,15 @@ async function loadOlderMessages() {
   }
 }
 
-async function send(content, clear) {
+function send(content, clear) {
   if (sending.value) return
   sending.value = true
   error.value = ''
   try {
-    const result = await sendGroupMessage(props.groupId, content)
-    messages.value.push(result.message)
-    messageOffset.value = messages.value.length
+    sendChatMessage(chatId.value, content)
     clear()
   } catch (err) {
     error.value = err.message
-  } finally {
     sending.value = false
   }
 }

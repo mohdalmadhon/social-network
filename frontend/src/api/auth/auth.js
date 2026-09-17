@@ -1,5 +1,6 @@
 import { checkSessionResponse } from "@/helpers/auth/auth";
 import { router } from "@/router/router";
+import { disconnectRealtime } from "@/services/realtime";
 
 export async function registerUser(userData) {
     const resp = await fetch("/api/user", {
@@ -40,7 +41,9 @@ export async function logout() {
     });
     
     if(!checkSessionResponse(resp)) {
+        disconnectRealtime()
         router.push("/login");
+        return
     }
 
     if (!resp.ok && resp.status != 401) {
@@ -48,6 +51,7 @@ export async function logout() {
         
     }
 
+    disconnectRealtime()
     router.push("/login")
 }
 
