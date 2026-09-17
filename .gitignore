@@ -28,6 +28,8 @@ db/
 PROJECT_PLAN.md
 PROJECT_CONTEXT.md
 CODE_EXPLANATION.md
+LEARNING_BOOK.md
+/lessons/
 output/
 .playwright-cli/
 .vscode/*
