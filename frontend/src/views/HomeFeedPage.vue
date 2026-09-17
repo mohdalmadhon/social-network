@@ -5,6 +5,8 @@ import FeedSidebar from '@/components/posts/FeedSidebar.vue'
 import PostCard from '@/components/posts/PostCard.vue'
 import PostComposer from '@/components/posts/PostComposer.vue'
 import { getPosts } from '@/api/posts/posts.js'
+import { addNotification } from '@/data/notifications'
+import { getUserData } from '@/api/users/personalProfile'
 
 const posts = ref([])
 const isLoading = ref(true)
@@ -14,8 +16,23 @@ const feedError = ref('')
 const feedSentinel = ref(null)
 const FEED_PAGE_SIZE = 20
 let feedObserver
-
+const user = ref({});
 const avatarColors = ['#3ee6b0', '#ff6b8a', '#7c5cff', '#ffb84d', '#4cc3ff']
+
+
+async function getData() {
+  try {
+    const result = await getUserData()
+    if (!result.status) {
+      addNotification(result.message || 'could not get data');
+      return;
+    }
+    user.value = { ...result.data };
+    console.log(user.value)
+  } catch (err) {
+    addNotification(err || "could not get data")
+  }
+}
 
 function formatPostTime(value) {
   if (!value) return 'Just now'
@@ -107,6 +124,7 @@ function observeFeedEnd() {
 onMounted(async () => {
   observeFeedEnd()
   await loadPosts()
+  await getData();
 })
 
 onBeforeUnmount(() => {
@@ -119,8 +137,8 @@ onBeforeUnmount(() => {
     <div class="feed-layout">
       <div class="home-feed">
         <h1 class="visually-hidden">Home feed</h1>
-        <PostComposer @post-created="addPost" />
-
+        <PostComposer :avatar="user?.UserInfo?.Avatar ? `/uploads/${user.UserInfo.Avatar}` : ''"
+          @post-created="addPost" />
         <p v-if="isLoading" class="feed-state orbit-surface">Loading your feed...</p>
 
         <div v-else-if="feedError" class="feed-state orbit-surface">

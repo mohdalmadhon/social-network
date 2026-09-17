@@ -15,6 +15,8 @@ const searchLoading = ref(false)
 let suggestionTimer
 let suggestionRequestID = 0
 
+const props = defineProps(["avatar"]);
+
 const hasSuggestions = computed(() =>
   suggestions.value.users.length > 0 ||
   suggestions.value.groups.length > 0 ||
@@ -94,7 +96,13 @@ watch(searchText, scheduleSuggestions)
 onBeforeUnmount(() => clearTimeout(suggestionTimer))
 
 async function signOut() {
-  try { await logout() } catch { logoutError.value = 'Could not log out. Please try again.' }
+  try {
+    await logout()
+    router.push("/login");
+    return;
+  } catch {
+    logoutError.value = 'Could not log out. Please try again.'
+  }
 }
 const { unreadCount: notificationUnreadCount } = useNotifications()
 const { chatCount } = useChatCount()
@@ -110,48 +118,65 @@ const { chatCount } = useChatCount()
     <div class="search-shell">
       <form class="search" role="search" @submit.prevent="submitSearch">
         <IconGlyph name="search" :size="16" />
-        <input v-model="searchText" autocomplete="off" type="search" placeholder="Search people, groups, posts…" aria-label="Search" @focus="searchOpen = Boolean(searchText.trim())" />
+        <input v-model="searchText" autocomplete="off" type="search" placeholder="Search people, groups, posts…"
+          aria-label="Search" @focus="searchOpen = Boolean(searchText.trim())" />
       </form>
 
-      <div v-if="searchOpen && searchText.trim()" class="search-suggestions" role="dialog" aria-label="Search suggestions">
+      <div v-if="searchOpen && searchText.trim()" class="search-suggestions" role="dialog"
+        aria-label="Search suggestions">
         <p v-if="searchLoading" class="search-suggestions__state">Looking around your orbit…</p>
 
         <template v-else-if="hasSuggestions">
           <section v-if="suggestions.users.length" class="search-suggestions__section">
             <p class="search-suggestions__label">People</p>
-            <button v-for="user in suggestions.users" :key="`user-${user.id}`" type="button" class="search-suggestion" @click="openSuggestion('users', user)">
+            <button v-for="user in suggestions.users" :key="`user-${user.id}`" type="button" class="search-suggestion"
+              @click="openSuggestion('users', user)">
               <span class="search-suggestion__avatar">
-                <img v-if="avatarUrl(user.avatarPath)" :src="avatarUrl(user.avatarPath)" :alt="`${user.firstName} ${user.lastName}`" />
-                <span v-else>{{ `${user.firstName || ''}${user.lastName || ''}`.trim().slice(0, 2).toUpperCase() || '?' }}</span>
+                <img v-if="avatarUrl(user.avatarPath)" :src="avatarUrl(user.avatarPath)"
+                  :alt="`${user.firstName} ${user.lastName}`" />
+                <span v-else>{{ `${user.firstName || ''}${user.lastName || ''}`.trim().slice(0, 2).toUpperCase() || '?'
+                }}</span>
               </span>
-              <span class="search-suggestion__copy"><strong>{{ user.firstName }} {{ user.lastName }}</strong><small>@{{ user.username || 'orbit member' }}</small></span>
+              <span class="search-suggestion__copy"><strong>{{ user.firstName }} {{ user.lastName }}</strong><small>@{{
+                user.username || 'orbit member' }}</small></span>
             </button>
           </section>
 
           <section v-if="suggestions.groups.length" class="search-suggestions__section">
             <p class="search-suggestions__label">Groups</p>
-            <button v-for="group in suggestions.groups" :key="`group-${group.id}`" type="button" class="search-suggestion" @click="openSuggestion('groups', group)">
-              <span class="search-suggestion__icon"><IconGlyph name="groups" :size="17" /></span>
-              <span class="search-suggestion__copy"><strong>{{ group.title }}</strong><small>{{ group.memberCount }} members</small></span>
+            <button v-for="group in suggestions.groups" :key="`group-${group.id}`" type="button"
+              class="search-suggestion" @click="openSuggestion('groups', group)">
+              <span class="search-suggestion__icon">
+                <IconGlyph name="groups" :size="17" />
+              </span>
+              <span class="search-suggestion__copy"><strong>{{ group.title }}</strong><small>{{ group.memberCount }}
+                  members</small></span>
             </button>
           </section>
 
           <section v-if="suggestions.posts.length" class="search-suggestions__section">
             <p class="search-suggestions__label">Posts</p>
-            <button v-for="post in suggestions.posts" :key="`post-${post.id}`" type="button" class="search-suggestion" @click="openSuggestion('posts', post)">
-              <span class="search-suggestion__icon"><IconGlyph name="image" :size="17" /></span>
-              <span class="search-suggestion__copy"><strong>{{ post.author }}</strong><small>{{ post.content }}</small></span>
+            <button v-for="post in suggestions.posts" :key="`post-${post.id}`" type="button" class="search-suggestion"
+              @click="openSuggestion('posts', post)">
+              <span class="search-suggestion__icon">
+                <IconGlyph name="image" :size="17" />
+              </span>
+              <span class="search-suggestion__copy"><strong>{{ post.author }}</strong><small>{{ post.content
+                  }}</small></span>
             </button>
           </section>
         </template>
 
         <p v-else class="search-suggestions__state">No matches yet.</p>
-        <button v-if="!searchLoading" type="button" class="search-suggestions__all" @click="submitSearch">See all results for “{{ searchText.trim() }}”</button>
+        <button v-if="!searchLoading" type="button" class="search-suggestions__all" @click="submitSearch">See all
+          results for
+          “{{ searchText.trim() }}”</button>
       </div>
     </div>
 
     <nav class="top-actions" aria-label="Account shortcuts">
-      <a class="icon-link orbit-touch-target" href="/chats" aria-label="Messages" :title="`${chatCount} unread message${chatCount === 1 ? '' : 's'}`">
+      <a class="icon-link orbit-touch-target" href="/chats" aria-label="Messages"
+        :title="`${chatCount} unread message${chatCount === 1 ? '' : 's'}`">
         <IconGlyph name="chat" :size="19" />
         <span v-if="chatCount" class="badge badge--message">{{ chatCount }}</span>
       </a>
@@ -159,7 +184,10 @@ const { chatCount } = useChatCount()
         <IconGlyph name="bell" :size="19" />
         <span v-if="notificationUnreadCount" class="badge badge--notification">{{ notificationUnreadCount }}</span>
       </a>
-      <a class="avatar orbit-touch-target" href="/profile" aria-label="My profile"><IconGlyph name="profile" :size="18" stroke-width="2" /></a>
+      <a class="avatar orbit-touch-target" href="/profile" aria-label="My profile">
+        <img v-if="avatarUrl(avatar)" :src="avatarUrl(avatar)" alt="My profile" />
+        <IconGlyph v-else name="profile" :size="18" stroke-width="2" />
+      </a>
       <button class="sign-out" type="button" @click="signOut">Log out</button>
     </nav>
     <p v-if="logoutError" role="alert">{{ logoutError }}</p>
@@ -167,8 +195,9 @@ const { chatCount } = useChatCount()
 </template>
 
 <style scoped>
- @import '../../styles/global.css';
- @import '../../styles/variables.css';
+@import '../../styles/global.css';
+@import '../../styles/variables.css';
+
 .top-navigation {
   position: sticky;
   top: 0;
@@ -235,19 +264,110 @@ const { chatCount } = useChatCount()
   box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 28%);
 }
 
-.search-suggestions__section { display: grid; gap: .2rem; }
-.search-suggestions__label { margin: var(--space-2) var(--space-2) .2rem; color: var(--color-text-faint); font-family: var(--font-meta); font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; }
-.search-suggestions__state { margin: 0; padding: var(--space-4); color: var(--color-text-muted); text-align: center; }
-.search-suggestion { display: grid; width: 100%; grid-template-columns: 2.25rem minmax(0, 1fr); align-items: center; gap: var(--space-3); padding: var(--space-2); border: 0; border-radius: var(--radius-small); background: transparent; color: var(--color-text); cursor: pointer; text-align: left; }
-.search-suggestion:hover, .search-suggestion:focus-visible { background: var(--color-surface-teal); }
-.search-suggestion__avatar, .search-suggestion__icon { display: grid; width: 2.25rem; height: 2.25rem; aspect-ratio: 1; place-items: center; overflow: hidden; border-radius: 50%; background: var(--gradient-action); color: white; font-size: .72rem; font-weight: 700; }
-.search-suggestion__avatar img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
-.search-suggestion__icon { background: rgb(62 230 176 / 14%); color: var(--color-mint); }
-.search-suggestion__copy { display: grid; min-width: 0; gap: .1rem; }
-.search-suggestion__copy strong, .search-suggestion__copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.search-suggestion__copy small { color: var(--color-text-muted); font-size: .75rem; }
-.search-suggestions__all { min-height: var(--touch-target); margin-top: var(--space-1); border: 1px solid var(--color-border); border-radius: 999px; background: transparent; color: var(--color-violet-soft); cursor: pointer; font: inherit; font-size: .8125rem; font-weight: 700; }
-.search-suggestions__all:hover, .search-suggestions__all:focus-visible { border-color: var(--color-violet); color: var(--color-text); }
+.search-suggestions__section {
+  display: grid;
+  gap: .2rem;
+}
+
+.search-suggestions__label {
+  margin: var(--space-2) var(--space-2) .2rem;
+  color: var(--color-text-faint);
+  font-family: var(--font-meta);
+  font-size: .68rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.search-suggestions__state {
+  margin: 0;
+  padding: var(--space-4);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.search-suggestion {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-small);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.search-suggestion:hover,
+.search-suggestion:focus-visible {
+  background: var(--color-surface-teal);
+}
+
+.search-suggestion__avatar,
+.search-suggestion__icon {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  aspect-ratio: 1;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--gradient-action);
+  color: white;
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.search-suggestion__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.search-suggestion__icon {
+  background: rgb(62 230 176 / 14%);
+  color: var(--color-mint);
+}
+
+.search-suggestion__copy {
+  display: grid;
+  min-width: 0;
+  gap: .1rem;
+}
+
+.search-suggestion__copy strong,
+.search-suggestion__copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-suggestion__copy small {
+  color: var(--color-text-muted);
+  font-size: .75rem;
+}
+
+.search-suggestions__all {
+  min-height: var(--touch-target);
+  margin-top: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-violet-soft);
+  cursor: pointer;
+  font: inherit;
+  font-size: .8125rem;
+  font-weight: 700;
+}
+
+.search-suggestions__all:hover,
+.search-suggestions__all:focus-visible {
+  border-color: var(--color-violet);
+  color: var(--color-text);
+}
 
 .top-actions {
   display: flex;
@@ -255,8 +375,19 @@ const { chatCount } = useChatCount()
   justify-content: flex-end;
   gap: var(--space-1);
 }
-.sign-out { min-height: 44px; border: 0; background: transparent; color: var(--color-text-muted); cursor: pointer; font-size: .8125rem; }
-.sign-out:hover { color: var(--color-coral); }
+
+.sign-out {
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: .8125rem;
+}
+
+.sign-out:hover {
+  color: var(--color-coral);
+}
 
 .icon-link,
 .avatar {
@@ -272,18 +403,37 @@ const { chatCount } = useChatCount()
   width: var(--touch-target);
 }
 
+
+
 .avatar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: var(--touch-target);
+  height: var(--touch-target);
+  overflow: hidden;
+  border: 2px solid var(--color-border);
   border-radius: 50%;
-  background: var(--color-violet);
+  background: var(--gradient-action);
   color: white;
-  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 0.25rem 0.75rem rgb(0 0 0 / 20%);
+}
+
+.avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 50%;
 }
 
 .avatar::after {
   position: absolute;
-  right: 0;
-  bottom: 0.125rem;
+  right: 0.05rem;
+  bottom: 0.05rem;
   width: 0.55rem;
   height: 0.55rem;
   border: 2px solid var(--color-sidebar);

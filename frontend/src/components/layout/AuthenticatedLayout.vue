@@ -1,6 +1,10 @@
 <script setup>
+import { onMounted, ref } from 'vue'
+
 import SideNavigation from './SideNavigation.vue'
 import TopNavigation from './TopNavigation.vue'
+
+import { getUserData } from '@/api/users/personalProfile.js'
 
 defineProps({
   activePage: {
@@ -8,13 +12,39 @@ defineProps({
     required: true,
   },
 })
+
+const user = ref({
+  UserInfo: {
+    Avatar: '',
+  },
+})
+
+async function getData() {
+  try {
+    const result = await getUserData()
+
+    if (!result.status) {
+      addNotification(result.message || 'could not get data')
+      return
+    }
+
+    user.value = result.data
+    console.log(user.value)
+  } catch (err) {
+    addNotification(err || 'could not get data')
+  }
+}
+
+onMounted(getData)
 </script>
 
 <template>
   <div class="authenticated-layout">
-    <TopNavigation />
+    <TopNavigation :avatar="user.UserInfo.Avatar" />
+
     <div class="authenticated-layout__body">
       <SideNavigation :active-page="activePage" />
+
       <main class="authenticated-layout__content">
         <slot />
       </main>

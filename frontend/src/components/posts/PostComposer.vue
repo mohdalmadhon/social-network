@@ -5,6 +5,7 @@ import { getFollowers } from '@/api/users/profiles.js'
 import IconGlyph from '@/components/layout/IconGlyph.vue'
 
 const emit = defineEmits(['post-created'])
+const props = defineProps(["avatar"]);
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const content = ref('')
@@ -138,29 +139,25 @@ watch(privacy, (value) => {
 <template>
   <form class="post-composer orbit-surface" @submit.prevent="preparePost">
     <div class="post-composer__input-row">
-      <div class="post-composer__avatar"><IconGlyph name="profile" :size="18" /></div>
+      <div class="post-composer__avatar">
+        <img v-if="avatar" :src="avatar" alt="Profile avatar" />
+        <IconGlyph v-else name="profile" :size="18" />
+      </div>
 
       <label class="visually-hidden" for="post-content">Post content</label>
-      <textarea
-        id="post-content"
-        v-model="content"
-        maxlength="500"
-        placeholder="What's happening in your orbit?"
-        rows="2"
-        @input="message = ''"
-      ></textarea>
+      <textarea id="post-content" v-model="content" maxlength="500" placeholder="What's happening in your orbit?"
+        rows="2" @input="message = ''"></textarea>
     </div>
 
     <div v-if="selectedFile" class="selected-file">
       <span>{{ selectedFile.name }}</span>
-      <button type="button" aria-label="Remove selected file" @click="removeFile"><IconGlyph name="close" :size="16" /></button>
+      <button type="button" aria-label="Remove selected file" @click="removeFile">
+        <IconGlyph name="close" :size="16" />
+      </button>
     </div>
 
     <div v-if="previewUrl" class="selected-preview">
-      <img
-        :src="previewUrl"
-        alt="Preview of the selected media"
-      />
+      <img :src="previewUrl" alt="Preview of the selected media" />
     </div>
 
     <div class="post-composer__toolbar">
@@ -169,51 +166,20 @@ watch(privacy, (value) => {
           <IconGlyph name="image" :size="17" />
           <span>Photo / GIF</span>
         </button>
-        <input
-          ref="fileInput"
-          class="file-input"
-          type="file"
-          accept="image/jpeg,image/png,image/gif"
-          @change="selectFile"
-        />
+        <input ref="fileInput" class="file-input" type="file" accept="image/jpeg,image/png,image/gif"
+          @change="selectFile" />
 
-        <div class="feeling-picker">
-          <button
-            class="composer-action composer-action--feeling"
-            type="button"
-            :aria-expanded="showFeelings"
-            @click="showFeelings = !showFeelings"
-          >
-            <IconGlyph name="smile" :size="17" />
-            <span>{{ feeling || 'Feeling' }}</span>
-          </button>
-
-          <div v-if="showFeelings" class="feeling-menu">
-            <button v-for="option in feelings" :key="option" type="button" @click="selectFeeling(option)">
-              {{ option }}
-            </button>
-          </div>
-        </div>
       </div>
 
       <div class="post-composer__actions">
-        <label class="privacy-control">
-          <IconGlyph name="globe" :size="16" />
-          <span class="visually-hidden">Post privacy</span>
-          <select v-model="privacy">
-            <option value="public">Public</option>
-            <option value="followers">Followers only</option>
-            <option value="selected">Selected followers</option>
-          </select>
-        </label>
-
         <div v-if="privacy === 'selected'" class="selected-followers">
           <p class="selected-followers__label">Choose followers</p>
           <p v-if="isLoadingFollowing" class="selected-followers__state">Loading your followers...</p>
           <p v-else-if="followingError" class="selected-followers__state selected-followers__state--error">
             {{ followingError }}
           </p>
-          <p v-else-if="following.length === 0" class="selected-followers__state">You have no approved followers yet.</p>
+          <p v-else-if="following.length === 0" class="selected-followers__state">You have no approved followers yet.
+          </p>
           <label v-for="person in following" v-else :key="person.id" class="selected-follower">
             <input v-model="selectedFollowerIds" type="checkbox" :value="person.id" />
             <span>{{ person.name || 'Orbit member' }}</span>
@@ -226,12 +192,8 @@ watch(privacy, (value) => {
       </div>
     </div>
 
-    <p
-      v-if="message"
-      class="post-composer__message"
-      :class="{ 'post-composer__message--error': messageType === 'error' }"
-      role="status"
-    >
+    <p v-if="message" class="post-composer__message"
+      :class="{ 'post-composer__message--error': messageType === 'error' }" role="status">
       {{ message }}
     </p>
   </form>
@@ -251,14 +213,26 @@ watch(privacy, (value) => {
 }
 
 .post-composer__avatar {
-  display: grid;
-  width: var(--touch-target);
-  height: var(--touch-target);
-  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
   border-radius: 50%;
+  border: 2px solid var(--color-border);
   background: var(--gradient-action);
   color: white;
-  font-weight: 700;
+  box-shadow: var(--shadow-soft);
+}
+
+.post-composer__avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 textarea {
@@ -394,7 +368,7 @@ textarea::placeholder {
   white-space: nowrap;
 }
 
-.composer-action--feeling > span:first-child {
+.composer-action--feeling>span:first-child {
   color: var(--color-amber);
   font-size: 1.4rem;
 }
