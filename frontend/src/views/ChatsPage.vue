@@ -181,11 +181,13 @@ function shortTime(value) {
               <span class="user-avatar"><img v-if="activeChat.otherUser.avatarPath" :src="`/uploads/${activeChat.otherUser.avatarPath}`" alt="" /><span v-else>{{ initials(activeChat.otherUser) }}</span></span>
               <span><strong>{{ displayName(activeChat.otherUser) }}</strong><small>@{{ activeChat.otherUser.username || 'orbit member' }}</small></span>
             </header>
-            <button v-if="hasOlderMessages" class="load-older-messages" type="button"
-              :disabled="loadingOlderMessages" @click="loadOlderMessages">
-              {{ loadingOlderMessages ? 'Loading older messages...' : 'Load older messages' }}
-            </button>
-            <MessageThread :messages="messages" :loading="loadingMessages" :auto-scroll="!loadingOlderMessages" />
+            <MessageThread
+              :messages="messages"
+              :loading="loadingMessages"
+              :loading-older="loadingOlderMessages"
+              :can-load-older="hasOlderMessages"
+              @reach-top="loadOlderMessages"
+            />
             <MessageComposer :sending="sending" @send="send" />
           </template>
           <div v-else class="thread-placeholder">
@@ -228,9 +230,6 @@ function shortTime(value) {
 .private-thread { display: flex; min-width: 0; flex-direction: column; }
 .private-thread__header { display: flex; min-height: 4.75rem; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--color-border); }
 .private-thread :deep(.message-thread) { flex: 1; max-height: none; }
-.load-older-messages { align-self: center; min-height: var(--touch-target); margin: var(--space-3) 0 0; padding: 0 var(--space-4); border: 1px solid var(--color-border); border-radius: 999px; background: transparent; color: var(--color-text-muted); cursor: pointer; font: inherit; font-size: .8125rem; }
-.load-older-messages:hover:not(:disabled), .load-older-messages:focus-visible { border-color: var(--color-violet); color: var(--color-text); }
-.load-older-messages:disabled { cursor: wait; opacity: .6; }
 .thread-placeholder { display: grid; margin: auto; justify-items: center; padding: var(--space-6); color: var(--color-text-faint); text-align: center; }
 .thread-placeholder h2 { margin: var(--space-3) 0 var(--space-2); color: var(--color-text); font-size: 1.25rem; }
 .thread-placeholder p { margin: 0; }

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout.vue'
 import IconGlyph from '@/components/layout/IconGlyph.vue'
 import {
@@ -23,7 +23,9 @@ const isLoadingMore = ref(false)
 const hasMoreNotifications = ref(false)
 const unreadTotal = ref(0)
 const loadError = ref('')
+const notificationSentinel = ref(null)
 const NOTIFICATION_PAGE_SIZE = 20
+let notificationObserver
 
 const activeFilter = ref('all')
 
@@ -173,7 +175,29 @@ async function chooseAction(item, action) {
   }
 }
 
-onMounted(loadNotifications)
+function observeNotificationEnd() {
+  if (!notificationSentinel.value || typeof IntersectionObserver === 'undefined') return
+
+  notificationObserver = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting && hasMoreNotifications.value && !isLoading.value && !isLoadingMore.value) {
+      loadNotifications({ append: true })
+    }
+  }, {
+    // Prefetch before the user reaches the end of a long notification list.
+    rootMargin: '0px 0px 320px',
+  })
+
+  notificationObserver.observe(notificationSentinel.value)
+}
+
+onMounted(async () => {
+  observeNotificationEnd()
+  await loadNotifications()
+})
+
+onBeforeUnmount(() => {
+  notificationObserver?.disconnect()
+})
 </script>
 
 <template>
@@ -284,20 +308,15 @@ onMounted(loadNotifications)
           </span>
         </article>
 
-        <button v-if="hasMoreNotifications" class="load-more-button" type="button" :disabled="isLoadingMore"
-          @click="loadNotifications({ append: true })">
-          {{ isLoadingMore ? 'Loading more updates...' : 'Load more updates' }}
-        </button>
       </div>
 
       <div v-else class="notifications-empty">
         <p>Nothing here yet.</p>
-
-        <button v-if="hasMoreNotifications" class="load-more-button" type="button" :disabled="isLoadingMore"
-          @click="loadNotifications({ append: true })">
-          {{ isLoadingMore ? 'Loading more updates...' : 'Load more updates' }}
-        </button>
       </div>
+
+      <div ref="notificationSentinel" class="notification-load-sentinel" aria-hidden="true"></div>
+      <p v-if="isLoadingMore" class="notification-load-state" role="status">Loading more updates...</p>
+      <p v-else-if="!hasMoreNotifications && notificationItems.length" class="notification-load-state">You’re all caught up.</p>
       </section>
 
       <aside class="notification-legend orbit-surface" aria-labelledby="notification-legend-title">
@@ -419,28 +438,18 @@ onMounted(loadNotifications)
   margin-top: var(--space-5);
 }
 
-.load-more-button {
-  min-height: var(--touch-target);
-  margin: var(--space-2) auto 0;
-  padding: 0 var(--space-5);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface);
+.notification-load-sentinel {
+  width: 100%;
+  height: 1px;
+  pointer-events: none;
+}
+
+.notification-load-state {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3) 0 var(--space-1);
   color: var(--color-text-muted);
-  cursor: pointer;
-  font: inherit;
-  font-weight: 600;
-}
-
-.load-more-button:hover:not(:disabled),
-.load-more-button:focus-visible {
-  border-color: var(--color-violet);
-  color: var(--color-text);
-}
-
-.load-more-button:disabled {
-  cursor: wait;
-  opacity: 0.6;
+  font-size: 0.8125rem;
+  text-align: center;
 }
 
 .notification-item {

@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout.vue'
 import FeedSidebar from '@/components/posts/FeedSidebar.vue'
 import PostCard from '@/components/posts/PostCard.vue'
@@ -11,7 +11,9 @@ const isLoading = ref(true)
 const isLoadingMore = ref(false)
 const hasMorePosts = ref(false)
 const feedError = ref('')
+const feedSentinel = ref(null)
 const FEED_PAGE_SIZE = 20
+let feedObserver
 
 const avatarColors = ['#3ee6b0', '#ff6b8a', '#7c5cff', '#ffb84d', '#4cc3ff']
 
@@ -87,7 +89,29 @@ function addPost(post) {
   }
 }
 
-onMounted(loadPosts)
+function observeFeedEnd() {
+  if (!feedSentinel.value || typeof IntersectionObserver === 'undefined') return
+
+  feedObserver = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting && hasMorePosts.value && !isLoading.value && !isLoadingMore.value) {
+      loadPosts({ append: true })
+    }
+  }, {
+    // Start the request before the user reaches the end of the feed.
+    rootMargin: '0px 0px 320px',
+  })
+
+  feedObserver.observe(feedSentinel.value)
+}
+
+onMounted(async () => {
+  observeFeedEnd()
+  await loadPosts()
+})
+
+onBeforeUnmount(() => {
+  feedObserver?.disconnect()
+})
 </script>
 
 <template>
@@ -110,13 +134,11 @@ onMounted(loadPosts)
 
         <template v-else>
           <PostCard v-for="post in posts" :key="post.id" :post="post" />
-
-          <div v-if="hasMorePosts" class="feed-pagination">
-            <button type="button" :disabled="isLoadingMore" @click="loadPosts({ append: true })">
-              {{ isLoadingMore ? 'Loading more posts...' : 'Load more posts' }}
-            </button>
-          </div>
         </template>
+
+        <div ref="feedSentinel" class="feed-load-sentinel" aria-hidden="true"></div>
+        <p v-if="isLoadingMore" class="feed-load-state" role="status">Loading more posts...</p>
+        <p v-else-if="!hasMorePosts && posts.length" class="feed-load-state">You’re all caught up.</p>
       </div>
       <FeedSidebar />
     </div>
@@ -159,33 +181,20 @@ onMounted(loadPosts)
   font-weight: 700;
 }
 
-.feed-pagination {
+.feed-load-sentinel {
+  width: 100%;
+  height: 1px;
+  pointer-events: none;
+}
+
+.feed-load-state {
   display: flex;
   justify-content: center;
-  padding: var(--space-2) 0 var(--space-3);
-}
-
-.feed-pagination button {
-  min-height: var(--touch-target);
-  padding: 0 var(--space-5);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface);
+  margin: 0;
+  padding: var(--space-3) 0 var(--space-4);
   color: var(--color-text-muted);
-  cursor: pointer;
-  font: inherit;
-  font-weight: 600;
-}
-
-.feed-pagination button:hover:not(:disabled),
-.feed-pagination button:focus-visible {
-  border-color: var(--color-violet);
-  color: var(--color-text);
-}
-
-.feed-pagination button:disabled {
-  cursor: wait;
-  opacity: 0.6;
+  font-size: 0.8125rem;
+  text-align: center;
 }
 
 @media (min-width: 48rem) {

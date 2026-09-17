@@ -76,12 +76,14 @@ async function send(content, clear) {
       </div>
     </header>
     <p v-if="error" class="group-chat__error" role="alert">{{ error }}</p>
-    <button v-if="hasOlderMessages" class="load-older-messages" type="button"
-      :disabled="loadingOlderMessages" @click="loadOlderMessages">
-      {{ loadingOlderMessages ? 'Loading older messages...' : 'Load older messages' }}
-    </button>
-    <MessageThread :messages="messages" :loading="loading" :auto-scroll="!loadingOlderMessages"
-      empty-message="No group messages yet. Start the conversation." />
+    <MessageThread
+      :messages="messages"
+      :loading="loading"
+      :loading-older="loadingOlderMessages"
+      :can-load-older="hasOlderMessages"
+      empty-message="No group messages yet. Start the conversation."
+      @reach-top="loadOlderMessages"
+    />
     <MessageComposer :sending="sending" @send="send" />
   </section>
 </template>
@@ -93,8 +95,5 @@ async function send(content, clear) {
 .group-chat .orbit-meta { margin: 0; }
 .group-chat h2 { margin: var(--space-1) 0 0; font-family: var(--font-display); font-size: 1.4rem; letter-spacing: 0; }
 .group-chat__error { margin: 0; padding: var(--space-3) var(--space-5); border-top: 1px solid var(--color-border); background: rgb(255 112 112 / 8%); color: var(--color-coral); }
-.load-older-messages { align-self: center; min-height: var(--touch-target); margin: var(--space-3) auto 0; padding: 0 var(--space-4); border: 1px solid var(--color-border); border-radius: 999px; background: transparent; color: var(--color-text-muted); cursor: pointer; font: inherit; font-size: .8125rem; }
-.load-older-messages:hover:not(:disabled), .load-older-messages:focus-visible { border-color: var(--color-violet); color: var(--color-text); }
-.load-older-messages:disabled { cursor: wait; opacity: .6; }
 @media (max-width: 520px) { .group-chat > header { padding: var(--space-4); } }
 </style>

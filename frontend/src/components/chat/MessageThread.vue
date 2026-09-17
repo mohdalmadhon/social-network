@@ -4,15 +4,37 @@ import { nextTick, ref, watch } from 'vue'
 const props = defineProps({
   messages: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
+  loadingOlder: { type: Boolean, default: false },
+  canLoadOlder: { type: Boolean, default: false },
   autoScroll: { type: Boolean, default: true },
   emptyMessage: { type: String, default: 'No messages yet. Say hello.' },
 })
+const emit = defineEmits(['reach-top'])
 const thread = ref(null)
+let previousScrollHeight = 0
 
-watch(() => [props.loading, props.messages.length], async () => {
+watch(() => [props.loading, props.messages.length], async ([loading, messageCount], [previousLoading, previousMessageCount] = []) => {
   await nextTick()
-  if (thread.value && props.autoScroll) thread.value.scrollTop = thread.value.scrollHeight
+  if (!thread.value) return
+
+  if (props.loadingOlder && messageCount > previousMessageCount) {
+    // Keep the first visible old message anchored while earlier rows are added.
+    thread.value.scrollTop += thread.value.scrollHeight - previousScrollHeight
+    return
+  }
+
+  if (props.autoScroll && (loading !== previousLoading || messageCount !== previousMessageCount)) {
+    thread.value.scrollTop = thread.value.scrollHeight
+  }
 })
+
+function handleScroll() {
+  if (!thread.value || !props.canLoadOlder || props.loadingOlder) return
+  if (thread.value.scrollTop <= 80) {
+    previousScrollHeight = thread.value.scrollHeight
+    emit('reach-top')
+  }
+}
 
 function senderName(message) {
   return `${message.firstName || ''} ${message.lastName || ''}`.trim() || message.username || 'Orbit member'
@@ -26,7 +48,8 @@ function messageTime(value) {
 </script>
 
 <template>
-  <div ref="thread" class="message-thread" aria-live="polite">
+  <div ref="thread" class="message-thread" aria-live="polite" @scroll="handleScroll">
+    <p v-if="loadingOlder" class="thread-load-state" role="status">Loading earlier messages...</p>
     <p v-if="loading" class="thread-state">Loading messages...</p>
     <p v-else-if="!messages.length" class="thread-state">{{ emptyMessage }}</p>
     <article v-for="message in messages" v-else :key="message.id" class="message-row" :class="{ 'message-row--own': message.isOwn }">
@@ -45,6 +68,7 @@ function messageTime(value) {
 
 <style scoped>
 .message-thread { display: flex; min-height: 20rem; max-height: 34rem; flex-direction: column; gap: var(--space-3); padding: var(--space-5); overflow-y: auto; background: var(--color-input); }
+.thread-load-state { margin: 0; padding: 0 0 var(--space-2); color: var(--color-text-faint); font-size: .75rem; text-align: center; }
 .thread-state { margin: auto; padding: var(--space-5); color: var(--color-text-muted); text-align: center; }
 .message-row { display: flex; max-width: min(78%, 38rem); align-items: end; gap: var(--space-2); }
 .message-row--own { align-self: flex-end; }
