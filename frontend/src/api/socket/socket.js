@@ -76,8 +76,16 @@ export function connectToWS() {
 
 export function sendWS(payload) {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
+        console.error('websocket is disconnected');
+        try {
+            connectToWS()
+        } catch (err) {
+            addNotification('could not connect to websocket')
+            return;
+        }
         return;
     }
 
+    console.log(payload)
     ws.send(JSON.stringify(payload));
 }

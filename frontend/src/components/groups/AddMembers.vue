@@ -1,7 +1,7 @@
 <script setup>
+import { ref } from 'vue';
 import { searchInvites } from '@/api/chats/search';
 import { addNotification } from '@/data/notifications';
-import { ref } from 'vue';
 
 const props = defineProps({
     modelValue: {
@@ -30,7 +30,7 @@ function handleSearchFriends() {
         try {
             const result = await searchInvites(value);
 
-            if (result.data == null) {
+            if (!result.data) {
                 friends.value = [];
                 return;
             }
@@ -38,16 +38,18 @@ function handleSearchFriends() {
             friends.value = Object.values(result.data)
                 .map(person => ({
                     ...person,
-                    id: person.ID
+                    id: person.ID ?? person.id
                 }))
-                .filter(
-                    person =>
-                        !props.modelValue.some(
-                            selected => selected.id === person.id
-                        )
-                );
+                .filter(person => {
+                    if (!person.id) {
+                        return false;
+                    }
 
-            console.log(friends.value);
+                    return !props.modelValue.some(
+                        selected => selected.id === person.id
+                    );
+                });
+
         } catch (err) {
             console.error(err);
             addNotification('could not fetch friends', 'error');
@@ -57,21 +59,36 @@ function handleSearchFriends() {
 }
 
 function addPerson(person) {
-    if (!person || !person.id) {
+    if (!person) {
         return;
     }
 
-    if (props.modelValue.some(existing => existing.id === person.id)) {
+    const id = person.ID ?? person.id;
+
+    if (!id) {
+        return;
+    }
+
+    const selectedPerson = {
+        ...person,
+        id
+    };
+
+    if (
+        props.modelValue.some(
+            existing => existing.id === id
+        )
+    ) {
         return;
     }
 
     emit('update:modelValue', [
         ...props.modelValue,
-        person
+        selectedPerson
     ]);
 
     friends.value = friends.value.filter(
-        friend => friend.id !== person.id
+        friend => friend.id !== id
     );
 
     search.value = '';
@@ -81,7 +98,9 @@ function addPerson(person) {
 function removePerson(id) {
     emit(
         'update:modelValue',
-        props.modelValue.filter(person => person.id !== id)
+        props.modelValue.filter(
+            person => person.id !== id
+        )
     );
 }
 </script>

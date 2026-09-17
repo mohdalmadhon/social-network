@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"social/database/chats"
 	"social/database/groups"
+	"social/database/users"
 	"social/internal/helpers"
 	"social/internal/models"
 	"social/internal/validation"
@@ -371,7 +372,7 @@ func (app *App) MakeNewGroup(w http.ResponseWriter, r *http.Request) {
 		group.Avatar = path
 	}
 
-	err = groups.MakeNewGroup(app.DB, group, userIDs)
+	g, ids, err := groups.MakeNewGroup(app.DB, group, userIDs)
 	if err != nil {
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
@@ -380,10 +381,42 @@ func (app *App) MakeNewGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	requests := []int{}
+
+	for _, id := range ids {
+		isFriend, err := users.IsFriend(app.DB, userID, id)
+		if err != nil {
+			helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+				"status":  false,
+				"message": "failed to check data",
+			})
+			return
+		}
+
+		if isFriend {
+			err = groups.AddMembers(app.DB, g.ID, userID)
+		} else {
+			requests = append(requests, id)
+		}
+
+		if err != nil {
+			helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+				"status":  false,
+				"message": "failed to check data",
+			})
+			return
+		}
+	}
+
 	helpers.WriteJson(w, http.StatusOK, map[string]any{
 		"status":  true,
 		"message": "group created",
+		"request": map[string]any{
+			"usersIds": requests,
+			"groupData": g,
+		},
 	})
+	
 }
 
 func (app *App) SearchInvites(w http.ResponseWriter, r *http.Request) {
@@ -521,8 +554,8 @@ func (app *App) DiscoverGroups(w http.ResponseWriter, r *http.Request) {
 	}
 
 	helpers.WriteJson(w, http.StatusOK, map[string]any{
-		"status":  true,
-		"data": groups,
+		"status": true,
+		"data":   groups,
 	})
 	return
 }

@@ -33,10 +33,16 @@ type NewNotification struct {
 }
 
 // user ID will be used if groupID is null which means new chat that did not exists before
+
 type IncomingMessage struct {
-	Offset     int    `json:"offset"`
-	Private    int    `json:"private"`
-	UserID     int    `json:"userID"`
-	GroupID    int    `json:"groupID"`
-	Content    string `json:"content"`
+	Offset  int    `json:"offset"`
+	Private int    `json:"private"`
+	UserID  int    `json:"userID"`
+	GroupID int    `json:"groupID"`
+	Content string `json:"content"`
+}
+
+type GroupInvite struct {
+	GroupData Group `json:"groupData"`
+	Users     []int `json:"users"`
 }

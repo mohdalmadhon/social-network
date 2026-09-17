@@ -4,6 +4,7 @@ import { reactive, ref, watch } from 'vue';
 import { addNotification } from '@/data/notifications';
 import AvatarPicker from './AvatarPicker.vue';
 import AddMembers from './AddMembers.vue';
+import { sendWS } from '@/api/socket/socket.js';
 
 const props = defineProps({
     show: {
@@ -136,7 +137,7 @@ async function handleSubmit() {
 
     try {
         const formData = new FormData();
-        
+
         formData.append('title', group.name.trim());
         formData.append('description', group.description.trim());
         formData.append(
@@ -155,11 +156,21 @@ async function handleSubmit() {
         });
 
         const result = await response.json();
-
+        console.log(result)
         if (!result.status) {
             addNotification(result.message || 'could not create group', 'error');
             return;
         }
+
+
+        sendWS({
+            type: "privateMessage/invite",
+            data: {
+                groupData: result.request.groupData,
+                users: result.request.usersIds
+            }
+        });
+
 
         addNotification('group created', 'success');
         emit('created');
@@ -211,18 +222,12 @@ async function handleSubmit() {
                     <label>
                         <strong>Group name</strong>
                     </label>
-                    
+
                     <label style="font-size: 8px;">
                         {{ group.name.length }}/{{ NAME_LIMIT }} characters
                     </label>
 
-                    <input
-                        v-model="group.name"
-                        type="text"
-                        name="title"
-                        maxlength="15"
-                        placeholder="goats"
-                    >
+                    <input v-model="group.name" type="text" name="title" maxlength="15" placeholder="goats">
                 </div>
 
                 <p v-if="validation.field === 'name'" class="validation-error">
@@ -238,13 +243,8 @@ async function handleSubmit() {
                         {{ group.description.length }}/{{ DESCRIPTION_LIMIT }} characters
                     </label>
 
-                    <textarea
-                        v-model="group.description"
-                        maxlength="200"
-                        rows="4"
-                        name="description"
-                        placeholder="What's this group about?"
-                    ></textarea>
+                    <textarea v-model="group.description" maxlength="200" rows="4" name="description"
+                        placeholder="What's this group about?"></textarea>
                 </div>
 
                 <p v-if="validation.field === 'description'" class="validation-error">

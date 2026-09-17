@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"log"
-	"social/database/users"
 	"social/internal/helpers"
 	"social/internal/models"
 	"strconv"
@@ -107,7 +106,7 @@ func UpdateGroup(db *sql.DB, group models.NewGroup) error {
 	return nil
 }
 
-func MakeNewGroup(db *sql.DB, g models.Group, userIDs []int) error {
+func MakeNewGroup(db *sql.DB, g models.Group, userIDs []int) (models.Group, []int, error) {
 	result, err := db.Exec(`
 		INSERT INTO groups (
 			is_private_chat,
@@ -125,12 +124,12 @@ func MakeNewGroup(db *sql.DB, g models.Group, userIDs []int) error {
 		g.Avatar,
 	)
 	if err != nil {
-		return err
+		return g, nil, err
 	}
 
 	groupID, err := result.LastInsertId()
 	if err != nil {
-		return err
+		return g, nil, err
 	}
 
 	g.ID = int(groupID)
@@ -140,42 +139,10 @@ func MakeNewGroup(db *sql.DB, g models.Group, userIDs []int) error {
 		VALUES (?, ?, 1)
 	`, groupID, g.UserID)
 	if err != nil {
-		return err
+		return g, nil, err
 	}
 
-	log.Println(userIDs)
-	for _, userID := range userIDs {
-		if userID == g.UserID {
-			continue
-		}
-
-		isFriend, err := users.IsFriend(db, g.UserID, userID)
-		if err != nil {
-			return err
-		}
-
-		status := 0
-
-		if isFriend {
-			status = 1
-		}
-
-		_, err = db.Exec(`
-			INSERT INTO groups_users (group_id, user_id, status)
-			VALUES (?, ?, ?)
-		`, groupID, userID, status)
-		if err != nil {
-			return err
-		}
-
-		if !isFriend {
-			if err := SendInvites(db, userID, g); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
+	return g, userIDs, nil
 }
 
 func AddMembers(db *sql.DB, groupID, userID int) error {

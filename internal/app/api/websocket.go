@@ -14,11 +14,11 @@ import (
 func (app *App) HandleWS(ws *websocket.Conn) {
 	userID, ok := ws.Request().Context().Value("userID").(int)
 	if !ok {
-		// do somehting
-		log.Println("err here")
+		log.Println("invalid user ID")
 		return
 	}
-	log.Println("incoming user")
+
+
 	app.register(userID, ws)
 	defer app.unregister(userID)
 
@@ -29,21 +29,20 @@ func (app *App) readLoop(userID int, ws *websocket.Conn) {
 	buff := make([]byte, 4096)
 
 	for {
-		n, err := ws.Read(buff)
 
+		n, err := ws.Read(buff)
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
 
-			log.Println(err)
+			log.Println("websocket read error:", err)
 			break
 		}
-		log.Println("incoming message")
 		var payload models.WSPayload
 
 		if err := json.Unmarshal(buff[:n], &payload); err != nil {
-			log.Println(err)
+			log.Println("invalid websocket payload:", err)
 			continue
 		}
 
@@ -52,7 +51,11 @@ func (app *App) readLoop(userID int, ws *websocket.Conn) {
 			app.handleMessage(userID, payload.Data)
 
 		case "notification":
-			// app.handleNotification(payload.Data)
+			log.Println("notification received")
+
+		case "privateMessage/invite":
+
+			app.handleInvite(userID, payload.Data)
 
 		default:
 			log.Println("unknown websocket type:", payload.Type)
@@ -64,7 +67,7 @@ func (app *App) handleMessage(userID int, data json.RawMessage) {
 	var msg models.IncomingMessage
 
 	if err := json.Unmarshal(data, &msg); err != nil {
-		log.Println(err)
+		log.Println("invalid message payload:", err)
 		return
 	}
 
@@ -73,51 +76,190 @@ func (app *App) handleMessage(userID int, data json.RawMessage) {
 	}
 
 	groupID := msg.GroupID
+
 	if groupID <= 0 {
-		existingGroupID, err := chats.HasPrivateChat(app.DB, userID, msg.UserID)
+		existingGroupID, err := chats.HasPrivateChat(
+			app.DB,
+			userID,
+			msg.UserID,
+		)
+
 		if err != nil {
+			log.Println("private chat lookup error:", err)
 			return
 		}
 
 		if existingGroupID != -1 {
 			groupID = existingGroupID
 		} else {
+			groupID, err = chats.MakePrivateChat(
+				app.DB,
+				userID,
+				msg.UserID,
+			)
 
-			groupID, err = chats.MakePrivateChat(app.DB, userID, msg.UserID)
 			if err != nil {
+				log.Println("private chat creation error:", err)
 				return
 			}
 		}
 	}
 
-	err := chats.AddMessages(app.DB, msg.Content, userID, groupID)
+	err := chats.AddMessages(
+		app.DB,
+		msg.Content,
+		userID,
+		groupID,
+	)
+
 	if err != nil {
-		log.Println(err)
+		log.Println("add message error:", err)
 		return
-		// do something
 	}
+
 	sender, err := users.GetUserSimpleData(app.DB, userID)
 	if err != nil {
-		log.Println(err)
+		log.Println("get sender error:", err)
 		return
 	}
+
 	message := models.Message{
 		Content: msg.Content,
-		Sender:  models.UserRegistration{
-			ID: userID,
+		Sender: models.UserRegistration{
+			ID:        userID,
 			FirstName: sender.FirstName,
-			LastName: sender.LastName,
-			Avatar: sender.Avatar,
+			LastName:  sender.LastName,
+			Avatar:    sender.Avatar,
 		},
 		GroupID: groupID,
 	}
+
 	app.sendToUsers(message, groupID, userID)
 }
 
-func (app *App) sendToUsers(msg models.Message, groupID, userID int) {
-	ids, err := chats.GetGroupMembersIds(app.DB, groupID)
+func (app *App) handleInvite(userID int, data json.RawMessage) {
+	var invite models.GroupInvite
+
+	if err := json.Unmarshal(data, &invite); err != nil {
+		log.Println("invalid invite payload:", err)
+		return
+	}
+
+	if invite.GroupData.ID <= 0 {
+		log.Println("invalid group ID")
+		return
+	}
+
+
+	if len(invite.Users) == 0 {
+		log.Println("no users in invite")
+		return
+	}
+
+	sender, err := users.GetUserSimpleData(app.DB, userID)
 	if err != nil {
-		log.Println(err)
+		log.Println("get sender error:", err)
+		return
+	}
+
+	inviteContent := map[string]any{
+		"type": "invite",
+		"group": map[string]any{
+			"id":     invite.GroupData.ID,
+			"name":   invite.GroupData.Name,
+			"avatar": invite.GroupData.Avatar,
+		},
+		"user": map[string]any{
+			"id":        sender.ID,
+			"firstName": sender.FirstName,
+			"lastName":  sender.LastName,
+			"avatar":    sender.Avatar,
+		},
+	}
+
+	content, err := json.Marshal(inviteContent)
+	if err != nil {
+		log.Println("marshal invite error:", err)
+		return
+	}
+
+	for _, invitedUserID := range invite.Users {
+		if invitedUserID <= 0 || invitedUserID == userID {
+			continue
+		}
+		_, err = app.DB.Exec(`INSERT INTO groups_users (group_id, user_id, status) VALUES (?,?,0)`, invite.GroupData.ID, invitedUserID)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		privateChatID, err := chats.HasPrivateChat(
+			app.DB,
+			userID,
+			invitedUserID,
+		)
+
+		if err != nil {
+			log.Println("private chat lookup error:", err)
+			continue
+		}
+
+		if privateChatID == -1 {
+			privateChatID, err = chats.MakePrivateChat(
+				app.DB,
+				userID,
+				invitedUserID,
+			)
+
+			if err != nil {
+				log.Println("private chat creation error:", err)
+				continue
+			}
+		}
+
+		err = chats.AddMessages(
+			app.DB,
+			string(content),
+			userID,
+			privateChatID,
+		)
+
+		if err != nil {
+			log.Println("add invite message error:", err)
+			continue
+		}
+
+		message := models.Message{
+			Content: string(content),
+			Sender: models.UserRegistration{
+				ID:        sender.ID,
+				FirstName: sender.FirstName,
+				LastName:  sender.LastName,
+				Avatar:    sender.Avatar,
+			},
+			GroupID: privateChatID,
+		}
+
+		app.sendToUsers(
+			message,
+			privateChatID,
+			userID,
+		)
+	}
+}
+
+func (app *App) sendToUsers(
+	msg models.Message,
+	groupID int,
+	userID int,
+) {
+	ids, err := chats.GetGroupMembersIds(
+		app.DB,
+		groupID,
+	)
+
+	if err != nil {
+		log.Println("get group members error:", err)
 		return
 	}
 
@@ -125,8 +267,9 @@ func (app *App) sendToUsers(msg models.Message, groupID, userID int) {
 		"type": "message",
 		"data": msg,
 	})
+
 	if err != nil {
-		log.Println(err)
+		log.Println("marshal websocket response error:", err)
 		return
 	}
 
@@ -140,24 +283,25 @@ func (app *App) sendToUsers(msg models.Message, groupID, userID int) {
 		app.H.Mu.RUnlock()
 
 		if !ok {
-			log.Println("not ok err")
 			continue
 		}
-		
+
 		if _, err := client.Write(response); err != nil {
 			log.Println("websocket write error:", err)
 		}
 	}
 }
 
+func (app *App) register(userID int, ws *websocket.Conn) {
+	app.H.Mu.Lock()
+	defer app.H.Mu.Unlock()
+
+	app.H.Conn[userID] = ws
+}
+
 func (app *App) unregister(userID int) {
 	app.H.Mu.Lock()
 	defer app.H.Mu.Unlock()
-	delete(app.H.Conn, userID)
-}
 
-func (app *App) register(userID int, ws *websocket.Conn) {
-	app.H.Mu.Lock()
-	app.H.Conn[userID] = ws
-	app.H.Mu.Unlock()
+	delete(app.H.Conn, userID)
 }

@@ -403,7 +403,6 @@ async function send() {
         });
 
         message.value = '';
-
         await scrollToBottom();
     } catch (err) {
         addNotification(
