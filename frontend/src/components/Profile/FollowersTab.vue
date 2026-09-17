@@ -1,128 +1,62 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-
-import { getFriends } from '@/api/common/friends';
-import { searchFollowing, searchFollows } from '@/api/users/profiles';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { getFriends } from '@/api/common/friends'
+import { searchFollowing, searchFollows } from '@/api/users/profiles'
+import IconGlyph from '@/components/layout/IconGlyph.vue'
 
 const props = defineProps({
-    type: {
-        type: String,
-        default: 'followers'
-    },
-    targetId: {
-        type: [String, Number],
-        required: true
-    },
-    followerList: {
-        type: Object,
-        default: () => ({})
-    }
-});
+  type: { type: String, default: 'followers' },
+  targetId: { type: [String, Number], default: null },
+  followerList: { type: Object, default: () => ({}) },
+})
 
-const emit = defineEmits(['close']);
+const router = useRouter()
+const route = useRoute()
+const PAGE_SIZE = 20
+const showDialog = ref(false)
+const list = ref([])
+const offset = ref(0)
+const loading = ref(false)
+const searching = ref(false)
+const hasMore = ref(true)
+const error = ref('')
+const searchResults = ref([])
+const searchQuery = ref('')
+const scrollBox = ref(null)
+let searchDebounce
 
-const router = useRouter();
-const route = useRoute();
+const targetId = computed(() => props.targetId || route.query.id || '')
+const title = computed(() => props.type === 'following' ? 'Following' : props.type === 'friends' ? 'Friends' : 'Followers')
+const emptyText = computed(() => `No ${title.value.toLowerCase()} yet.`)
+const previewList = computed(() => normalizeUsers(props.followerList).slice(0, 6))
+const displayedList = computed(() => searchQuery.value.trim() ? searchResults.value : list.value)
 
-const PAGE_SIZE = 20;
-const SCROLL_THROTTLE_MS = 250;
-const PREVIEW_SIZE = 5;
-
-const showDialog = ref(false);
-const list = ref([]);
-const offset = ref(0);
-const loading = ref(false);
-const searching = ref(false);
-const hasMore = ref(true);
-const error = ref(null);
-const searchResults = ref([]);
-const searchQuery = ref('');
-const scrollBox = ref(null);
-
-let searchDebounce;
-let targetID = props.targetId || route.query.id;
-
-const dialogTitle = computed(() => {
-    if (props.type === 'following') return 'Following';
-    if (props.type === 'friends') return 'Friends';
-    return 'Followers';
-});
-
-const sectionTitle = computed(() => {
-    if (props.type === 'following') return 'Following';
-    if (props.type === 'friends') return 'Friends';
-    return 'Followers';
-});
-
-const emptyText = computed(() => {
-    if (props.type === 'following') return 'No following yet.';
-    if (props.type === 'friends') return 'No friends yet.';
-    return 'No followers yet.';
-});
-
-const previewList = computed(() => {
-    return Object.entries(props.followerList || {})
-        .slice(0, PREVIEW_SIZE)
-        .map(([id, user]) => ({
-            ...user,
-            ID: Number(id)
-        }));
-});
-
-const totalCount = computed(() => {
-    return Object.keys(props.followerList || {}).length;
-});
-
-function throttle(fn, wait) {
-    let lastCall = 0;
-    let timeoutId = null;
-
-    return function throttled(...args) {
-        const now = Date.now();
-        const remaining = wait - (now - lastCall);
-
-        if (remaining <= 0) {
-            if (timeoutId) {
-                clearTimeout(timeoutId);
-                timeoutId = null;
-            }
-
-            lastCall = now;
-            fn.apply(this, args);
-        } else if (!timeoutId) {
-            timeoutId = setTimeout(() => {
-                lastCall = Date.now();
-                timeoutId = null;
-                fn.apply(this, args);
-            }, remaining);
-        }
-    };
+function normalizeUsers(users = {}) {
+  return Object.entries(users || {}).map(([id, user]) => ({
+    id: Number(id),
+    firstName: user.FirstName || user.firstName || '',
+    lastName: user.LastName || user.lastName || '',
+    username: user.UserName || user.username || '',
+    avatar: user.Avatar || user.avatar || '',
+  }))
 }
 
-function openDialog() {
-    showDialog.value = true;
-    list.value = [];
-    offset.value = 0;
-    hasMore.value = true;
-    error.value = null;
-    searchQuery.value = '';
-
-    fetchPage();
+function initials(user) {
+  return `${user.firstName}${user.lastName}`.slice(0, 2).toUpperCase() || 'O'
 }
 
-function closeDialog() {
-    showDialog.value = false;
-    searchQuery.value = '';
-    searchResults.value = [];
-    list.value = [];
-    offset.value = 0;
-    hasMore.value = true;
-    error.value = null;
-    emit('close');
+function buildListUrl() {
+  const endpoint = props.type === 'following'
+    ? '/api/profile/following'
+    : props.type === 'friends' ? '/api/friends/' : '/api/profile/follow'
+  const params = new URLSearchParams({ offset: offset.value.toString() })
+  if (props.type !== 'friends' && targetId.value) params.set('targetid', targetId.value)
+  return `${endpoint}?${params.toString()}`
 }
 
 async function fetchPage() {
+<<<<<<< HEAD
     if (
         loading.value ||
         !hasMore.value ||
@@ -176,123 +110,159 @@ async function fetchPage() {
     } finally {
         loading.value = false;
     }
+=======
+  if (loading.value || !hasMore.value || searchQuery.value.trim()) return
+  loading.value = true
+  error.value = ''
+  try {
+    const response = await fetch(buildListUrl(), { credentials: 'include' })
+    const result = await response.json()
+    if (!response.ok || !result.status) throw new Error(result.message || 'Could not load connections')
+    const page = normalizeUsers(result.data)
+    list.value.push(...page.filter(user => !list.value.some(existing => existing.id === user.id)))
+    offset.value += PAGE_SIZE
+    hasMore.value = page.length === PAGE_SIZE
+  } catch (err) {
+    error.value = err.message || 'Could not load connections.'
+  } finally {
+    loading.value = false
+  }
+>>>>>>> 10a41907a21c0baac510b189cc5b0eead2b57f53
 }
 
-function checkAndFetch() {
-    if (searchQuery.value.trim()) {
-        return;
-    }
-
-    const el = scrollBox.value;
-
-    if (!el) {
-        return;
-    }
-
-    const distanceFromBottom =
-        el.scrollHeight - el.scrollTop - el.clientHeight;
-
-    if (distanceFromBottom < 120) {
-        fetchPage();
-    }
+function openDialog() {
+  showDialog.value = true
+  list.value = []
+  offset.value = 0
+  hasMore.value = true
+  error.value = ''
+  searchQuery.value = ''
+  fetchPage()
 }
 
-const throttledScroll = throttle(
-    checkAndFetch,
-    SCROLL_THROTTLE_MS
-);
+function closeDialog() {
+  showDialog.value = false
+  searchQuery.value = ''
+  searchResults.value = []
+}
 
 async function runSearch(query) {
-    if (!query) {
-        searchResults.value = [];
-        return;
-    }
-
-    searching.value = true;
-    error.value = null;
-
-    try {
-        let result;
-
-        if (props.type === 'following') {
-            result = await searchFollowing(query, props.targetId);
-        } else if (props.type === 'friends') {
-            result = await getFriends(query, props.targetId);
-        } else {
-            result = await searchFollows(query, props.targetId);
-        }
-
-        searchResults.value = Object.entries(result.data || {}).map(
-            ([id, value]) => ({
-                ID: Number(id),
-                ...value
-            })
-        );
-    } catch (err) {
-        console.error(err);
-        searchResults.value = [];
-    } finally {
-        searching.value = false;
-    }
+  searching.value = true
+  error.value = ''
+  try {
+    const result = props.type === 'following'
+      ? await searchFollowing(query, targetId.value)
+      : props.type === 'friends'
+        ? await getFriends(query, targetId.value)
+        : await searchFollows(query, targetId.value)
+    searchResults.value = normalizeUsers(result.data)
+  } catch (err) {
+    searchResults.value = []
+    error.value = err.message || 'Could not search connections.'
+  } finally {
+    searching.value = false
+  }
 }
 
 watch(searchQuery, value => {
-    clearTimeout(searchDebounce);
+  clearTimeout(searchDebounce)
+  const query = value.trim()
+  if (!query) {
+    searchResults.value = []
+    searching.value = false
+    error.value = ''
+    return
+  }
+  searchDebounce = setTimeout(() => runSearch(query), 300)
+})
 
-    const query = value.trim();
+function handleScroll() {
+  const box = scrollBox.value
+  if (box && box.scrollHeight - box.scrollTop - box.clientHeight < 120) fetchPage()
+}
 
-    if (!query) {
-        searchResults.value = [];
-        searching.value = false;
-        error.value = null;
-        return;
-    }
-
-    searchDebounce = setTimeout(() => {
-        runSearch(query);
-    }, 300);
-});
-
-function handleKeydown(e) {
-    if (e.key === 'Escape' && showDialog.value) {
-        closeDialog();
-    }
+function handleKeydown(event) {
+  if (event.key === 'Escape' && showDialog.value) closeDialog()
 }
 
 async function goToProfile(id) {
-    closeDialog();
-    await router.replace(`/user?id=${id}`);
-    window.location.reload();
+  closeDialog()
+  await router.push({ path: '/user', query: { id } })
 }
 
+<<<<<<< HEAD
 onMounted(() => {
     window.addEventListener('keydown', handleKeydown);
 });
 
+=======
+onMounted(() => window.addEventListener('keydown', handleKeydown))
+>>>>>>> 10a41907a21c0baac510b189cc5b0eead2b57f53
 onUnmounted(() => {
-    window.removeEventListener('keydown', handleKeydown);
-    clearTimeout(searchDebounce);
-});
+  window.removeEventListener('keydown', handleKeydown)
+  clearTimeout(searchDebounce)
+})
 </script>
 
 <template>
-    <section class="followers-section">
-        <div class="section-heading">
-            <p class="eyebrow">SOCIAL</p>
+  <section class="connections orbit-surface">
+    <header class="connections-header">
+      <div>
+        <p class="orbit-meta">Connections</p>
+        <h2>{{ title }}</h2>
+      </div>
+      <button v-if="previewList.length" type="button" class="text-button" @click="openDialog">Show all</button>
+    </header>
 
-            <div class="heading-row">
-                <h2>{{ sectionTitle }}</h2>
+    <div v-if="previewList.length" class="preview-grid">
+      <button v-for="user in previewList" :key="user.id" type="button" class="person" @click="goToProfile(user.id)">
+        <span class="avatar">
+          <img v-if="user.avatar" :src="`/uploads/${user.avatar}`" alt="" />
+          <span v-else>{{ initials(user) }}</span>
+        </span>
+        <span class="person-copy">
+          <strong>{{ user.firstName }} {{ user.lastName }}</strong>
+          <small v-if="user.username">@{{ user.username }}</small>
+        </span>
+      </button>
+    </div>
+    <p v-else class="empty-state">{{ emptyText }}</p>
+  </section>
 
-                <button
-                    v-if="totalCount"
-                    type="button"
-                    class="show-all-btn"
-                    @click="openDialog"
-                >
-                    Show all
-                </button>
-            </div>
+  <Teleport to="body">
+    <div v-if="showDialog" class="dialog-backdrop" @click.self="closeDialog">
+      <section class="dialog" role="dialog" aria-modal="true" :aria-label="title">
+        <header class="dialog-header">
+          <div><p class="orbit-meta">Connections</p><h2>{{ title }}</h2></div>
+          <button type="button" class="icon-button" aria-label="Close" title="Close" @click="closeDialog">
+            <IconGlyph name="close" :size="18" />
+          </button>
+        </header>
+
+        <label class="search-field">
+          <IconGlyph name="search" :size="17" />
+          <input v-model="searchQuery" type="search" placeholder="Search by name..." />
+        </label>
+
+        <div ref="scrollBox" class="dialog-list" @scroll="handleScroll">
+          <button v-for="user in displayedList" :key="user.id" type="button" class="person person--row" @click="goToProfile(user.id)">
+            <span class="avatar">
+              <img v-if="user.avatar" :src="`/uploads/${user.avatar}`" alt="" />
+              <span v-else>{{ initials(user) }}</span>
+            </span>
+            <span class="person-copy">
+              <strong>{{ user.firstName }} {{ user.lastName }}</strong>
+              <small v-if="user.username">@{{ user.username }}</small>
+            </span>
+            <IconGlyph name="arrowRight" :size="17" />
+          </button>
+
+          <p v-if="loading || searching" class="dialog-status">{{ searching ? 'Searching...' : 'Loading...' }}</p>
+          <p v-else-if="error" class="dialog-status dialog-status--error" role="alert">{{ error }}</p>
+          <p v-else-if="!displayedList.length" class="dialog-status">{{ searchQuery.trim() ? 'No users found.' : emptyText }}</p>
+          <p v-else-if="!searchQuery.trim() && !hasMore" class="dialog-status">You have reached the end.</p>
         </div>
+<<<<<<< HEAD
 
         <div class="followers-card">
             <div
@@ -510,491 +480,42 @@ onUnmounted(() => {
             </aside>
         </div>
     </Teleport>
+=======
+      </section>
+    </div>
+  </Teleport>
+>>>>>>> 10a41907a21c0baac510b189cc5b0eead2b57f53
 </template>
 
 <style scoped>
-.followers-section {
-    width: 100%;
-}
-
-.section-heading {
-    margin-bottom: 18px;
-}
-
-.eyebrow {
-    margin: 0 0 5px;
-    color: var(--input-focus);
-    font-family: "JetBrains Mono", monospace;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 2px;
-}
-
-.heading-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 15px;
-}
-
-.heading-row h2 {
-    margin: 0;
-    color: var(--font-color);
-    font-family: "Liter", serif;
-    font-size: 25px;
-}
-
-.show-all-btn {
-    padding: 8px 13px;
-    border: 2px solid var(--main-color);
-    border-radius: 6px;
-    background: var(--bg-color);
-    box-shadow: 3px 3px var(--main-color);
-    color: var(--font-color);
-    font-family: "JetBrains Mono", monospace;
-    font-size: 10px;
-    font-weight: 700;
-    cursor: pointer;
-    transition:
-        transform 0.15s ease,
-        box-shadow 0.15s ease,
-        border-color 0.15s ease;
-}
-
-.show-all-btn:hover {
-    border-color: var(--input-focus);
-    transform: translate(-2px, -2px);
-    box-shadow: 5px 5px var(--input-focus);
-}
-
-.show-all-btn:active {
-    transform: translate(2px, 2px);
-    box-shadow: 1px 1px var(--main-color);
-}
-
-.followers-card {
-    width: 100%;
-    padding: 20px;
-    border: 2px solid var(--main-color);
-    border-radius: 8px;
-    background: var(--bg-color);
-    box-shadow: 5px 5px var(--main-color);
-    box-sizing: border-box;
-}
-
-.followers-grid {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 14px;
-}
-
-.follower-card {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-    padding: 11px;
-    border: 2px solid var(--main-color);
-    border-radius: 7px;
-    background: var(--bg-color);
-    box-shadow: 3px 3px var(--main-color);
-    cursor: pointer;
-    transition:
-        transform 0.15s ease,
-        box-shadow 0.15s ease,
-        border-color 0.15s ease;
-}
-
-.follower-card:hover {
-    border-color: var(--input-focus);
-    transform: translate(-2px, -2px);
-    box-shadow: 5px 5px var(--input-focus);
-}
-
-.follower-avatar {
-    display: block;
-    width: 44px;
-    height: 44px;
-    flex: 0 0 44px;
-    border: 2px solid var(--main-color);
-    border-radius: 50%;
-    background: var(--bg-color);
-    object-fit: cover;
-    box-sizing: border-box;
-}
-
-.follower-info {
-    min-width: 0;
-}
-
-.follower-name {
-    margin: 0;
-    color: var(--font-color);
-    font-family: "Hedvig Letters Sans", sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1.3;
-    overflow-wrap: anywhere;
-}
-
-.empty {
-    margin: 0;
-    padding: 20px;
-    color: var(--font-color-sub);
-    font-family: "JetBrains Mono", monospace;
-    font-size: 11px;
-    text-align: center;
-}
-
-.dialog-overlay {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    justify-content: flex-end;
-    background: rgba(0, 0, 0, 0.48);
-    backdrop-filter: blur(3px);
-    z-index: 1000;
-}
-
-.dialog-panel {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    width: min(410px, 94vw);
-    height: 100%;
-    background: var(--bg-color);
-    border-left: 3px solid var(--main-color);
-    box-shadow: -8px 0 var(--main-color);
-    animation: slide-in 0.2s ease-out;
-}
-
-@keyframes slide-in {
-    from {
-        transform: translateX(100%);
-    }
-
-    to {
-        transform: translateX(0);
-    }
-}
-
-.dialog-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 15px;
-    padding: 20px;
-    border-bottom: 2px solid var(--main-color);
-    background: var(--bg-color);
-    box-shadow: 0 4px 0 var(--input-focus);
-    flex: 0 0 auto;
-}
-
-.header-title {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-}
-
-.header-accent {
-    width: 5px;
-    height: 40px;
-    border: 1px solid var(--input-focus);
-    border-radius: 2px;
-    background: var(--input-focus);
-    box-shadow: 2px 2px var(--main-color);
-}
-
-.dialog-header h2 {
-    margin: 0;
-    color: var(--font-color);
-    font-family: "Liter", serif;
-    font-size: 24px;
-    line-height: 1;
-}
-
-.close-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    flex: 0 0 auto;
-    border: 2px solid var(--main-color);
-    border-radius: 6px;
-    background: var(--bg-color);
-    box-shadow: 4px 4px var(--main-color);
-    color: var(--font-color);
-    font-family: Arial, sans-serif;
-    font-size: 21px;
-    line-height: 1;
-    cursor: pointer;
-    transition:
-        transform 0.15s ease,
-        box-shadow 0.15s ease,
-        border-color 0.15s ease;
-}
-
-.close-btn:hover {
-    border-color: var(--input-focus);
-    transform: translate(-2px, -2px);
-    box-shadow: 6px 6px var(--input-focus);
-}
-
-.close-btn:active {
-    transform: translate(2px, 2px);
-    box-shadow: 1px 1px var(--main-color);
-}
-
-.search-wrap {
-    padding: 18px 20px 14px;
-    flex: 0 0 auto;
-}
-
-.search-box {
-    position: relative;
-}
-
-.search-icon {
-    position: absolute;
-    top: 50%;
-    left: 12px;
-    color: var(--input-focus);
-    font-family: "JetBrains Mono", monospace;
-    font-size: 19px;
-    line-height: 1;
-    transform: translateY(-50%);
-    pointer-events: none;
-}
-
-.group-search-input {
-    width: 100%;
-    padding: 11px 14px 11px 38px;
-    border: 2px solid var(--main-color);
-    border-radius: 7px;
-    outline: none;
-    background: var(--bg-color);
-    box-shadow: 4px 4px var(--main-color);
-    color: var(--font-color);
-    font-family: "Hedvig Letters Sans", sans-serif;
-    font-size: 14px;
-    box-sizing: border-box;
-    transition:
-        border-color 0.15s ease,
-        box-shadow 0.15s ease,
-        transform 0.15s ease;
-}
-
-.group-search-input:focus {
-    border-color: var(--input-focus);
-    box-shadow: 4px 4px var(--input-focus);
-    transform: translate(-1px, -1px);
-}
-
-.group-search-input::placeholder {
-    color: var(--font-color-sub);
-    font-family: "JetBrains Mono", monospace;
-    font-size: 11px;
-}
-
-.dialog-body {
-    flex: 1 1 auto;
-    overflow-y: auto;
-    padding: 6px 20px 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 11px;
-}
-
-.dialog-body::-webkit-scrollbar {
-    width: 7px;
-}
-
-.dialog-body::-webkit-scrollbar-track {
-    background: var(--bg-color);
-    border-left: 1px solid var(--main-color);
-}
-
-.dialog-body::-webkit-scrollbar-thumb {
-    border: 1px solid var(--main-color);
-    background: var(--input-focus);
-}
-
-.follower-row {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-height: 68px;
-    padding: 10px 12px;
-    border: 2px solid var(--main-color);
-    border-radius: 7px;
-    background: var(--bg-color);
-    box-shadow: 4px 4px var(--main-color);
-    box-sizing: border-box;
-    cursor: pointer;
-    overflow: hidden;
-    transition:
-        transform 0.15s ease,
-        box-shadow 0.15s ease,
-        border-color 0.15s ease;
-}
-
-.follower-row::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    background: var(--input-focus);
-    transform: scaleY(0);
-    transform-origin: bottom;
-    transition: transform 0.15s ease;
-}
-
-.follower-row:hover {
-    border-color: var(--input-focus);
-    transform: translate(-3px, -3px);
-    box-shadow: 7px 7px var(--input-focus);
-}
-
-.follower-row:hover::before {
-    transform: scaleY(1);
-}
-
-.follower-row:active {
-    transform: translate(0, 0);
-    box-shadow: 1px 1px var(--main-color);
-}
-
-.row-avatar-wrap {
-    flex: 0 0 auto;
-    padding: 2px;
-    border: 2px solid var(--input-focus);
-    border-radius: 50%;
-    box-shadow: 2px 2px var(--main-color);
-}
-
-.row-info {
-    min-width: 0;
-    flex: 1;
-}
-
-.row-label {
-    display: block;
-    margin-top: 4px;
-    color: var(--input-focus);
-    font-family: "JetBrains Mono", monospace;
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.6px;
-    opacity: 0;
-    transform: translateY(3px);
-    transition:
-        opacity 0.15s ease,
-        transform 0.15s ease;
-}
-
-.follower-row:hover .row-label {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.row-arrow {
-    flex: 0 0 auto;
-    color: var(--input-focus);
-    font-family: "JetBrains Mono", monospace;
-    font-size: 16px;
-    font-weight: 700;
-    opacity: 0;
-    transform: translate(-3px, 3px);
-    transition:
-        opacity 0.15s ease,
-        transform 0.15s ease;
-}
-
-.follower-row:hover .row-arrow {
-    opacity: 1;
-    transform: translate(0, 0);
-}
-
-.status-text {
-    margin: 4px 0;
-    padding: 13px;
-    border: 1px dashed var(--main-color);
-    border-radius: 6px;
-    color: var(--font-color-sub);
-    font-family: "JetBrains Mono", monospace;
-    font-size: 10px;
-    letter-spacing: 0.4px;
-    text-align: center;
-}
-
-.empty-status {
-    color: var(--input-focus);
-}
-
-.end-status {
-    border-style: solid;
-    color: var(--input-focus);
-}
-
-.status-text.error {
-    border-color: #c0392b;
-    color: #c0392b;
-}
-
-@media (max-width: 800px) {
-    .followers-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 500px) {
-    .followers-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .dialog-panel {
-        width: 100%;
-        border-left-width: 2px;
-        box-shadow: -5px 0 var(--main-color);
-    }
-
-    .dialog-header {
-        padding: 17px;
-    }
-
-    .search-wrap {
-        padding: 15px 17px 12px;
-    }
-
-    .dialog-body {
-        padding: 6px 17px 20px;
-    }
-
-    .follower-row {
-        min-height: 64px;
-    }
-
-    .row-label,
-    .row-arrow {
-        display: none;
-    }
-}
-
-@media (max-width: 350px) {
-    .dialog-header {
-        padding: 14px;
-    }
-
-    .search-wrap {
-        padding: 13px 14px 10px;
-    }
-
-    .dialog-body {
-        padding: 5px 14px 18px;
-    }
+.connections { padding: var(--space-5); }
+.connections-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-4); }
+.connections h2, .dialog h2 { margin: var(--space-1) 0 0; font-family: var(--font-display); font-size: 1.2rem; letter-spacing: 0; }
+.text-button { min-height: var(--touch-target); padding: 0 var(--space-3); border: 0; background: transparent; color: var(--color-violet-soft); cursor: pointer; font-weight: 700; }
+.preview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.person { display: flex; min-width: 0; min-height: 4.25rem; align-items: center; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-small); background: var(--color-input); color: var(--color-text); cursor: pointer; text-align: left; }
+.person:hover { border-color: var(--color-violet); background: var(--color-surface-raised); }
+.avatar { display: grid; width: 2.75rem; height: 2.75rem; flex: 0 0 2.75rem; place-items: center; overflow: hidden; border-radius: 50%; background: var(--gradient-action); color: white; font-size: .75rem; font-weight: 800; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.person-copy { display: grid; min-width: 0; flex: 1; gap: .2rem; }
+.person-copy strong, .person-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.person-copy strong { font-size: .875rem; }
+.person-copy small { color: var(--color-text-muted); }
+.empty-state, .dialog-status { margin: 0; padding: var(--space-6); color: var(--color-text-muted); text-align: center; }
+.dialog-backdrop { position: fixed; inset: 0; display: flex; justify-content: flex-end; background: rgb(0 0 0 / 62%); z-index: 1000; }
+.dialog { display: flex; width: min(27rem, 100%); height: 100%; flex-direction: column; border-left: 1px solid var(--color-border); background: var(--color-surface); box-shadow: -1rem 0 3rem rgb(0 0 0 / 25%); }
+.dialog-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-5); border-bottom: 1px solid var(--color-border); }
+.icon-button { display: grid; width: var(--touch-target); height: var(--touch-target); place-items: center; border: 1px solid var(--color-border); border-radius: var(--radius-small); background: var(--color-input); color: var(--color-text); cursor: pointer; }
+.search-field { display: flex; align-items: center; gap: var(--space-2); margin: var(--space-4); padding: 0 var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-small); background: var(--color-input); color: var(--color-text-muted); }
+.search-field:focus-within { border-color: var(--color-violet); }
+.search-field input { width: 100%; min-height: var(--touch-target); border: 0; outline: 0; background: transparent; color: var(--color-text); font: inherit; }
+.dialog-list { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: var(--space-2); overflow-y: auto; padding: 0 var(--space-4) var(--space-5); }
+.person--row { flex: 0 0 auto; width: 100%; }
+.person--row > svg { color: var(--color-text-faint); }
+.dialog-status--error { color: var(--color-coral-soft); }
+@media (max-width: 600px) {
+  .connections { padding: var(--space-4); }
+  .preview-grid { grid-template-columns: 1fr; }
+  .dialog { border-left: 0; }
 }
 </style>

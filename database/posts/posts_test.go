@@ -60,6 +60,106 @@ func TestSelectedPostRejectsSomeoneWhoIsNotAFollower(t *testing.T) {
 	}
 }
 
+func TestPostLikesAreIdempotentAndRespectPrivacy(t *testing.T) {
+	db := newPostTestDatabase(t)
+	insertPostTestUser(t, db, 1, "author")
+	insertPostTestUser(t, db, 2, "follower")
+	insertPostTestUser(t, db, 3, "outsider")
+
+	publicPost, err := CreatePost(db, 1, models.CreatePostRequest{
+		Content: "a public post",
+		Privacy: models.PostPrivacyPublic,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := LikePost(db, 2, publicPost.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Liked || result.LikeCount != 1 {
+		t.Fatalf("first like = %+v, want liked=true and count=1", result)
+	}
+	feed, err := ListFeedPosts(db, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(feed) != 1 || !feed[0].Liked || feed[0].LikeCount != 1 {
+		t.Fatalf("feed after like = %+v, want liked=true and count=1", feed)
+	}
+
+	result, err = LikePost(db, 2, publicPost.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Liked || result.LikeCount != 1 {
+		t.Fatalf("repeat like = %+v, want no duplicate count", result)
+	}
+
+	result, err = UnlikePost(db, 2, publicPost.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Liked || result.LikeCount != 0 {
+		t.Fatalf("unlike = %+v, want liked=false and count=0", result)
+	}
+	feed, err = ListFeedPosts(db, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(feed) != 1 || feed[0].Liked || feed[0].LikeCount != 0 {
+		t.Fatalf("feed after unlike = %+v, want liked=false and count=0", feed)
+	}
+
+	result, err = UnlikePost(db, 2, publicPost.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Liked || result.LikeCount != 0 {
+		t.Fatalf("repeat unlike = %+v, want no negative count", result)
+	}
+
+	followersPost, err := CreatePost(db, 1, models.CreatePostRequest{
+		Content: "a followers-only post",
+		Privacy: models.PostPrivacyFollowers,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = LikePost(db, 3, followersPost.ID); !errors.Is(err, ErrPostNotVisible) {
+		t.Fatalf("outsider like error = %v, want ErrPostNotVisible", err)
+	}
+}
+
+func TestFeedCanLoadOnePageAtATime(t *testing.T) {
+	db := newPostTestDatabase(t)
+	insertPostTestUser(t, db, 1, "author")
+
+	for _, content := range []string{"first", "second", "third"} {
+		createTestPost(t, db, models.CreatePostRequest{
+			Content: content,
+			Privacy: models.PostPrivacyPublic,
+		})
+	}
+
+	page, err := ListFeedPosts(db, 1, 3, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page) != 3 {
+		t.Fatalf("first page length = %d, expected 3", len(page))
+	}
+
+	olderPage, err := ListFeedPosts(db, 1, 3, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(olderPage) != 0 {
+		t.Fatalf("older page length = %d, expected 0", len(olderPage))
+	}
+}
+
 func createTestPost(t *testing.T, db *sql.DB, request models.CreatePostRequest) {
 	t.Helper()
 	if _, err := CreatePost(db, 1, request); err != nil {
@@ -158,6 +258,29 @@ func newPostTestDatabase(t *testing.T) *sql.DB {
 			FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
 			FOREIGN KEY (viewer_id) REFERENCES user(id) ON DELETE CASCADE
 		);
+
+		CREATE TABLE post_reactions (
+			user_id INTEGER NOT NULL,
+			post_id INTEGER NOT NULL,
+			value INTEGER NOT NULL,
+			PRIMARY KEY (user_id, post_id),
+			FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+			FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+		);
+
+		CREATE TRIGGER increase_reaction_like
+		AFTER INSERT ON post_reactions
+		WHEN NEW.value = 1
+		BEGIN
+			UPDATE posts SET like_count = like_count + 1 WHERE id = NEW.post_id;
+		END;
+
+		CREATE TRIGGER decrease_reaction_like
+		AFTER DELETE ON post_reactions
+		WHEN OLD.value = 1
+		BEGIN
+			UPDATE posts SET like_count = like_count - 1 WHERE id = OLD.post_id;
+		END;
 	`)
 	if err != nil {
 		t.Fatal(err)

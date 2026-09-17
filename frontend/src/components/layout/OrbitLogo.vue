@@ -1,45 +1,22 @@
 <template>
-  <span class="orbit-logo" aria-hidden="true">
-    <span class="orbit-logo__top"></span>
-    <span class="orbit-logo__bottom"></span>
-  </span>
+  <svg class="orbit-logo" viewBox="0 0 42 42" fill="none" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="orbit-logo-gradient" x1="4" y1="4" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+        <stop stop-color="var(--color-violet)" />
+        <stop offset="1" stop-color="var(--color-coral)" />
+      </linearGradient>
+    </defs>
+    <ellipse class="orbit-logo__path" cx="21" cy="21" rx="17" ry="8" transform="rotate(-28 21 21)" stroke="url(#orbit-logo-gradient)" stroke-width="3" />
+    <circle class="orbit-logo__ring" cx="21" cy="21" r="10.5" stroke="url(#orbit-logo-gradient)" stroke-width="5" />
+    <circle class="orbit-logo__core" cx="21" cy="21" r="3.5" fill="var(--color-text)" />
+  </svg>
 </template>
 
 <style scoped>
 .orbit-logo {
-  position: relative;
-  width: 1.75rem;
-  height: 2.5rem;
-  flex: 0 0 1.75rem;
-}
-
-.orbit-logo__top,
-.orbit-logo__bottom {
-  position: absolute;
-  left: 50%;
-  border-radius: 50%;
-  transform: translateX(-50%);
-}
-
-.orbit-logo__top {
-  top: 0;
-  width: 1.25rem;
-  height: 1.25rem;
-  background: var(--color-violet);
-}
-
-.orbit-logo__bottom {
-  bottom: 0;
   width: 1.75rem;
   height: 1.75rem;
-  background: var(--color-coral);
-}
-
-.orbit-logo__bottom::after {
-  position: absolute;
-  inset: 0.5rem;
-  border-radius: 50%;
-  background: var(--color-text);
-  content: "";
+  flex: 0 0 1.75rem;
+  overflow: visible;
 }
 </style>

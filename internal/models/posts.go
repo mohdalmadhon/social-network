@@ -25,5 +25,6 @@ type Post struct {
 	Privacy      string    `json:"privacy"`
 	CreatedAt    time.Time `json:"createdAt"`
 	LikeCount    int       `json:"likeCount"`
+	Liked        bool      `json:"liked"`
 	CommentCount int       `json:"commentCount"`
 }

@@ -33,8 +33,17 @@ func (app App) Notifications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	page, err := parsePage(r)
+	if err != nil {
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "limit must be between 1 and 50 and offset cannot be negative",
+		})
+		return
+	}
+
 	category := r.URL.Query().Get("category")
-	result, err := notifications.List(app.DB, userID, category)
+	result, err := notifications.List(app.DB, userID, category, page.Limit+1, page.Offset)
 	if errors.Is(err, notifications.ErrInvalidCategory) {
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
@@ -49,8 +58,9 @@ func (app App) Notifications(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	result, hasMore := trimPage(result, page, true)
 
-	unreadCount, err := notifications.UnreadCount(app.DB, userID)
+	unreadCount, err := notifications.UnreadCount(app.DB, userID, category)
 	if err != nil {
 		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
 			"status":  false,
@@ -63,6 +73,8 @@ func (app App) Notifications(w http.ResponseWriter, r *http.Request) {
 		"status":        true,
 		"notifications": result,
 		"unreadCount":   unreadCount,
+		"hasMore":       hasMore,
+		"nextOffset":    page.Offset + len(result),
 	})
 }
 
@@ -200,7 +212,7 @@ func (app App) ApplyNotificationAction(w http.ResponseWriter, r *http.Request) {
 
 	if err := app.applyNotificationAction(userID, notification, request.Action); err != nil {
 		status := http.StatusBadRequest
-		if errors.Is(err, sql.ErrNoRows) || errors.Is(err, groups.ErrGroupNotFound) || errors.Is(err, events.ErrEventNotFound) {
+		if errors.Is(err, sql.ErrNoRows) || errors.Is(err, groups.ErrGroupNotFound) || errors.Is(err, groups.ErrInvitationNotFound) || errors.Is(err, events.ErrEventNotFound) {
 			status = http.StatusNotFound
 		}
 		helpers.WriteJson(w, status, map[string]any{
@@ -235,19 +247,19 @@ func (app App) applyNotificationAction(userID int, notification models.Notificat
 
 		switch action {
 		case "accept":
-			return profiles.SendFollowRequest(
+			return profiles.DecideFollowRequest(
 				app.DB,
 				userID,
 				*notification.ActorID,
-				1,
+				true,
 			)
 
 		case "decline":
-			return profiles.SendFollowRequest(
+			return profiles.DecideFollowRequest(
 				app.DB,
 				userID,
 				*notification.ActorID,
-				-1,
+				false,
 			)
 
 		default:

@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var ErrInvalidCategory = errors.New("notification category must be requests, groups, or events")
+var ErrInvalidCategory = errors.New("notification category must be requests, groups, events, or messages")
 
 func Create(db *sql.DB, userID int, request models.CreateNotificationRequest) (models.Notification, error) {
 	if userID <= 0 || !IsCategory(request.Category) {
@@ -37,7 +37,7 @@ func Create(db *sql.DB, userID int, request models.CreateNotificationRequest) (m
 	return GetByID(db, userID, id)
 }
 
-func List(db *sql.DB, userID int, category string) ([]models.Notification, error) {
+func List(db *sql.DB, userID int, category string, pagination ...int) ([]models.Notification, error) {
 	query := notificationSelect + ` WHERE n.user_id = ?`
 	args := []any{userID}
 
@@ -49,7 +49,13 @@ func List(db *sql.DB, userID int, category string) ([]models.Notification, error
 		args = append(args, category)
 	}
 
-	query += ` ORDER BY n.created_at DESC, n.id DESC LIMIT 100`
+	query += ` ORDER BY n.created_at DESC, n.id DESC`
+	if len(pagination) >= 2 {
+		query += ` LIMIT ? OFFSET ?`
+		args = append(args, pagination[0], pagination[1])
+	} else {
+		query += ` LIMIT 100`
+	}
 	rows, err := db.Query(query, args...)
 	if err != nil {
 		return nil, err
@@ -68,13 +74,28 @@ func List(db *sql.DB, userID int, category string) ([]models.Notification, error
 	return result, rows.Err()
 }
 
-func UnreadCount(db *sql.DB, userID int) (int, error) {
-	var count int
-	err := db.QueryRow(`
+func UnreadCount(db *sql.DB, userID int, categories ...string) (int, error) {
+	category := ""
+	if len(categories) > 0 {
+		category = categories[0]
+	}
+	if category != "" && category != "all" && !IsCategory(category) {
+		return 0, ErrInvalidCategory
+	}
+
+	query := `
 		SELECT COUNT(*)
 		FROM notifications
 		WHERE user_id = ? AND is_read = 0
-	`, userID).Scan(&count)
+	`
+	args := []any{userID}
+	if category != "" && category != "all" {
+		query += ` AND category = ?`
+		args = append(args, category)
+	}
+
+	var count int
+	err := db.QueryRow(query, args...).Scan(&count)
 	return count, err
 }
 
@@ -96,6 +117,20 @@ func MarkAllRead(db *sql.DB, userID int) error {
 	return err
 }
 
+// MarkMessageNotificationsRead clears message alerts for one private chat.
+// Other notification categories and other conversations stay unread.
+func MarkMessageNotificationsRead(db *sql.DB, userID int, chatID int64) error {
+	_, err := db.Exec(`
+		UPDATE notifications
+		SET is_read = 1
+		WHERE user_id = ?
+		  AND category = 'messages'
+		  AND type = 'new_message'
+		  AND related_id = ?
+	`, userID, chatID)
+	return err
+}
+
 func GetByID(db *sql.DB, userID int, notificationID int64) (models.Notification, error) {
 	return scanNotification(
 		db.QueryRow(
@@ -109,6 +144,8 @@ func GetByID(db *sql.DB, userID int, notificationID int64) (models.Notification,
 func IsCategory(category string) bool {
 	switch category {
 	case "requests", "groups", "events":
+		return true
+	case "messages":
 		return true
 	default:
 		return false
@@ -128,7 +165,11 @@ const notificationSelect = `
 		n.created_at,
 
 		gjr.status AS request_status,
-		gi.status AS invitation_status
+		gi.status AS invitation_status,
+		(SELECT status FROM user_followers f WHERE n.type = 'follow_request'
+		 AND f.target_id = n.user_id AND f.follower_id = n.actor_id) AS follow_status,
+		(SELECT response FROM event_rsvps v WHERE n.type = 'event_created'
+		 AND v.event_id = n.related_id AND v.user_id = n.user_id) AS event_response
 
 	FROM notifications n
 
@@ -141,7 +182,7 @@ const notificationSelect = `
 	LEFT JOIN group_invitations gi
 		ON n.category = 'groups'
 		AND n.type = 'invitation'
-		AND gi.group_id = n.related_id
+		AND gi.id = n.related_id
 		AND gi.user_id = n.user_id
 `
 
@@ -164,6 +205,8 @@ func scanNotification(row rowScanner) (models.Notification, error) {
 		&notification.CreatedAt,
 		&notification.RequestStatus,
 		&notification.InvitationStatus,
+		&notification.FollowStatus,
+		&notification.EventResponse,
 	); err != nil {
 		return models.Notification{}, err
 	}

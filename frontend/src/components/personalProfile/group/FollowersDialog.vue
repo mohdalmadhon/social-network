@@ -2,7 +2,11 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
+<<<<<<< HEAD:frontend/src/components/personalProfile/group/FollowersDialog.vue
 import FollowersDialog from '../personalProfile/group/FollowersDialog.vue';
+=======
+import IconGlyph from '@/components/layout/IconGlyph.vue';
+>>>>>>> 10a41907a21c0baac510b189cc5b0eead2b57f53:frontend/src/components/personalProfile/FollowersDialog.vue
 
 const router = useRouter();
 
@@ -70,7 +74,7 @@ function closeDialog() {
                     @click="openDialog"
                 >
                     <span>Show all</span>
-                    <span class="arrow">→</span>
+                    <IconGlyph class="arrow" name="arrowRight" :size="16" />
                 </button>
             </div>
         </div>
@@ -102,12 +106,12 @@ function closeDialog() {
                         <span class="profile-label">VIEW PROFILE</span>
                     </div>
 
-                    <span class="card-arrow">↗</span>
+                    <IconGlyph class="card-arrow" name="arrowRight" :size="16" />
                 </article>
             </div>
 
             <div v-else class="empty-state">
-                <div class="empty-icon">◎</div>
+                <div class="empty-icon"><IconGlyph name="profile" :size="21" /></div>
                 <p class="empty-title">No {{ type }} yet</p>
                 <p class="empty-text">
                     People will appear here when you have some.

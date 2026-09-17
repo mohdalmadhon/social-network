@@ -442,7 +442,8 @@ func (app App) JoinRequest(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		status, message := helpers.NormalizeSQLError(err)
-		if status == http.StatusConflict {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed: group_join_requests.group_id, group_join_requests.user_id") {
+			status = http.StatusConflict
 			message = "join request is already pending"
 		}
 		writeJSON(w, status, map[string]any{

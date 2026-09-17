@@ -8,16 +8,12 @@ import (
 	"social/internal/helpers"
 	"social/internal/models"
 	"social/internal/validation"
-	"sync"
 	"time"
 
-	"golang.org/x/net/websocket"
 )
 
 type App struct {
 	DB *sql.DB
-	Conns map[int]*websocket.Conn
-	Mu sync.Mutex
 }
 
 func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
@@ -106,7 +102,7 @@ func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	userData.Password = hashedPassword
 
 	if err := users.RegisterUser(app.DB, &userData); err != nil {
-		log.Println(err)
+		log.Println("here1", err)
 
 		status, message := helpers.NormalizeSQLError(err)
 

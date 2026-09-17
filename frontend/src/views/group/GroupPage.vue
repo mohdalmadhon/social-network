@@ -2,20 +2,41 @@
 import { ref, onMounted } from 'vue'
 import { router } from '@/router/router.js'
 import { useRoute } from 'vue-router'
-import { getGroup, deleteGroupApi } from '@/api/groups/Groups.js'
+import {
+    getGroup,
+    deleteGroupApi,
+    getGroupPosts,
+    groupJoinRequest,
+    undoJoinGroup,
+} from '@/api/groups/Groups.js'
+import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout.vue'
+import GroupActivity from '@/components/groups/GroupActivity.vue'
+import GroupPostCard from '@/components/groups/GroupPostCard.vue'
+import GroupPostComposer from '@/components/groups/GroupPostComposer.vue'
+import IconGlyph from '@/components/layout/IconGlyph.vue'
+import GroupChat from '@/components/chat/GroupChat.vue'
 
 const route = useRoute()
 const groupId = route.params.groupId
 
 const group = ref(null)
+const groupPosts = ref([])
 const loading = ref(true)
 const error = ref(null)
+const isDeletingGroup = ref(false)
+const deleteError = ref('')
+const isJoinPending = ref(false)
+const joinError = ref('')
 
 onMounted(async () => {
     try {
         const result = await getGroup(groupId)
 
         group.value = result.group
+        if (group.value?.isMember) {
+            const postsResult = await getGroupPosts(groupId)
+            groupPosts.value = postsResult?.posts || []
+        }
     } catch (err) {
         console.error(err)
         error.value = 'Could not load group'
@@ -25,6 +46,10 @@ onMounted(async () => {
 })
 
 async function deleteGroup() {
+    if (isDeletingGroup.value || !window.confirm('Delete this group and all of its content?')) return
+
+    isDeletingGroup.value = true
+    deleteError.value = ''
     try {
         const result = await deleteGroupApi(groupId)
 
@@ -33,199 +58,565 @@ async function deleteGroup() {
         }
     } catch (err) {
         console.error(err)
+        deleteError.value = err.message || 'Could not delete group.'
+    } finally {
+        isDeletingGroup.value = false
+    }
+}
+
+function addGroupPost(post) {
+    groupPosts.value.unshift(post)
+}
+
+function removeGroupPost(postId) {
+    groupPosts.value = groupPosts.value.filter((post) => post.id !== postId)
+}
+
+async function toggleJoinRequest() {
+    if (!group.value || group.value.isMember || isJoinPending.value) return
+
+    isJoinPending.value = true
+    joinError.value = ''
+
+    try {
+        const result = group.value.isRequested
+            ? await undoJoinGroup(groupId)
+            : await groupJoinRequest(groupId)
+
+        if (!result?.status) {
+            throw new Error('Could not update your join request.')
+        }
+
+        group.value.isRequested = !group.value.isRequested
+    } catch (err) {
+        joinError.value = err.message || 'Could not update your join request.'
+    } finally {
+        isJoinPending.value = false
     }
 }
 </script>
 
 <template>
-    <main class="group-page">
-        <section class="group-container">
+    <AuthenticatedLayout active-page="groups">
+    <div class="group-page">
+        <div class="group-container">
 
-            <p v-if="loading">
+            <p v-if="loading" class="group-page__state">
                 Loading group...
             </p>
 
-            <p v-else-if="error">
+            <p v-else-if="error" class="group-page__state group-page__state--error" role="alert">
                 {{ error }}
             </p>
 
             <template v-else-if="group">
-                <header class="group-header">
-                    <div>
-                        <h1>{{ group.title }}</h1>
-                        <p>{{ group.description }}</p>
+                <header class="group-header orbit-surface">
+                    <div class="group-header__art" aria-hidden="true">
+                        <span class="group-header__art-orbit group-header__art-orbit--outer"></span>
+                        <span class="group-header__art-orbit group-header__art-orbit--inner"></span>
+                        <span class="group-header__art-star"></span>
+                        <span class="group-header__art-label">ORBIT / COMMUNITY</span>
                     </div>
 
-                    <button v-if="group.isCreator" @click="deleteGroup">
-                        Delete Group
-                    </button>
+                    <div class="group-header__copy">
+                        <p class="orbit-meta">A place to gather</p>
+                        <div class="group-header__title-row">
+                            <h1>{{ group.title }}</h1>
+                            <span class="group-header__badge">Community</span>
+                        </div>
+                        <p>{{ group.description }}</p>
+                        <div class="group-header__signals">
+                            <span>
+                                <IconGlyph name="groups" :size="17" />
+                                {{ group.memberCount }} {{ group.memberCount === 1 ? 'member' : 'members' }}
+                            </span>
+                            <span>
+                                <span class="group-header__signal-dot"></span>
+                                Shared space for thoughtful conversations
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="group-header__aside">
+                        <button
+                            v-if="!group.isMember"
+                            class="group-header__join"
+                            type="button"
+                            :disabled="isJoinPending"
+                            @click="toggleJoinRequest"
+                        >
+                            <span>{{ isJoinPending ? 'Updating...' : group.isRequested ? 'Request sent' : 'Request to join' }}</span>
+                            <IconGlyph :name="group.isRequested ? 'check' : 'arrowRight'" :size="17" />
+                        </button>
+
+                        <p v-if="group.isMember" class="group-header__member-state">
+                            <IconGlyph name="check" :size="17" />
+                            You are part of this orbit
+                        </p>
+
+                        <button v-if="group.isCreator" class="group-header__delete" :disabled="isDeletingGroup" @click="deleteGroup">
+                            {{ isDeletingGroup ? 'Deleting...' : 'Delete group' }}
+                        </button>
+                    </div>
+                    <p v-if="joinError || deleteError" class="group-header__error" role="alert">{{ joinError || deleteError }}</p>
                 </header>
 
-                <section class="group-content">
-                    <p>
-                        Members: {{ group.memberCount }}
-                    </p>
+                <section class="group-membership" aria-label="Group membership">
+                    <div>
+                        <IconGlyph name="groups" :size="19" />
+                        <span>People who make this space what it is</span>
+                    </div>
+                    <span class="group-membership__count">{{ group.memberCount }} total</span>
+                </section>
 
-                    <p v-if="group.isMember">
-                        You are a member of this group.
-                    </p>
+                <section v-if="!group.isMember" class="group-welcome orbit-surface" aria-labelledby="group-welcome-title">
+                    <div>
+                        <p class="orbit-meta">Before you join</p>
+                        <h2 id="group-welcome-title">Bring your perspective into the circle.</h2>
+                        <p>
+                            This is a member-led space. Read the description, get a feel for the conversation, and request access when it feels like your kind of orbit.
+                        </p>
+                    </div>
+                    <div class="group-welcome__details">
+                        <span><IconGlyph name="lock" :size="17" /> Membership is approved</span>
+                        <span><IconGlyph name="chat" :size="17" /> Posts and chats unlock after joining</span>
+                    </div>
+                </section>
+
+                <GroupActivity v-if="group.isMember" :group-id="groupId" />
+
+                <GroupChat v-if="group.isMember" :group-id="groupId" />
+
+                <section v-if="group.isMember" class="group-feed orbit-surface">
+                    <div class="group-feed__heading">
+                        <div>
+                            <p class="orbit-meta">Conversation</p>
+                            <h2>Group posts</h2>
+                        </div>
+                        <span>{{ groupPosts.length }} {{ groupPosts.length === 1 ? 'post' : 'posts' }}</span>
+                    </div>
+                    <GroupPostComposer :group-id="groupId" @post-created="addGroupPost" />
+                    <div v-if="groupPosts.length" class="group-posts">
+                        <GroupPostCard
+                            v-for="post in groupPosts"
+                            :key="post.id"
+                            :group-id="groupId"
+                            :post="post"
+                            @post-deleted="removeGroupPost"
+                        />
+                    </div>
+                    <p v-else class="group-feed__state">No posts yet. Start the group conversation.</p>
                 </section>
             </template>
 
-        </section>
-    </main>
+        </div>
+    </div>
+    </AuthenticatedLayout>
 </template>
 
 <style scoped>
 .group-page {
     width: 100%;
-    min-height: 100vh;
-    padding: var(--space-6);
+    padding: 0;
     background: var(--color-background);
     color: var(--color-text);
 }
 
 .group-container {
+    display: grid;
     width: 100%;
-    max-width: 960px;
+    max-width: 64rem;
     margin: 0 auto;
+    gap: var(--space-5);
 }
 
 .group-header {
-    display: flex;
-    flex-direction: column;
+    position: relative;
+    display: grid;
     gap: var(--space-4);
+    overflow: hidden;
+    padding: var(--space-4);
+    background:
+        linear-gradient(135deg, rgb(21 24 46 / 98%), rgb(13 15 30 / 98%)),
+        var(--color-surface);
+}
 
-    padding: var(--space-6);
-    margin-bottom: var(--space-5);
+.group-header::after {
+    position: absolute;
+    right: -6rem;
+    bottom: -7rem;
+    width: 16rem;
+    height: 16rem;
+    border: 1px solid rgb(124 92 255 / 22%);
+    border-radius: 50%;
+    content: '';
+    pointer-events: none;
+}
 
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-large);
+.group-header__art {
+    position: relative;
+    min-height: 8rem;
+    overflow: hidden;
+    border: 1px solid rgb(124 92 255 / 28%);
+    border-radius: var(--radius-small);
+    background:
+        radial-gradient(circle at 18% 26%, rgb(255 107 138 / 82%) 0 0.25rem, transparent 0.3rem),
+        radial-gradient(circle at 78% 68%, rgb(62 230 176 / 75%) 0 0.2rem, transparent 0.25rem),
+        linear-gradient(145deg, rgb(124 92 255 / 22%), rgb(255 107 138 / 10%));
+}
 
-    background: var(--color-surface);
-    box-shadow: var(--shadow-raised);
+.group-header__art-orbit {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border: 1px solid rgb(172 159 255 / 45%);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) rotate(-18deg);
+}
+
+.group-header__art-orbit--outer {
+    width: 13rem;
+    height: 5.5rem;
+}
+
+.group-header__art-orbit--inner {
+    width: 7rem;
+    height: 3rem;
+    border-color: rgb(62 230 176 / 60%);
+    transform: translate(-50%, -50%) rotate(35deg);
+}
+
+.group-header__art-star {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1.15rem;
+    height: 1.15rem;
+    border: 3px solid var(--color-text);
+    border-radius: 50%;
+    background: var(--color-coral);
+    box-shadow: 0 0 0 0.45rem rgb(255 107 138 / 15%), 0 0 2rem rgb(255 107 138 / 45%);
+    transform: translate(-50%, -50%);
+}
+
+.group-header__art-label {
+    position: absolute;
+    right: var(--space-3);
+    bottom: var(--space-3);
+    color: rgb(235 232 255 / 78%);
+    font-family: var(--font-meta);
+    font-size: 0.625rem;
+    letter-spacing: 0.12em;
+}
+
+.group-header__copy {
+    min-width: 0;
+}
+
+.group-header .orbit-meta {
+    margin: 0 0 var(--space-2);
+    color: var(--color-violet-soft);
+}
+
+.group-header__title-row {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
 }
 
 .group-header h1 {
     margin: 0;
-
     color: var(--color-text);
     font-family: var(--font-display);
-    font-size: clamp(2rem, 5vw, 3rem);
+    font-size: clamp(1.75rem, 7vw, 2.5rem);
     font-weight: 700;
-    line-height: 1.1;
+    line-height: 1.15;
+    letter-spacing: 0;
 }
 
-.group-header p {
-    max-width: 700px;
-    margin: 0;
+.group-header__badge {
+    margin-top: 0.25rem;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid rgb(62 230 176 / 30%);
+    border-radius: 999px;
+    background: rgb(62 230 176 / 9%);
+    color: var(--color-mint);
+    font-family: var(--font-meta);
+    font-size: 0.625rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
 
+.group-header__copy > p:last-child {
+    max-width: 52ch;
+    margin: var(--space-3) 0 0;
     color: var(--color-text-muted);
-    font-family: var(--font-body);
-    font-size: 1rem;
-    line-height: 1.7;
+    font-size: 0.9375rem;
+    line-height: 1.65;
 }
 
-.group-header button {
-    align-self: flex-start;
+.group-header__signals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    margin-top: var(--space-4);
+    color: var(--color-text-faint);
+    font-size: 0.8125rem;
+}
 
+.group-header__signals span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.group-header__signals :deep(.icon-glyph) { color: var(--color-violet-soft); }
+
+.group-header__signal-dot {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: var(--color-mint);
+    box-shadow: 0 0 0 0.25rem rgb(62 230 176 / 12%);
+}
+
+.group-header__aside {
+    display: grid;
+    align-items: start;
+    gap: var(--space-3);
+}
+
+.group-header__join {
+    display: inline-flex;
+    min-width: 100%;
     min-height: var(--touch-target);
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
     padding: 0 var(--space-4);
-
-    border: 1px solid var(--color-coral);
+    border: 0;
     border-radius: var(--radius-small);
-
-    background: transparent;
-    color: var(--color-coral);
-
+    background: var(--gradient-action);
+    color: #fff;
     font-family: var(--font-body);
-    font-size: 0.9rem;
-    font-weight: 600;
-
+    font-size: 0.875rem;
+    font-weight: 700;
     cursor: pointer;
-
-    transition:
-        background 0.15s ease,
-        color 0.15s ease,
-        transform 0.15s ease;
+    transition: transform 160ms ease, opacity 160ms ease;
 }
 
-.group-header button:hover {
-    background: var(--color-coral);
-    color: var(--color-background);
+.group-header__join:hover:not(:disabled) {
     transform: translateY(-1px);
 }
 
-.group-header button:active {
-    transform: translateY(0);
+.group-header__join:disabled {
+    cursor: wait;
+    opacity: 0.7;
 }
 
-.group-content {
-    display: grid;
-    gap: var(--space-4);
-
-    padding: var(--space-5);
-
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-medium);
-
-    background: var(--color-surface);
-}
-
-.group-content p {
+.group-header__member-state {
+    display: inline-flex;
+    min-height: var(--touch-target);
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
     margin: 0;
-
-    color: var(--color-text-soft);
-    font-family: var(--font-body);
-    font-size: 0.95rem;
-    line-height: 1.6;
-}
-
-.group-content p:first-child {
-    color: var(--color-text);
+    padding: 0 var(--space-3);
+    border: 1px solid rgb(62 230 176 / 25%);
+    border-radius: var(--radius-small);
+    background: rgb(62 230 176 / 8%);
+    color: var(--color-mint);
+    font-size: 0.8125rem;
     font-weight: 600;
 }
 
-.group-content p:last-child {
+.group-header__delete {
+    min-height: var(--touch-target);
+    padding: 0 var(--space-4);
+    border: 1px solid var(--color-coral);
+    border-radius: var(--radius-small);
+    background: transparent;
+    color: var(--color-coral);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.group-header__delete:hover:not(:disabled) {
+    background: var(--color-coral);
+    color: var(--color-background);
+}
+
+.group-header__error {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--color-coral);
+    font-size: .875rem;
+}
+
+.group-membership {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: 0 var(--space-1) var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+}
+
+.group-membership > div {
     display: inline-flex;
     align-items: center;
-    width: fit-content;
-
-    padding: var(--space-2) var(--space-3);
-
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-small);
-
-    background: var(--color-surface-raised);
-    color: var(--color-mint);
-
+    gap: var(--space-2);
     font-size: 0.875rem;
-    font-weight: 600;
 }
 
-.group-container>p {
-    margin: var(--space-6) 0;
-    text-align: center;
+.group-membership > div :deep(.icon-glyph) {
+    color: var(--color-violet-soft);
+}
 
+.group-membership__count {
+    color: var(--color-text);
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+}
+
+.group-welcome {
+    display: grid;
+    gap: var(--space-5);
+    padding: var(--space-5);
+    border-color: rgb(124 92 255 / 30%);
+    background:
+        linear-gradient(135deg, rgb(124 92 255 / 11%), transparent 58%),
+        var(--color-surface);
+}
+
+.group-welcome .orbit-meta {
+    margin: 0 0 var(--space-2);
+    color: var(--color-violet-soft);
+}
+
+.group-welcome h2 {
+    max-width: 25ch;
+    margin: 0;
+    color: var(--color-text);
+    font-family: var(--font-display);
+    font-size: clamp(1.25rem, 4vw, 1.75rem);
+    line-height: 1.2;
+}
+
+.group-welcome > div:first-child > p:last-child {
+    max-width: 58ch;
+    margin: var(--space-3) 0 0;
     color: var(--color-text-muted);
-    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    line-height: 1.65;
 }
 
-@media (max-width: 700px) {
-    .group-page {
-        padding: var(--space-4);
-    }
+.group-welcome__details {
+    display: grid;
+    align-content: center;
+    gap: var(--space-3);
+    color: var(--color-text-soft);
+    font-size: 0.8125rem;
+}
 
+.group-welcome__details span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.group-welcome__details :deep(.icon-glyph) {
+    color: var(--color-mint);
+}
+
+.group-feed {
+    display: grid;
+    gap: var(--space-5);
+    padding: var(--space-6) 0 0;
+    border-width: 1px 0 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.group-feed__heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.group-feed__heading h2 {
+    margin: var(--space-1) 0 0;
+    color: var(--color-text);
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    letter-spacing: 0;
+}
+
+.group-feed__heading > span {
+    color: var(--color-text-muted);
+    font-size: .875rem;
+}
+
+.group-posts {
+    display: grid;
+    gap: var(--space-5);
+}
+
+.group-feed__state {
+    margin: 0;
+    padding: var(--space-5);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-small);
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
+.group-page__state {
+    margin: var(--space-7) 0;
+    padding: var(--space-6);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-medium);
+    text-align: center;
+    color: var(--color-text-muted);
+}
+.group-page__state--error { color: var(--color-coral); }
+
+@media (min-width: 48rem) {
+    .group-container { gap: var(--space-7); }
     .group-header {
+        grid-template-columns: minmax(10rem, 0.35fr) minmax(0, 1fr) auto;
+        align-items: center;
+        gap: var(--space-6);
         padding: var(--space-5);
     }
 
-    .group-content {
-        padding: var(--space-4);
+    .group-header__art { min-height: 10rem; }
+
+    .group-header__aside {
+        min-width: 12rem;
+        justify-items: stretch;
     }
 
-    .group-header button {
+    .group-header__join { min-width: 0; }
+
+    .group-header__delete {
         width: 100%;
     }
+
+    .group-welcome {
+        grid-template-columns: minmax(0, 1fr) minmax(15rem, 0.55fr);
+        align-items: center;
+        padding: var(--space-6);
+    }
+
+    .group-feed { padding-top: var(--space-5); }
+    .group-feed__heading { align-items: start; }
+    .group-feed__heading h2 { font-size: 1.5rem; }
 }
 </style>

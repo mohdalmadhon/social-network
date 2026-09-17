@@ -14,16 +14,20 @@ export async function getProfileData(id, count) {
         return;
     }
 
-    const result = await resp.json();
+    const result = await resp.json().catch(() => null);
+    if (!result) {
+        throw new Error('Could not load profile')
+    }
 
     if (!resp.ok) {
         if (result.message == "cannot view your own profile this way") {
             router.push("/me")
             return;
         }
-        throw new Error("network error, could not connet to server")
+        throw new Error(result.message || 'Could not load profile')
     }
 
+<<<<<<< HEAD
     const data = result.data;
     const userInfo = data.UserInfo;
 
@@ -90,6 +94,61 @@ export async function getProfileData(id, count) {
     }
 
     return user;
+=======
+    profileData.userInfo.id = Number(id)
+    profileData.userInfo.firstName = result.data.UserInfo.FirstName || ''
+    profileData.userInfo.lastName = result.data.UserInfo.LastName || ''
+    profileData.userInfo.userName = ''
+    profileData.userInfo.email = ''
+    profileData.userInfo.dob = ''
+    profileData.userInfo.avatar = result.data.UserInfo.Avatar || ''
+    profileData.userInfo.isPrivate = result.showProfile
+        ? (Number(result.data.IsPrivate) === 1 ? 1 : 0)
+        : 1
+    profileData.numOfFollowers = result.data.NumOfFollowers || 0
+    profileData.numOfPosts = result.data.NumOfPosts || 0
+    profileData.numOfFollowing = result.data.NumOfFollowing || 0
+    profileData.about.bio = result.data.About.Bio || ''
+    profileData.about.work = ''
+    profileData.about.education = ''
+    profileData.about.travel = ''
+    profileData.about.intrests = ''
+    profileData.about.hobbies = ''
+    profileData.about.website = ''
+    profileData.about.linkedin = ''
+    profileData.about.instgram = ''
+    profileData.about.twitter = ''
+    profileData.followers = {}
+    profileData.following = {}
+
+    profileData.show = result.showProfile;
+    profileData.isFollowing = result.followStatus;
+    if (profileData.show) {
+        profileData.userInfo.userName = result.data.UserInfo.UserName || ''
+        profileData.userInfo.email = result.data.UserInfo.Email
+        profileData.userInfo.dob = result.data.UserInfo.DOB
+
+        profileData.about.work = result.data.About.Work
+        profileData.about.education = result.data.About.Education
+        profileData.about.travel = result.data.About.Travel
+        profileData.about.intrests = result.data.About.interests
+        profileData.about.hobbies = result.data.About.Hobbies
+        profileData.about.website = result.data.About.Website
+        profileData.about.linkedin = result.data.About.Linkedin
+        profileData.about.instgram = result.data.About.instagram
+        profileData.about.twitter = result.data.About.Twitter
+        try {
+            const followerResult = await getFollowers(id, count, 0)
+            const followingResult = await getFollowing(id, count, 0)
+            profileData.followers = followerResult?.data || {}
+            profileData.following = followingResult?.data || {}
+        } catch {
+            throw new Error('Could not load profile connections')
+        }
+    }
+
+    return result
+>>>>>>> 10a41907a21c0baac510b189cc5b0eead2b57f53
 }
 
 export async function requestFollow(id, method) {
@@ -150,10 +209,8 @@ export async function getFollowing(id, count, offset = 0) {
 }
 
 export async function searchFollows(searchValue = "", targetId) {
-    const params = new URLSearchParams({
-        search: searchValue,
-        targetid: targetId
-    });
+    const params = new URLSearchParams({ search: searchValue });
+    if (targetId) params.set('targetid', targetId);
 
     const resp = await fetch(`/api/profile/follows/search?${params.toString()}`, {
         method: "GET",
@@ -169,10 +226,8 @@ export async function searchFollows(searchValue = "", targetId) {
 }
 
 export async function searchFollowing(searchValue = "", targetId) {
-    const params = new URLSearchParams({
-        search: searchValue,
-        targetid: targetId
-    });
+    const params = new URLSearchParams({ search: searchValue });
+    if (targetId) params.set('targetid', targetId);
     
     const resp = await fetch(`/api/profile/following/search?${params.toString()}`, {
         method: "GET",

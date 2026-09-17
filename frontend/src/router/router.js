@@ -5,12 +5,15 @@ import GroupPage from "@/views/group/GroupPage.vue";
 import HomeFeedPage from "@/views/HomeFeedPage.vue";
 import ChatsPage from "@/views/ChatsPage.vue";
 import NotificationsPage from "@/views/NotificationsPage.vue";
+import SearchPage from "@/views/SearchPage.vue";
 
 import { createRouter, createWebHistory } from "vue-router";
 import EditProfile from "@/views/profiles/EditProfile.vue";
 import UserProfile from "@/views/profiles/UserProfile.vue";
 
 const routes = [
+  { path: '/', redirect: '/home' },
+  { path: '/:pathMatch(.*)*', redirect: '/home' },
   {
     path: "/login",
     component: LoginPage,
@@ -55,6 +58,13 @@ const routes = [
   {
     path: "/notifications",
     component: NotificationsPage,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: "/search",
+    component: SearchPage,
     meta: {
       requiresAuth: true,
     },

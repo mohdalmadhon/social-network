@@ -1,9 +1,9 @@
 export async function getFriends(searchValue = "", targetId, offset = 0) {
     const params = new URLSearchParams({
         search: searchValue,
-        targetid: targetId,
         offset: offset.toString()
     });
+    if (targetId) params.set('targetid', targetId);
 
     const resp = await fetch(`/api/friends?${params.toString()}`, {
         method: "GET",

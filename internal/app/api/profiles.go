@@ -386,6 +386,7 @@ func (app *App) AcceptFollowRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+
 	helpers.WriteJson(w, http.StatusOK, map[string]any{
 		"status":  true,
 		"message": "follow request accepted",

@@ -1,4 +1,5 @@
 import { ref, computed, onMounted } from "vue";
+import { useRoute } from "vue-router";
 import {
   getGroups,
   createGroupApi,
@@ -8,8 +9,9 @@ import {
 } from "@/api/groups/Groups";
 
 export function useGroups() {
+  const route = useRoute();
   const activeTab = ref("discover");
-  const searchInputValue = ref("");
+  const searchInputValue = ref(typeof route.query.search === "string" ? route.query.search : "");
   const modalStatus = ref(false);
 
   const AllGroupsdata = ref([]);

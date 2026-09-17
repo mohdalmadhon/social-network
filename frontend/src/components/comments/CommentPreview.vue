@@ -10,17 +10,21 @@ function imageUrl(imagePath) {
   if (!imagePath) return ''
   return imagePath.startsWith('/') ? imagePath : `/uploads/${imagePath}`
 }
+
+function initials(author) {
+  return author.slice(0, 2).toUpperCase()
+}
 </script>
 
 <template>
   <div class="comment-preview">
     <div class="comment-preview__avatar" :style="{ background: comment.avatarColor }" aria-hidden="true">
-      {{ comment.author.charAt(0) }}
+      <img v-if="comment.avatarPath" :src="imageUrl(comment.avatarPath)" alt="" />
+      <span v-else>{{ initials(comment.author) }}</span>
     </div>
     <div class="comment-preview__body">
       <strong>{{ comment.author }}</strong>
       <p>{{ comment.content }}</p>
-      <img v-if="comment.imagePath" :src="imageUrl(comment.imagePath)" alt="Image attached to this comment" />
     </div>
   </div>
 </template>
@@ -41,11 +45,22 @@ function imageUrl(imagePath) {
   display: grid;
   width: 2.25rem;
   height: 2.25rem;
+  aspect-ratio: 1;
   place-items: center;
+  overflow: hidden;
   border-radius: 50%;
+  background: var(--color-input);
   color: var(--color-text);
   font-size: 0.8125rem;
   font-weight: 700;
+}
+
+.comment-preview__avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  object-position: center;
 }
 
 .comment-preview__body {
@@ -70,12 +85,4 @@ function imageUrl(imagePath) {
   overflow-wrap: anywhere;
 }
 
-.comment-preview img {
-  display: block;
-  width: min(100%, 20rem);
-  max-height: 16rem;
-  margin-top: var(--space-2);
-  border-radius: var(--radius-small);
-  object-fit: contain;
-}
 </style>

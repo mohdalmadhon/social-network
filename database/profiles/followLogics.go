@@ -343,3 +343,22 @@ func AcceptFollowRequest(db *sql.DB, requesterID int, targetID int) error {
 
 	return tx.Commit()
 }
+
+func DecideFollowRequest(db *sql.DB, targetID, followerID int, accept bool) error {
+	query := `DELETE FROM user_followers WHERE target_id = ? AND follower_id = ? AND status = 0`
+	if accept {
+		query = `UPDATE user_followers SET status = 1 WHERE target_id = ? AND follower_id = ? AND status = 0`
+	}
+	result, err := db.Exec(query, targetID, followerID)
+	if err != nil {
+		return err
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
