@@ -27,6 +27,14 @@ const isDeletingGroup = ref(false)
 const deleteError = ref('')
 const isJoinPending = ref(false)
 const joinError = ref('')
+const activeSection = ref('overview')
+
+const groupSections = [
+    { id: 'overview', label: 'Overview', icon: 'groups' },
+    { id: 'activity', label: 'Activity & events', icon: 'calendar' },
+    { id: 'chat', label: 'Group chat', icon: 'chat' },
+    { id: 'posts', label: 'Posts', icon: 'image' },
+]
 
 onMounted(async () => {
     try {
@@ -34,6 +42,7 @@ onMounted(async () => {
 
         group.value = result.group
         if (group.value?.isMember) {
+            activeSection.value = 'posts'
             const postsResult = await getGroupPosts(groupId)
             groupPosts.value = postsResult?.posts || []
         }
@@ -169,6 +178,21 @@ async function toggleJoinRequest() {
                     <span class="group-membership__count">{{ group.memberCount }} total</span>
                 </section>
 
+                <nav v-if="group.isMember" class="group-sections" aria-label="Group sections">
+                    <button
+                        v-for="section in groupSections"
+                        :key="section.id"
+                        class="group-section-tab"
+                        :class="{ 'group-section-tab--active': activeSection === section.id }"
+                        type="button"
+                        :aria-current="activeSection === section.id ? 'page' : undefined"
+                        @click="activeSection = section.id"
+                    >
+                        <IconGlyph :name="section.icon" :size="16" />
+                        <span>{{ section.label }}</span>
+                    </button>
+                </nav>
+
                 <section v-if="!group.isMember" class="group-welcome orbit-surface" aria-labelledby="group-welcome-title">
                     <div>
                         <p class="orbit-meta">Before you join</p>
@@ -183,30 +207,60 @@ async function toggleJoinRequest() {
                     </div>
                 </section>
 
-                <GroupActivity v-if="group.isMember" :group-id="groupId" />
-
-                <GroupChat v-if="group.isMember" :group-id="groupId" />
-
-                <section v-if="group.isMember" class="group-feed orbit-surface">
-                    <div class="group-feed__heading">
+                <div v-else class="group-section-panels">
+                    <section v-show="activeSection === 'overview'" class="group-section-panel group-overview orbit-surface" aria-labelledby="group-overview-heading">
                         <div>
-                            <p class="orbit-meta">Conversation</p>
-                            <h2>Group posts</h2>
+                            <p class="orbit-meta">Your shared orbit</p>
+                            <h2 id="group-overview-heading">A quick read before you explore</h2>
+                            <p>{{ group.description }}</p>
                         </div>
-                        <span>{{ groupPosts.length }} {{ groupPosts.length === 1 ? 'post' : 'posts' }}</span>
-                    </div>
-                    <GroupPostComposer :group-id="groupId" @post-created="addGroupPost" />
-                    <div v-if="groupPosts.length" class="group-posts">
-                        <GroupPostCard
-                            v-for="post in groupPosts"
-                            :key="post.id"
-                            :group-id="groupId"
-                            :post="post"
-                            @post-deleted="removeGroupPost"
-                        />
-                    </div>
-                    <p v-else class="group-feed__state">No posts yet. Start the group conversation.</p>
-                </section>
+                        <div class="group-overview__signals">
+                            <div>
+                                <span class="group-overview__icon group-overview__icon--mint"><IconGlyph name="groups" :size="18" /></span>
+                                <span><strong>{{ group.memberCount }} members</strong><small>A familiar circle to share with</small></span>
+                            </div>
+                            <div>
+                                <span class="group-overview__icon group-overview__icon--violet"><IconGlyph name="calendar" :size="18" /></span>
+                                <span><strong>Activity & events</strong><small>Plan meetups and keep everyone in sync</small></span>
+                            </div>
+                            <div>
+                                <span class="group-overview__icon group-overview__icon--coral"><IconGlyph name="chat" :size="18" /></span>
+                                <span><strong>Member conversations</strong><small>Posts and chat open after you join</small></span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section v-show="activeSection === 'activity'" class="group-section-panel" aria-labelledby="group-activity-heading">
+                        <h2 id="group-activity-heading" class="visually-hidden">Group activity and events</h2>
+                        <GroupActivity :group-id="groupId" />
+                    </section>
+
+                    <section v-show="activeSection === 'chat'" class="group-section-panel" aria-labelledby="group-chat-section-heading">
+                        <h2 id="group-chat-section-heading" class="visually-hidden">Group chat</h2>
+                        <GroupChat :group-id="groupId" />
+                    </section>
+
+                    <section v-show="activeSection === 'posts'" class="group-section-panel group-feed orbit-surface" aria-labelledby="group-posts-heading">
+                        <div class="group-feed__heading">
+                            <div>
+                                <p class="orbit-meta">Conversation</p>
+                                <h2 id="group-posts-heading">Group posts</h2>
+                            </div>
+                            <span>{{ groupPosts.length }} {{ groupPosts.length === 1 ? 'post' : 'posts' }}</span>
+                        </div>
+                        <GroupPostComposer :group-id="groupId" @post-created="addGroupPost" />
+                        <div v-if="groupPosts.length" class="group-posts">
+                            <GroupPostCard
+                                v-for="post in groupPosts"
+                                :key="post.id"
+                                :group-id="groupId"
+                                :post="post"
+                                @post-deleted="removeGroupPost"
+                            />
+                        </div>
+                        <p v-else class="group-feed__state">No posts yet. Start the group conversation.</p>
+                    </section>
+                </div>
             </template>
 
         </div>
@@ -483,6 +537,78 @@ async function toggleJoinRequest() {
     font-size: 0.75rem;
 }
 
+.group-sections {
+    display: flex;
+    gap: var(--space-2);
+    overflow-x: auto;
+    padding: var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-medium);
+    background: rgb(21 24 46 / 72%);
+    scrollbar-width: none;
+}
+
+.group-sections::-webkit-scrollbar { display: none; }
+
+.group-section-tab {
+    display: inline-flex;
+    min-width: max-content;
+    min-height: var(--touch-target);
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-4);
+    border: 1px solid transparent;
+    border-radius: var(--radius-small);
+    background: transparent;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.group-section-tab:hover,
+.group-section-tab:focus-visible {
+    border-color: var(--color-border-strong);
+    color: var(--color-text);
+}
+
+.group-section-tab--active {
+    border-color: rgb(124 92 255 / 55%);
+    background: rgb(124 92 255 / 16%);
+    color: var(--color-violet-soft);
+}
+
+.group-section-panels { min-width: 0; }
+.group-section-panel { min-width: 0; }
+
+.group-overview {
+    display: grid;
+    gap: var(--space-6);
+    padding: var(--space-5);
+    border-color: rgb(124 92 255 / 30%);
+    background:
+        linear-gradient(135deg, rgb(124 92 255 / 11%), transparent 58%),
+        var(--color-surface);
+}
+
+.group-overview .orbit-meta { margin: 0 0 var(--space-2); color: var(--color-violet-soft); }
+.group-overview h2 { max-width: 28ch; margin: 0; font-family: var(--font-display); font-size: clamp(1.25rem, 4vw, 1.75rem); line-height: 1.2; }
+.group-overview p:not(.orbit-meta) { max-width: 58ch; margin: var(--space-3) 0 0; color: var(--color-text-muted); line-height: 1.65; }
+
+.group-overview__signals { display: grid; gap: var(--space-3); }
+.group-overview__signals > div { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr); align-items: center; gap: var(--space-3); }
+.group-overview__icon { display: grid; width: 2.75rem; height: 2.75rem; place-items: center; border: 1px solid; border-radius: 50%; }
+.group-overview__icon--mint { border-color: rgb(62 230 176 / 35%); background: rgb(62 230 176 / 10%); color: var(--color-mint); }
+.group-overview__icon--violet { border-color: rgb(172 159 255 / 35%); background: rgb(124 92 255 / 12%); color: var(--color-violet-soft); }
+.group-overview__icon--coral { border-color: rgb(255 107 138 / 35%); background: rgb(255 107 138 / 10%); color: var(--color-coral); }
+.group-overview__signals span:last-child { display: grid; gap: 0.2rem; min-width: 0; }
+.group-overview__signals strong { color: var(--color-text); font-size: 0.875rem; }
+.group-overview__signals small { color: var(--color-text-faint); font-size: 0.75rem; line-height: 1.4; }
+
 .group-welcome {
     display: grid;
     gap: var(--space-5);
@@ -536,11 +662,7 @@ async function toggleJoinRequest() {
 .group-feed {
     display: grid;
     gap: var(--space-5);
-    padding: var(--space-6) 0 0;
-    border-width: 1px 0 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
+    padding: var(--space-5);
 }
 
 .group-feed__heading {
@@ -615,8 +737,19 @@ async function toggleJoinRequest() {
         padding: var(--space-6);
     }
 
-    .group-feed { padding-top: var(--space-5); }
+    .group-feed { padding: var(--space-6); }
     .group-feed__heading { align-items: start; }
     .group-feed__heading h2 { font-size: 1.5rem; }
+
+    .group-overview {
+        grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.75fr);
+        align-items: start;
+        padding: var(--space-6);
+    }
+
+    .group-overview__signals {
+        padding-left: var(--space-5);
+        border-left: 1px solid var(--color-border);
+    }
 }
 </style>

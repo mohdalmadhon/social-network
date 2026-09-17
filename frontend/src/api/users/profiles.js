@@ -20,7 +20,10 @@ export async function getProfileData(id, count) {
 
     if (!resp.ok) {
         if (result.message == "cannot view your own profile this way") {
-            router.push("/me")
+            // Replace the invalid self-profile entry. Using push here leaves
+            // the profile page in browser history, so Back appears to do
+            // nothing and returns to the same profile again.
+            router.replace("/me")
             return;
         }
         throw new Error(result.message || 'Could not load profile')

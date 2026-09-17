@@ -11,6 +11,24 @@ import { createRouter, createWebHistory } from "vue-router";
 import EditProfile from "@/views/profiles/EditProfile.vue";
 import UserProfile from "@/views/profiles/UserProfile.vue";
 
+// IDs in links are only references. The API still decides whether the
+// signed-in user may view the requested profile or group. These guards keep
+// malformed values out of the app before a request is made.
+function isSafeId(value) {
+  const id = Array.isArray(value) ? value[0] : value
+  if (typeof id !== "string" || !/^[1-9]\d*$/.test(id)) return false
+
+  return Number.isSafeInteger(Number(id))
+}
+
+function validateUserProfileRoute(to) {
+  return isSafeId(to.query.id) ? true : { path: "/home", replace: true }
+}
+
+function validateGroupRoute(to) {
+  return isSafeId(to.params.groupId) ? true : { path: "/groups", replace: true }
+}
+
 const routes = [
   { path: '/', redirect: '/home' },
   { path: '/:pathMatch(.*)*', redirect: '/home' },
@@ -29,7 +47,8 @@ const routes = [
   },
   {
     path: "/user",
-    component: UserProfile
+    component: UserProfile,
+    beforeEnter: validateUserProfileRoute,
   },
   {
     path: "/groups",
@@ -38,6 +57,7 @@ const routes = [
   {
     path: "/groups/:groupId",
     component: GroupPage,
+    beforeEnter: validateGroupRoute,
   },
 
   {

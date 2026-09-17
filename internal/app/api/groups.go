@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"social/internal/helpers"
+	"strconv"
 	"strings"
 )
 
@@ -238,11 +239,11 @@ func (app App) GetGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	groupID := r.PathValue("id")
-	if groupID == "" {
+	groupID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || groupID <= 0 {
 		writeJSON(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
-			"message": "group id is required",
+			"message": "invalid group id",
 		})
 		return
 	}
@@ -341,11 +342,11 @@ func (app App) DeleteGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	groupID := r.PathValue("id")
-	if groupID == "" {
+	groupID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || groupID <= 0 {
 		writeJSON(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
-			"message": "group id is required",
+			"message": "invalid group id",
 		})
 		return
 	}
@@ -397,7 +398,11 @@ func (app App) JoinRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	groupID := r.PathValue("id")
+	groupID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || groupID <= 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"status": false, "message": "invalid group id"})
+		return
+	}
 
 	var isMember bool
 	err = app.DB.QueryRow(`
@@ -528,7 +533,11 @@ func (app App) UndoJoinRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	groupID := r.PathValue("id")
+	groupID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || groupID <= 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"status": false, "message": "invalid group id"})
+		return
+	}
 
 	tx, err := app.DB.Begin()
 	if err != nil {

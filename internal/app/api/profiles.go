@@ -148,7 +148,7 @@ func (app *App) RequestFollow(w http.ResponseWriter, r *http.Request) {
 
 	queryID := r.URL.Query().Get("targetid")
 	targetID, err := strconv.Atoi(queryID)
-	if err != nil || targetID == followerID {
+	if err != nil || targetID <= 0 || targetID == followerID {
 		log.Println(err)
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
@@ -200,7 +200,7 @@ func (app *App) CancelRequest(w http.ResponseWriter, r *http.Request) {
 
 	queryID := r.URL.Query().Get("targetid")
 	targetID, err := strconv.Atoi(queryID)
-	if err != nil || targetID == followerID {
+	if err != nil || targetID <= 0 || targetID == followerID {
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "invalid target ID",
@@ -253,7 +253,7 @@ func (app *App) GetFollowers(w http.ResponseWriter, r *http.Request) {
 	if queryID != "" && queryID != "null" {
 		log.Println(queryID)
 		targetID, err := strconv.Atoi(queryID)
-		if err != nil {
+		if err != nil || targetID <= 0 {
 			log.Println(err, "here2")
 			helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 				"status":  false,
@@ -327,7 +327,7 @@ func (app *App) GetFollowing(w http.ResponseWriter, r *http.Request) {
 
 	if queryID != "" && queryID != "null" {
 		targetID, err := strconv.Atoi(queryID)
-		if err != nil {
+		if err != nil || targetID <= 0 {
 			helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 				"status":  false,
 				"message": "invalid target id",
