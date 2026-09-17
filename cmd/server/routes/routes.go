@@ -83,6 +83,9 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("POST /api/groups/{id}/join-requests", app.AuthMiddleware(app.JoinRequest))
 	mux.HandleFunc("DELETE /api/groups/{id}/join-requests", app.AuthMiddleware(app.UndoJoinRequest))
 
+	//Websocket
+	//mux.HandleFunc("", app.AuthMiddleware(app.WsHandler))
+
 	//folder handlers
 	mux.HandleFunc("GET /uploads/", app.AuthMiddleware(app.ServeUpload))
 	return mux
