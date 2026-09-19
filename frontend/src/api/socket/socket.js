@@ -11,7 +11,7 @@ export function connectToWS() {
     }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    
+
     ws = new WebSocket(`${protocol}//${window.location.host}/api/ws`);
 
     ws.onopen = () => {
@@ -29,20 +29,23 @@ export function connectToWS() {
             case 'message': {
                 const message = payload.data;
 
-                console.log(message);
-                console.log(activePage.value);
-                console.log(activePage.value === 'chat:' + message.Sender.ID);
+                const groupID = message.GroupID;
+                const privateChat =
+                    activePage.value === 'chat:' + message.Sender.ID;
 
-                if (activePage.value === 'chat:' + message.Sender.ID) {
+                const groupChat =
+                    activePage.value === 'group:' + groupID;
+
+                if (privateChat || groupChat) {
                     window.dispatchEvent(
                         new CustomEvent('chat-message', {
                             detail: message
                         })
                     );
                 } else {
-                    const groupID = message.GroupID;
                     const now = Date.now();
-                    const lastNotification = notificationDebounce.get(groupID);
+                    const lastNotification =
+                        notificationDebounce.get(groupID);
 
                     if (
                         !lastNotification ||

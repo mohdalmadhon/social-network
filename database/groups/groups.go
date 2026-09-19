@@ -348,3 +348,114 @@ func DiscoverGroups(db *sql.DB, userID, offset int, search string) ([]models.Gro
 
 	return groups, nil
 }
+
+func GetGroup(de *sql.DB, userID, groupID int) (models.Group, error) {
+	var g models.Group
+
+	err := de.QueryRow(`
+	SELECT
+		g.name,
+		g.avatar,
+		g.description,
+		g.created_at,
+		(
+			SELECT COUNT(*)
+			FROM groups_users gu
+			WHERE gu.group_id = g.id
+		) AS member_count
+	FROM groups g
+	WHERE
+		g.is_private_chat = 0
+		AND g.id = ?
+		AND EXISTS (
+			SELECT 1
+			FROM groups_users gu2
+			WHERE gu2.group_id = g.id
+			AND gu2.user_id = ?
+		);
+`, groupID, userID).Scan(
+		&g.Title,
+		&g.Avatar,
+		&g.Description,
+		&g.CreatedAt,
+		&g.Count,
+	)
+
+	return g, err
+}
+
+func SearchGroupMembers(db *sql.DB, groupID int, search string, offset int, limit int) ([]int, error) {
+	rows, err := db.Query(`
+		SELECT u.id
+		FROM user u
+		INNER JOIN groups_users gu ON gu.user_id = u.id
+		WHERE gu.group_id = ?
+		AND (
+			u.first_name LIKE ?
+			OR u.last_name LIKE ?
+		)
+		ORDER BY u.first_name, u.last_name
+		LIMIT ? OFFSET ?
+	`, groupID, "%"+search+"%", "%"+search+"%", limit, offset)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []int
+
+	for rows.Next() {
+		var id int
+
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+
+		ids = append(ids, id)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return ids, nil
+}
+
+func GroupExists(db *sql.DB, groupID int) (bool, error) {
+	var exists bool
+
+	err := db.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1
+			FROM groups
+			WHERE id = ?
+			AND is_private_chat = 0
+		)
+	`, groupID).Scan(&exists)
+
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}
+
+func UserIN(db *sql.DB, groupID, userID int) (bool, error) {
+	var exists bool
+
+	err := db.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1
+			FROM groups_users
+			WHERE group_id = ?
+			AND user_id = ?
+		)
+	`, groupID, userID).Scan(&exists)
+
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}

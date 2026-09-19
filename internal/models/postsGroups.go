@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type Group struct {
 	ID          int
 	UserID      int
@@ -9,6 +11,7 @@ type Group struct {
 	Description string `json:"description"`
 	Avatar      string `json:"avatar"`
 	Users       []UserRegistration
+	CreatedAt   time.Time
 }
 
 type NewGroup struct {

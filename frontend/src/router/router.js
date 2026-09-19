@@ -8,6 +8,7 @@ import HomePage from '@/views/home/HomePage.vue'
 import Notifications from '@/views/Notifications.vue'
 import Chats from '@/views/chats/Chats.vue'
 import GroupsPages from '@/views/groups/GroupsPages.vue'
+import GroupChatPage from '@/views/groups/GroupChatPage.vue'
 
 const routes = [
     {
@@ -45,6 +46,10 @@ const routes = [
     {
         path: '/groups',
         component: GroupsPages
+    },
+    {
+        path: "/groups/:id",
+        component: GroupChatPage
     }
 ]
 

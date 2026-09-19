@@ -82,13 +82,14 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("GET /api/groups", app.AuthMiddleware(app.GetGroups))
 	mux.HandleFunc("POST /api/chats", app.AuthMiddleware(app.AddMessages))
 	mux.HandleFunc("GET /api/chats", app.AuthMiddleware(app.GetMessages))
-	// mux.HandleFunc("POST /api/groups", app.AuthMiddleware(app.MakeNewGroup))
-
+	
 	//group chats
 	mux.HandleFunc("GET /api/groups/invites/search", app.AuthMiddleware(app.SearchInvites))
 	mux.HandleFunc("POST /api/groups", app.AuthMiddleware(app.MakeNewGroup))
 	mux.HandleFunc("POST /api/groups/status", app.AuthMiddleware(app.AcceptInvite))
 	mux.HandleFunc("GET /api/groups/discover", app.AuthMiddleware(app.DiscoverGroups))
+	mux.HandleFunc("GET /api/group", app.AuthMiddleware(app.GetGroup))
+	mux.HandleFunc("GET /api/group/search", app.AuthMiddleware(app.SearchMembers))
 	
 	//ws
 	mux.Handle("/api/ws", app.WSAuthMiddleware(websocket.Handler(app.HandleWS)))

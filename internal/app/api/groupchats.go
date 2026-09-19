@@ -164,6 +164,7 @@ func (app *App) AddMessages(w http.ResponseWriter, r *http.Request) {
 	var req request
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Println(err)
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "invalid data",
@@ -179,9 +180,6 @@ func (app *App) AddMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.GroupID != 1 {
-		// group message
-	}
 	log.Println(req.UserID)
 	groupID := req.GroupID
 
@@ -207,6 +205,34 @@ func (app *App) AddMessages(w http.ResponseWriter, r *http.Request) {
 				})
 				return
 			}
+		}
+	} else {
+		log.Println(req.GroupID)
+		exists, err := groups.GroupExists(app.DB, req.GroupID)
+		if err != nil {
+			helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "group does not exists",
+			})
+			return
+		}
+
+		userIN, err := groups.UserIN(app.DB, req.GroupID, userID)
+		if err != nil {
+			helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "bad request",
+			})
+			return
+		}
+
+		if !exists || !userIN {
+			log.Println("here", exists, userIN)
+			helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "could not send message",
+			})
+			return
 		}
 	}
 
@@ -412,11 +438,11 @@ func (app *App) MakeNewGroup(w http.ResponseWriter, r *http.Request) {
 		"status":  true,
 		"message": "group created",
 		"request": map[string]any{
-			"usersIds": requests,
+			"usersIds":  requests,
 			"groupData": g,
 		},
 	})
-	
+
 }
 
 func (app *App) SearchInvites(w http.ResponseWriter, r *http.Request) {
@@ -558,4 +584,111 @@ func (app *App) DiscoverGroups(w http.ResponseWriter, r *http.Request) {
 		"data":   groups,
 	})
 	return
+}
+
+func (app *App) GetGroup(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
+			"status":  false,
+			"message": "could not authorize user",
+		})
+		return
+	}
+
+	groupID, err := strconv.Atoi(r.URL.Query().Get("groupID"))
+	if err != nil {
+		log.Println(err)
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid groupID",
+		})
+		return
+	}
+
+	group, err := groups.GetGroup(app.DB, userID, groupID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Println(err)
+			helpers.WriteJson(w, http.StatusOK, map[string]any{
+				"status":  false,
+				"message": "group does not exists",
+			})
+			return
+		}
+
+		log.Println(err)
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not get group data",
+		})
+		return
+	}
+
+	helpers.WriteJson(w, http.StatusOK, map[string]any{
+		"status": true,
+		"data":   group,
+	})
+}
+
+func (app *App) SearchMembers(w http.ResponseWriter, r *http.Request) {
+	_, ok := r.Context().Value("userID").(int)
+	if !ok {
+		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
+			"status":  false,
+			"message": "could not authorize user",
+		})
+		return
+	}
+
+	groupID, err := strconv.Atoi(r.URL.Query().Get("groupID"))
+	if err != nil {
+		log.Println(err)
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid groupID",
+		})
+		return
+	}
+
+	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+	if err != nil {
+		log.Println(err)
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid offset",
+		})
+		return
+	}
+
+	search := r.URL.Query().Get("search")
+
+	ids, err := groups.SearchGroupMembers(app.DB, groupID, search, offset, 20)
+	if err != nil && err != sql.ErrNoRows {
+		log.Println(err)
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not get members",
+		})
+		return
+	}
+
+	var usersArray []models.UserRegistration
+	for _, id := range ids {
+		u, err := users.GetUserSimpleData(app.DB, id)
+		if err != nil {
+			helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+				"status":  false,
+				"message": "could not get members",
+			})
+			return
+		}
+
+		usersArray = append(usersArray, u)
+	}
+
+	helpers.WriteJson(w, http.StatusOK, map[string]any{
+		"status": true,
+		"data":   usersArray,
+	})
 }
