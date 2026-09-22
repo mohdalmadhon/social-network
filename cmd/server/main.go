@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	server "social/cmd"
 	"social/cmd/server/routes"
+	"social/cmd/utils"
 	"social/internal/database"
 	"strings"
 
@@ -21,6 +22,7 @@ func main() {
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		log.Fatal(err)
 	}
+
 	separator := "?"
 	if strings.Contains(path, "?") {
 		separator = "&"
@@ -35,6 +37,14 @@ func main() {
 	if err != nil {
 		log.Println(err)
 		return
+	}
+
+	if err := utils.InitUploadFolders(); err != nil {
+		log.Println("error", err)
+	}
+
+	if err := utils.CopyDefaultAvatar(); err != nil {
+		log.Println(err)
 	}
 
 	address := os.Getenv("ORBIT_ADDR")
