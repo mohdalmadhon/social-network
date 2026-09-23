@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 import CommentInput from '@/components/comments/CommentInput.vue'
 import CommentPreview from '@/components/comments/CommentPreview.vue'
 import IconGlyph from '@/components/layout/IconGlyph.vue'
@@ -17,13 +17,19 @@ const comments = ref([])
 const commentInput = ref(null)
 const commentsError = ref('')
 const isLoadingComments = ref(false)
+const isLoadingMoreComments = ref(false)
 const areCommentsOpen = ref(false)
 const commentsLoaded = ref(false)
+const hasMoreComments = ref(false)
+const commentsList = ref(null)
+const commentsSentinel = ref(null)
 const isSubmittingComment = ref(false)
 const isLiked = ref(Boolean(props.post.liked))
 const likeCount = ref(Number(props.post.likes) || 0)
 const isLikePending = ref(false)
 const likeError = ref('')
+const COMMENTS_PAGE_SIZE = 20
+let commentsObserver
 
 const commentCount = computed(() => Math.max(props.post.comments, comments.value.length))
 
@@ -36,21 +42,49 @@ function commentForPreview(comment) {
   }
 }
 
-async function loadComments() {
-  if (commentsLoaded.value) return
+async function loadComments({ append = false } = {}) {
+  if (append) {
+    if (isLoadingMoreComments.value || !hasMoreComments.value) return
+    isLoadingMoreComments.value = true
+  } else {
+    if (commentsLoaded.value) return
+    isLoadingComments.value = true
+  }
 
-  isLoadingComments.value = true
   commentsError.value = ''
 
   try {
-    const result = await getComments(props.post.id)
-    comments.value = (result?.comments || []).map(commentForPreview)
+    const result = await getComments(props.post.id, {
+      limit: COMMENTS_PAGE_SIZE,
+      offset: append ? comments.value.length : 0,
+    })
+    const nextComments = (result?.comments || []).map(commentForPreview)
+    comments.value = append ? [...comments.value, ...nextComments] : nextComments
+    hasMoreComments.value = Boolean(result?.hasMore)
     commentsLoaded.value = true
   } catch (error) {
     commentsError.value = error.message || 'Could not load comments.'
   } finally {
     isLoadingComments.value = false
+    isLoadingMoreComments.value = false
   }
+}
+
+function observeCommentsEnd() {
+  commentsObserver?.disconnect()
+
+  if (!commentsList.value || !commentsSentinel.value || typeof IntersectionObserver === 'undefined') return
+
+  commentsObserver = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting && areCommentsOpen.value && hasMoreComments.value) {
+      loadComments({ append: true })
+    }
+  }, {
+    root: commentsList.value,
+    rootMargin: '0px 0px 120px',
+  })
+
+  commentsObserver.observe(commentsSentinel.value)
 }
 
 async function addComment(comment) {
@@ -102,14 +136,22 @@ function imageUrl(imagePath) {
 
 async function toggleComments() {
   areCommentsOpen.value = !areCommentsOpen.value
-  if (areCommentsOpen.value && !commentsLoaded.value) {
+  if (areCommentsOpen.value) {
     await loadComments()
+    await nextTick()
+    observeCommentsEnd()
+  } else {
+    commentsObserver?.disconnect()
   }
 }
 
 function initials(author) {
   return author.slice(0, 2).toUpperCase()
 }
+
+onBeforeUnmount(() => {
+  commentsObserver?.disconnect()
+})
 
 </script>
 
@@ -205,9 +247,12 @@ function initials(author) {
         <button type="button" @click="loadComments">Retry</button>
       </div>
       <p v-else-if="!comments.length" class="comments-state comments-state--empty">No comments yet. Start the conversation.</p>
-      <div v-else class="comments-list">
+      <div v-else class="comments-list" ref="commentsList">
         <CommentPreview v-for="comment in comments" :key="comment.id" :comment="comment" />
+        <div ref="commentsSentinel" class="comments-sentinel" aria-hidden="true"></div>
       </div>
+
+      <p v-if="isLoadingMoreComments" class="comments-load-state" role="status">Loading more comments...</p>
 
       <CommentInput
         ref="commentInput"
@@ -465,6 +510,23 @@ function initials(author) {
 .comments-list {
   display: grid;
   gap: var(--space-2);
+  max-height: min(28rem, 55vh);
+  overflow-y: auto;
+  padding-right: var(--space-2);
+  overscroll-behavior: contain;
+}
+
+.comments-sentinel {
+  width: 100%;
+  height: 1px;
+  pointer-events: none;
+}
+
+.comments-load-state {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-faint);
+  font-size: 0.8125rem;
+  text-align: center;
 }
 
 .comments-state--empty {

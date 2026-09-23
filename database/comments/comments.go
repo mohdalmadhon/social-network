@@ -56,7 +56,9 @@ func GetCommentByID(db *sql.DB, commentID int64) (models.Comment, error) {
 	return comment, err
 }
 
-func ListComments(db *sql.DB, userID int, postID int64) ([]models.Comment, error) {
+// ListComments returns one page of comments. Keeping pagination here prevents
+// a popular post from forcing every comment into one database response.
+func ListComments(db *sql.DB, userID int, postID int64, pagination ...int) ([]models.Comment, error) {
 	canView, err := CanViewPost(db, userID, postID)
 	if err != nil {
 		return nil, err
@@ -65,7 +67,14 @@ func ListComments(db *sql.DB, userID int, postID int64) ([]models.Comment, error
 		return nil, ErrPostNotVisible
 	}
 
-	rows, err := db.Query(commentQuery+" WHERE comments.post_id = ? ORDER BY comments.created_at ASC, comments.id ASC", postID)
+	query := commentQuery + " WHERE comments.post_id = ? ORDER BY comments.created_at ASC, comments.id ASC"
+	args := []any{postID}
+	if len(pagination) >= 2 {
+		query += " LIMIT ? OFFSET ?"
+		args = append(args, pagination[0], pagination[1])
+	}
+
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

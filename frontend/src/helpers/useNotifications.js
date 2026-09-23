@@ -9,6 +9,7 @@ let subscribers = 0
 let pending = false
 let stopNotificationListener
 let stopConnectionListener
+const NOTIFICATION_PREVIEW_SIZE = 12
 
 function receiveNotification(event) {
   const notification = event?.notification
@@ -26,7 +27,12 @@ export async function refreshNotifications() {
   if (pending) return
   pending = true
   try {
-    const result = await getNotifications()
+    // The header and feed sidebar only need a small recent preview. The full
+    // notifications screen loads the rest page by page as the user scrolls.
+    const result = await getNotifications('all', {
+      limit: NOTIFICATION_PREVIEW_SIZE,
+      offset: 0,
+    })
     items.value = result?.notifications || []
     unreadCount.value = result?.unreadCount || 0
     error.value = ''

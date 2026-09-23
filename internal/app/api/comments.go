@@ -33,7 +33,7 @@ func (app App) Comments(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		app.listComments(w, userID, postID)
+		app.listComments(w, r, userID, postID)
 	case http.MethodPost:
 		app.createComment(w, r, userID, postID)
 	default:
@@ -45,8 +45,17 @@ func (app App) Comments(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (app App) listComments(w http.ResponseWriter, userID int, postID int64) {
-	result, err := comments.ListComments(app.DB, userID, postID)
+func (app App) listComments(w http.ResponseWriter, r *http.Request, userID int, postID int64) {
+	page, err := parsePage(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "limit must be between 1 and 50 and offset cannot be negative",
+		})
+		return
+	}
+
+	result, err := comments.ListComments(app.DB, userID, postID, page.Limit+1, page.Offset)
 	if errors.Is(err, comments.ErrPostNotVisible) {
 		writeJSON(w, http.StatusNotFound, map[string]any{
 			"status":  false,
@@ -61,10 +70,13 @@ func (app App) listComments(w http.ResponseWriter, userID int, postID int64) {
 		})
 		return
 	}
+	result, hasMore := trimPage(result, page, true)
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"status":   true,
-		"comments": result,
+		"status":     true,
+		"comments":   result,
+		"hasMore":    hasMore,
+		"nextOffset": page.Offset + len(result),
 	})
 }
 

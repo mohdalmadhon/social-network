@@ -20,8 +20,13 @@ async function requestComments(url, options = {}) {
   return result
 }
 
-export async function getComments(postId) {
-  return requestComments(`/api/posts/${postId}/comments`)
+export async function getComments(postId, { limit = 20, offset = 0 } = {}) {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  })
+
+  return requestComments(`/api/posts/${postId}/comments?${params}`)
 }
 
 export async function createComment(postId, comment) {

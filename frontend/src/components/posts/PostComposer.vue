@@ -9,7 +9,9 @@ const props = defineProps(["avatar"]);
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const content = ref('')
-const privacy = ref('public')
+// This is the visibility chosen for the new post. The API still receives it
+// as `privacy`, but the UI name makes its purpose easier to understand.
+const postVisibility = ref('public')
 const feeling = ref('')
 const selectedFile = ref(null)
 const selectedFollowerIds = ref([])
@@ -27,7 +29,7 @@ const feelings = ['Happy', 'Excited', 'Grateful', 'Thoughtful']
 
 const canPost = computed(() => {
   const hasContent = content.value.trim() !== '' || selectedFile.value !== null
-  const hasSelectedFollowers = privacy.value !== 'selected' || selectedFollowerIds.value.length > 0
+  const hasSelectedFollowers = postVisibility.value !== 'selected' || selectedFollowerIds.value.length > 0
   return hasContent && hasSelectedFollowers && !isLoadingFollowing.value
 })
 
@@ -96,7 +98,7 @@ async function preparePost() {
 
   const formData = new FormData()
   formData.append('content', content.value)
-  formData.append('privacy', privacy.value)
+  formData.append('privacy', postVisibility.value)
   formData.append('selectedFollowerIds', JSON.stringify(selectedFollowerIds.value))
 
   if (selectedFile.value) {
@@ -115,7 +117,7 @@ async function preparePost() {
 
     content.value = ''
     feeling.value = ''
-    privacy.value = 'public'
+    postVisibility.value = 'public'
     selectedFollowerIds.value = []
     removeFile()
     emit('post-created', result.post)
@@ -129,7 +131,7 @@ async function preparePost() {
   }
 }
 
-watch(privacy, (value) => {
+watch(postVisibility, (value) => {
   if (value === 'selected' && following.value.length === 0 && !followingError.value) {
     loadFollowing()
   }
@@ -172,7 +174,17 @@ watch(privacy, (value) => {
       </div>
 
       <div class="post-composer__actions">
-        <div v-if="privacy === 'selected'" class="selected-followers">
+        <label class="privacy-control">
+          <IconGlyph name="globe" :size="16" />
+          <span class="visually-hidden">Post visibility</span>
+          <select v-model="postVisibility" aria-label="Post visibility">
+            <option value="public">Public · everyone</option>
+            <option value="followers">Almost private · followers</option>
+            <option value="selected">Private · selected followers</option>
+          </select>
+        </label>
+
+        <div v-if="postVisibility === 'selected'" class="selected-followers">
           <p class="selected-followers__label">Choose followers</p>
           <p v-if="isLoadingFollowing" class="selected-followers__state">Loading your followers...</p>
           <p v-else-if="followingError" class="selected-followers__state selected-followers__state--error">
