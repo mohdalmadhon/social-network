@@ -70,7 +70,7 @@ func ListComments(db *sql.DB, userID int, postID int64) ([]models.Comment, error
 		return nil, err
 	}
 	defer rows.Close()
-
+	
 	result := []models.Comment{}
 	for rows.Next() {
 		var comment models.Comment
