@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 import CommentInput from '@/components/comments/CommentInput.vue'
 import CommentPreview from '@/components/comments/CommentPreview.vue'
 import IconGlyph from '@/components/layout/IconGlyph.vue'
+
 import { createComment, getComments } from '@/api/posts/comments.js'
 import { setPostLike } from '@/api/posts/posts.js'
 
@@ -33,6 +34,37 @@ let commentsObserver
 
 const commentCount = computed(() => Math.max(props.post.comments, comments.value.length))
 
+function formatRelativeTime(dateValue) {
+  if (!dateValue) return ''
+
+  const date = new Date(dateValue)
+
+  if (Number.isNaN(date.getTime())) return dateValue
+
+  const now = new Date()
+  const difference = now.getTime() - date.getTime()
+
+  const minutes = Math.floor(difference / 60000)
+  const hours = Math.floor(difference / 3600000)
+  const days = Math.floor(difference / 86400000)
+  const weeks = Math.floor(difference / 604800000)
+
+  if (difference < 0) return 'just now'
+
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes}m`
+  if (hours < 24) return `${hours}h`
+  if (days < 7) return `${days}d`
+  if (weeks < 5) return `${weeks}w`
+
+  return date.toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+  })
+}
+
+const formattedTime = computed(() => formatRelativeTime(props.post.time))
 
 function commentForPreview(comment) {
   return {
@@ -93,6 +125,7 @@ async function addComment(comment) {
 
   try {
     const result = await createComment(props.post.id, comment)
+
     if (!result?.comment) {
       throw new Error('Could not create comment')
     }
@@ -110,11 +143,13 @@ async function toggleLike() {
   if (isLikePending.value) return
 
   const nextLiked = !isLiked.value
+
   isLikePending.value = true
   likeError.value = ''
 
   try {
     const result = await setPostLike(props.post.id, nextLiked)
+
     if (!result?.status) {
       throw new Error('Could not update the like')
     }
@@ -156,14 +191,18 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
+
   <article class="post-card orbit-surface">
+
     <header class="post-card__header">
+
       <RouterLink
         v-if="post.authorId"
         class="post-card__author-link"
         :to="{ path: '/user', query: { id: post.authorId } }"
         :aria-label="`View ${post.author}'s profile`"
       >
+
         <div class="post-card__avatar" :style="{ background: post.avatarColor }" aria-hidden="true">
           <img v-if="post.avatarPath" :src="imageUrl(post.avatarPath)" alt="" />
           <span v-else>{{ initials(post.author) }}</span>
@@ -171,11 +210,13 @@ onBeforeUnmount(() => {
 
         <div class="post-card__author">
           <h2>{{ post.author }}</h2>
-          <p>{{ post.time }} <span aria-hidden="true">•</span> {{ post.privacy }}</p>
+          <p>{{ formattedTime }} <span aria-hidden="true">•</span> {{ post.privacy }}</p>
         </div>
+
       </RouterLink>
 
       <template v-else>
+
         <div class="post-card__avatar" :style="{ background: post.avatarColor }" aria-hidden="true">
           <img v-if="post.avatarPath" :src="imageUrl(post.avatarPath)" alt="" />
           <span v-else>{{ initials(post.author) }}</span>
@@ -183,8 +224,9 @@ onBeforeUnmount(() => {
 
         <div class="post-card__author">
           <h2>{{ post.author }}</h2>
-          <p>{{ post.time }} <span aria-hidden="true">•</span> {{ post.privacy }}</p>
+          <p>{{ formattedTime }} <span aria-hidden="true">•</span> {{ post.privacy }}</p>
         </div>
+
       </template>
 
     </header>
@@ -195,13 +237,19 @@ onBeforeUnmount(() => {
       <img :src="imageUrl(post.imagePath)" alt="Image attached to this post" />
     </div>
 
-    <div v-else-if="post.hasMedia" class="post-card__media" role="img" :aria-label="post.mediaDescription">
+    <div
+      v-else-if="post.hasMedia"
+      class="post-card__media"
+      role="img"
+      :aria-label="post.mediaDescription"
+    >
       <span class="post-card__sun" aria-hidden="true"></span>
       <span class="post-card__mountain post-card__mountain--back" aria-hidden="true"></span>
       <span class="post-card__mountain post-card__mountain--front" aria-hidden="true"></span>
     </div>
 
     <footer class="post-card__actions">
+
       <button
         class="post-action"
         :class="{ 'post-action--liked': isLiked }"
@@ -226,22 +274,40 @@ onBeforeUnmount(() => {
         <span>{{ commentCount }} comments</span>
         <span class="post-action__hint">{{ areCommentsOpen ? 'Hide' : 'View' }}</span>
       </button>
+
     </footer>
 
     <p v-if="likeError" class="post-action-error" role="alert">{{ likeError }}</p>
 
-    <section v-if="areCommentsOpen" :id="`comments-${post.id}`" class="comments-panel" aria-label="Comments">
+    <section
+      v-if="areCommentsOpen"
+      :id="`comments-${post.id}`"
+      class="comments-panel"
+      aria-label="Comments"
+    >
+
       <header class="comments-panel__header">
+
         <div>
           <p class="comments-panel__eyebrow">The conversation</p>
           <h3>Comments <span>{{ commentCount }}</span></h3>
         </div>
-        <button type="button" class="comments-panel__close" aria-label="Close comments" @click="areCommentsOpen = false">
+
+        <button
+          type="button"
+          class="comments-panel__close"
+          aria-label="Close comments"
+          @click="areCommentsOpen = false"
+        >
           <IconGlyph name="close" :size="17" />
         </button>
+
       </header>
 
-      <p v-if="isLoadingComments" class="comments-state">Loading comments...</p>
+      <p v-if="isLoadingComments" class="comments-state">
+        Loading comments...
+      </p>
+
       <div v-else-if="commentsError" class="comments-state comments-state--error">
         <span>{{ commentsError }}</span>
         <button type="button" @click="loadComments">Retry</button>
@@ -260,11 +326,15 @@ onBeforeUnmount(() => {
         :disabled="isSubmittingComment"
         @submit="addComment"
       />
+
     </section>
+
   </article>
+
 </template>
 
 <style scoped>
+
 .post-card {
   width: 100%;
   padding: var(--space-4);
@@ -537,8 +607,15 @@ onBeforeUnmount(() => {
 }
 
 @keyframes comments-panel-in {
-  from { opacity: 0; transform: translateY(-0.35rem); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-0.35rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .comments-state--error {
@@ -601,4 +678,5 @@ onBeforeUnmount(() => {
     min-height: 15rem;
   }
 }
+
 </style>

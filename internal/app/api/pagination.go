@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -40,6 +41,7 @@ func parsePage(r *http.Request) (pageRequest, error) {
 		page.Offset = offset
 	}
 
+	log.Println(page.Limit, page.Offset)
 	return page, nil
 }
 
