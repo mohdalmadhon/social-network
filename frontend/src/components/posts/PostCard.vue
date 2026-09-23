@@ -24,6 +24,7 @@ const commentsLoaded = ref(false)
 const hasMoreComments = ref(false)
 const commentsList = ref(null)
 const commentsSentinel = ref(null)
+const commentsOffset = ref(0)
 const isSubmittingComment = ref(false)
 const isLiked = ref(Boolean(props.post.liked))
 const likeCount = ref(Number(props.post.likes) || 0)
@@ -84,14 +85,23 @@ async function loadComments({ append = false } = {}) {
   }
 
   commentsError.value = ''
+  const requestOffset = append ? commentsOffset.value : 0
 
   try {
     const result = await getComments(props.post.id, {
       limit: COMMENTS_PAGE_SIZE,
-      offset: append ? comments.value.length : 0,
+      offset: requestOffset,
     })
     const nextComments = (result?.comments || []).map(commentForPreview)
-    comments.value = append ? [...comments.value, ...nextComments] : nextComments
+    const combinedComments = append ? [...comments.value, ...nextComments] : nextComments
+    const uniqueComments = new Map(combinedComments.map(comment => [comment.id, comment]))
+    comments.value = [...uniqueComments.values()].sort((first, second) => {
+      const timeDifference = Date.parse(first.createdAt || '') - Date.parse(second.createdAt || '')
+      return (Number.isFinite(timeDifference) ? timeDifference : 0) || Number(first.id) - Number(second.id)
+    })
+    commentsOffset.value = Number.isInteger(result?.nextOffset)
+      ? result.nextOffset
+      : requestOffset + nextComments.length
     hasMoreComments.value = Boolean(result?.hasMore)
     commentsLoaded.value = true
   } catch (error) {
@@ -105,7 +115,7 @@ async function loadComments({ append = false } = {}) {
 function observeCommentsEnd() {
   commentsObserver?.disconnect()
 
-  if (!commentsList.value || !commentsSentinel.value || typeof IntersectionObserver === 'undefined') return
+  if (!areCommentsOpen.value || !commentsList.value || !commentsSentinel.value || typeof IntersectionObserver === 'undefined') return
 
   commentsObserver = new IntersectionObserver(([entry]) => {
     if (entry.isIntersecting && areCommentsOpen.value && hasMoreComments.value) {
@@ -117,6 +127,17 @@ function observeCommentsEnd() {
   })
 
   commentsObserver.observe(commentsSentinel.value)
+}
+
+async function retryComments() {
+  await loadComments({ append: commentsLoaded.value && comments.value.length > 0 })
+  await nextTick()
+  observeCommentsEnd()
+}
+
+function closeComments() {
+  areCommentsOpen.value = false
+  commentsObserver?.disconnect()
 }
 
 async function addComment(comment) {
@@ -176,7 +197,7 @@ async function toggleComments() {
     await nextTick()
     observeCommentsEnd()
   } else {
-    commentsObserver?.disconnect()
+    closeComments()
   }
 }
 
@@ -297,7 +318,7 @@ onBeforeUnmount(() => {
           type="button"
           class="comments-panel__close"
           aria-label="Close comments"
-          @click="areCommentsOpen = false"
+          @click="closeComments"
         >
           <IconGlyph name="close" :size="17" />
         </button>
@@ -308,9 +329,9 @@ onBeforeUnmount(() => {
         Loading comments...
       </p>
 
-      <div v-else-if="commentsError" class="comments-state comments-state--error">
+      <div v-else-if="commentsError && !comments.length" class="comments-state comments-state--error">
         <span>{{ commentsError }}</span>
-        <button type="button" @click="loadComments">Retry</button>
+        <button type="button" @click="retryComments">Retry</button>
       </div>
       <p v-else-if="!comments.length" class="comments-state comments-state--empty">No comments yet. Start the conversation.</p>
       <div v-else class="comments-list" ref="commentsList">
@@ -319,6 +340,11 @@ onBeforeUnmount(() => {
       </div>
 
       <p v-if="isLoadingMoreComments" class="comments-load-state" role="status">Loading more comments...</p>
+
+      <div v-if="commentsError && comments.length" class="comments-state comments-state--error">
+        <span>{{ commentsError }}</span>
+        <button type="button" @click="retryComments">Retry</button>
+      </div>
 
       <CommentInput
         ref="commentInput"

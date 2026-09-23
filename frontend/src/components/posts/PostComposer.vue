@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { createPost } from '@/api/posts/posts.js'
 import { getFollowers } from '@/api/users/profiles.js'
+import { normalizePostAudience } from '@/helpers/postAudience.js'
 import IconGlyph from '@/components/layout/IconGlyph.vue'
 
 const emit = defineEmits(['post-created'])
@@ -15,9 +16,11 @@ const postVisibility = ref('public')
 const feeling = ref('')
 const selectedFile = ref(null)
 const selectedFollowerIds = ref([])
-const following = ref([])
-const followingError = ref('')
-const isLoadingFollowing = ref(false)
+const followers = ref([])
+const followersOffset = ref(0)
+const hasMoreFollowers = ref(false)
+const followersError = ref('')
+const isLoadingFollowers = ref(false)
 const previewUrl = ref('')
 const fileInput = ref(null)
 const showFeelings = ref(false)
@@ -30,24 +33,37 @@ const feelings = ['Happy', 'Excited', 'Grateful', 'Thoughtful']
 const canPost = computed(() => {
   const hasContent = content.value.trim() !== '' || selectedFile.value !== null
   const hasSelectedFollowers = postVisibility.value !== 'selected' || selectedFollowerIds.value.length > 0
-  return hasContent && hasSelectedFollowers && !isLoadingFollowing.value
+  return hasContent && hasSelectedFollowers && !isLoadingFollowers.value
 })
 
-async function loadFollowing() {
-  isLoadingFollowing.value = true
-  followingError.value = ''
+async function loadFollowers({ append = false } = {}) {
+  if (isLoadingFollowers.value) return
+
+  isLoadingFollowers.value = true
+  followersError.value = ''
 
   try {
-    const result = await getFollowers('', 100)
-    following.value = Object.entries(result?.data || {}).map(([id, user]) => ({
-      id: Number(id),
-      name: `${user.FirstName} ${user.LastName}`.trim(),
-    }))
+    const offset = append ? followersOffset.value : 0
+    const result = await getFollowers('', 20, offset)
+    if (!result?.status) {
+      throw new Error(result?.message || 'Could not load your followers.')
+    }
+    const nextFollowers = normalizePostAudience(result?.data)
+
+    followers.value = append
+      ? [...followers.value, ...nextFollowers]
+      : nextFollowers
+    followersOffset.value = offset + nextFollowers.length
+    hasMoreFollowers.value = nextFollowers.length === 20
   } catch (error) {
-    followingError.value = error.message || 'Could not load your followers.'
+    followersError.value = error.message || 'Could not load your followers.'
   } finally {
-    isLoadingFollowing.value = false
+    isLoadingFollowers.value = false
   }
+}
+
+function loadMoreFollowers() {
+  loadFollowers({ append: true })
 }
 
 function selectFile(event) {
@@ -99,7 +115,12 @@ async function preparePost() {
   const formData = new FormData()
   formData.append('content', content.value)
   formData.append('privacy', postVisibility.value)
-  formData.append('selectedFollowerIds', JSON.stringify(selectedFollowerIds.value))
+  // Only send a private audience for the selected-followers option. This keeps
+  // old checkbox choices from making a later public post fail validation.
+  const selectedAudience = postVisibility.value === 'selected'
+    ? selectedFollowerIds.value
+    : []
+  formData.append('selectedFollowerIds', JSON.stringify(selectedAudience))
 
   if (selectedFile.value) {
     formData.append('image', selectedFile.value)
@@ -132,8 +153,13 @@ async function preparePost() {
 }
 
 watch(postVisibility, (value) => {
-  if (value === 'selected' && following.value.length === 0 && !followingError.value) {
-    loadFollowing()
+  if (value !== 'selected') {
+    selectedFollowerIds.value = []
+    return
+  }
+
+  if (followers.value.length === 0 && !followersError.value) {
+    loadFollowers()
   }
 })
 </script>
@@ -178,24 +204,45 @@ watch(postVisibility, (value) => {
           <IconGlyph name="globe" :size="16" />
           <span class="visually-hidden">Post visibility</span>
           <select v-model="postVisibility" aria-label="Post visibility">
-            <option value="public">Public · everyone</option>
-            <option value="followers">Almost private · followers</option>
-            <option value="selected">Private · selected followers</option>
+            <option value="public">Public</option>
+            <option value="followers">Followers only</option>
+            <option value="selected">Selected followers</option>
           </select>
         </label>
 
+        <p class="privacy-description" aria-live="polite">
+          <template v-if="postVisibility === 'public'">Anyone on Orbit can see this post.</template>
+          <template v-else-if="postVisibility === 'followers'">People who follow you can see this post.</template>
+          <template v-else>Only the followers you choose can see this post.</template>
+        </p>
+
         <div v-if="postVisibility === 'selected'" class="selected-followers">
-          <p class="selected-followers__label">Choose followers</p>
-          <p v-if="isLoadingFollowing" class="selected-followers__state">Loading your followers...</p>
-          <p v-else-if="followingError" class="selected-followers__state selected-followers__state--error">
-            {{ followingError }}
+          <p class="selected-followers__label">Choose approved followers</p>
+          <p v-if="isLoadingFollowers && followers.length === 0" class="selected-followers__state">Loading your followers...</p>
+          <div v-else-if="followersError && followers.length === 0" class="selected-followers__state selected-followers__state--error">
+            {{ followersError }}
+            <button class="load-followers-button" type="button" :disabled="isLoadingFollowers" @click="loadFollowers()">
+              Try again
+            </button>
+          </div>
+          <p v-else-if="followers.length === 0" class="selected-followers__state">You have no approved followers yet.
           </p>
-          <p v-else-if="following.length === 0" class="selected-followers__state">You have no approved followers yet.
-          </p>
-          <label v-for="person in following" v-else :key="person.id" class="selected-follower">
-            <input v-model="selectedFollowerIds" type="checkbox" :value="person.id" />
-            <span>{{ person.name || 'Orbit member' }}</span>
-          </label>
+          <div v-else class="selected-followers__list">
+            <p v-if="followersError" class="selected-followers__state selected-followers__state--error">
+              {{ followersError }}
+              <button class="load-followers-button" type="button" :disabled="isLoadingFollowers" @click="loadMoreFollowers">
+                Try again
+              </button>
+            </p>
+            <label v-for="person in followers" :key="person.id" class="selected-follower">
+              <input v-model="selectedFollowerIds" type="checkbox" :value="person.id" />
+              <span>{{ person.name }}</span>
+            </label>
+            <button v-if="hasMoreFollowers" class="load-followers-button" type="button"
+              :disabled="isLoadingFollowers" @click="loadMoreFollowers">
+              {{ isLoadingFollowers ? 'Loading…' : 'Show more followers' }}
+            </button>
+          </div>
         </div>
 
         <button class="post-button" type="submit" :disabled="!canPost || isPosting">
@@ -213,8 +260,17 @@ watch(postVisibility, (value) => {
 
 <style scoped>
 .post-composer {
+  position: sticky;
+  top: 4rem;
+  z-index: 15;
+  align-self: start;
   width: 100%;
+  max-height: calc(100vh - 8.5rem);
+  max-height: calc(100dvh - 8.5rem);
+  overflow-y: auto;
   padding: var(--space-4);
+  box-shadow: 0 0.75rem 1.75rem rgb(0 0 0 / 24%);
+  overscroll-behavior: contain;
 }
 
 .post-composer__input-row {
@@ -327,6 +383,7 @@ textarea::placeholder {
 
 .post-composer__actions {
   justify-content: space-between;
+  flex-wrap: wrap;
 }
 
 .composer-action,
@@ -444,6 +501,14 @@ textarea::placeholder {
   color: var(--color-text);
 }
 
+.privacy-description {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--color-text-faint);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
 .selected-followers {
   flex: 1 1 100%;
   display: grid;
@@ -452,6 +517,14 @@ textarea::placeholder {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-small);
   background: var(--color-input);
+}
+
+.selected-followers__list {
+  display: grid;
+  max-height: 12rem;
+  gap: var(--space-1);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .selected-followers__label,
@@ -478,6 +551,21 @@ textarea::placeholder {
   width: 1.1rem;
   height: 1.1rem;
   accent-color: var(--color-violet);
+}
+
+.load-followers-button {
+  min-height: var(--touch-target);
+  border: 0;
+  background: transparent;
+  color: var(--color-violet-soft);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.load-followers-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 
 .post-button {

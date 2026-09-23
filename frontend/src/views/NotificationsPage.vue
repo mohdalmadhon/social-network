@@ -226,30 +226,32 @@ onBeforeUnmount(() => {
   <AuthenticatedLayout active-page="notifications">
     <div class="notifications-layout">
       <section class="notifications-page orbit-surface" aria-labelledby="notifications-title">
-      <header class="notifications-page__header">
-        <div>
-          <p class="orbit-meta">Stay in the loop</p>
+      <div class="notifications-sticky-controls">
+        <header class="notifications-page__header">
+          <div>
+            <p class="orbit-meta">Stay in the loop</p>
 
-          <h1 id="notifications-title">
-            Notifications
-          </h1>
+            <h1 id="notifications-title">
+              Notifications
+            </h1>
 
-          <p class="notifications-page__summary">
-            {{ unreadCount ? `${unreadCount} unread updates` : 'You are all caught up' }}
-          </p>
-        </div>
+            <p class="notifications-page__summary">
+              {{ unreadCount ? `${unreadCount} unread updates` : 'You are all caught up' }}
+            </p>
+          </div>
 
-        <button class="mark-all-button" type="button" :disabled="unreadCount === 0" @click="markAllAsRead">
-          Mark all as read
-        </button>
-      </header>
+          <button class="mark-all-button" type="button" :disabled="unreadCount === 0" @click="markAllAsRead">
+            Mark all as read
+          </button>
+        </header>
 
-      <nav class="notification-filters" aria-label="Notification filters">
-        <button v-for="filter in filters" :key="filter.id" type="button"
-          :class="{ 'notification-filter--active': activeFilter === filter.id }" @click="activeFilter = filter.id">
-          {{ filter.label }}
-        </button>
-      </nav>
+        <nav class="notification-filters" aria-label="Notification filters">
+          <button v-for="filter in filters" :key="filter.id" type="button"
+            :class="{ 'notification-filter--active': activeFilter === filter.id }" @click="activeFilter = filter.id">
+            {{ filter.label }}
+          </button>
+        </nav>
+      </div>
 
       <p v-if="isLoading" class="notifications-state">
         Loading notifications...
@@ -388,6 +390,15 @@ onBeforeUnmount(() => {
   gap: var(--space-4);
 }
 
+.notifications-sticky-controls {
+  position: sticky;
+  top: 4rem;
+  z-index: 10;
+  padding: 0 0 var(--space-2);
+  background: var(--color-surface);
+  box-shadow: 0 0.75rem 1rem rgb(0 0 0 / 12%);
+}
+
 .notifications-page h1,
 .notifications-page__summary,
 .notification-item h2,
@@ -431,7 +442,7 @@ onBeforeUnmount(() => {
 .notification-filters {
   display: flex;
   gap: var(--space-2);
-  margin-top: var(--space-5);
+  margin-top: var(--space-3);
   overflow-x: auto;
   padding-bottom: var(--space-1);
 }

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 import {
   createGroupPostComment,
   deleteGroupPost,
@@ -25,6 +25,11 @@ const comments = ref([])
 const commentsVisible = ref(false)
 const commentsLoaded = ref(false)
 const commentsLoading = ref(false)
+const commentsLoadingMore = ref(false)
+const commentsHasMore = ref(false)
+const commentsOffset = ref(0)
+const commentsList = ref(null)
+const commentsSentinel = ref(null)
 const commentsError = ref('')
 const commentContent = ref('')
 const isSubmittingComment = ref(false)
@@ -32,6 +37,9 @@ const isDeletingPost = ref(false)
 const deletingCommentId = ref(null)
 const postDeleteError = ref('')
 const localCommentCount = ref(props.post.commentCount || 0)
+const COMMENTS_PAGE_SIZE = 20
+const loadedCommentIDs = new Set()
+let commentsObserver
 
 const authorName = computed(() => `${props.post.firstName || ''} ${props.post.lastName || ''}`.trim() || props.post.username || 'Group member')
 const canComment = computed(() => commentContent.value.trim() !== '')
@@ -46,21 +54,75 @@ function formatDate(value) {
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleString()
 }
 
-async function toggleComments() {
-  commentsVisible.value = !commentsVisible.value
-  if (!commentsVisible.value || commentsLoaded.value || commentsLoading.value) return
+async function loadComments({ append = false } = {}) {
+  if (append) {
+    if (commentsLoadingMore.value || !commentsHasMore.value) return
+    commentsLoadingMore.value = true
+  } else {
+    if (commentsLoading.value || commentsLoaded.value) return
+    commentsLoading.value = true
+  }
 
-  commentsLoading.value = true
   commentsError.value = ''
+  const requestOffset = append ? commentsOffset.value : 0
   try {
-    const result = await getGroupPostComments(props.groupId, props.post.id)
-    comments.value = result?.comments || []
+    const result = await getGroupPostComments(props.groupId, props.post.id, {
+      limit: COMMENTS_PAGE_SIZE,
+      offset: requestOffset,
+    })
+    const nextComments = result?.comments || []
+    for (const comment of nextComments) loadedCommentIDs.add(comment.id)
+
+    const combinedComments = append ? [...comments.value, ...nextComments] : nextComments
+    const uniqueComments = new Map(combinedComments.map(comment => [comment.id, comment]))
+    comments.value = [...uniqueComments.values()].sort((first, second) => {
+      const timeDifference = Date.parse(first.createdAt || '') - Date.parse(second.createdAt || '')
+      return (Number.isFinite(timeDifference) ? timeDifference : 0) || Number(first.id) - Number(second.id)
+    })
+    commentsOffset.value = Number.isInteger(result?.nextOffset)
+      ? result.nextOffset
+      : requestOffset + nextComments.length
+    commentsHasMore.value = Boolean(result?.hasMore)
     commentsLoaded.value = true
   } catch (err) {
     commentsError.value = err.message || 'Could not load comments.'
   } finally {
     commentsLoading.value = false
+    commentsLoadingMore.value = false
   }
+}
+
+function observeCommentsEnd() {
+  commentsObserver?.disconnect()
+  if (!commentsVisible.value || !commentsList.value || !commentsSentinel.value || typeof IntersectionObserver === 'undefined') return
+
+  commentsObserver = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting && commentsVisible.value && commentsHasMore.value) {
+      loadComments({ append: true })
+    }
+  }, {
+    root: commentsList.value,
+    rootMargin: '0px 0px 120px',
+  })
+  commentsObserver.observe(commentsSentinel.value)
+}
+
+async function retryComments() {
+  await loadComments({ append: commentsLoaded.value && comments.value.length > 0 })
+  await nextTick()
+  observeCommentsEnd()
+}
+
+async function toggleComments() {
+  commentsVisible.value = !commentsVisible.value
+  if (!commentsVisible.value) {
+    commentsObserver?.disconnect()
+    return
+  }
+
+  await loadComments()
+  await nextTick()
+  observeCommentsEnd()
 }
 
 function clearCommentForm() {
@@ -109,6 +171,9 @@ async function removeComment(comment) {
   commentsError.value = ''
   try {
     await deleteGroupPostComment(props.groupId, props.post.id, comment.id)
+    if (loadedCommentIDs.delete(comment.id)) {
+      commentsOffset.value = Math.max(0, commentsOffset.value - 1)
+    }
     comments.value = comments.value.filter(item => item.id !== comment.id)
     localCommentCount.value = Math.max(0, localCommentCount.value - 1)
   } catch (err) {
@@ -117,6 +182,8 @@ async function removeComment(comment) {
     deletingCommentId.value = null
   }
 }
+
+onBeforeUnmount(() => commentsObserver?.disconnect())
 
 </script>
 
@@ -167,28 +234,40 @@ async function removeComment(comment) {
 
     <section v-if="commentsVisible" class="group-comments">
       <p v-if="commentsLoading" class="comments-state">Loading comments...</p>
+      <div v-else-if="commentsError && !comments.length" class="comments-state comments-state--error" role="alert">
+        <span>{{ commentsError }}</span>
+        <button type="button" @click="retryComments">Try again</button>
+      </div>
       <p v-else-if="commentsLoaded && comments.length === 0" class="comments-state">No comments yet.</p>
 
-      <div v-for="comment in comments" :key="comment.id" class="group-comment">
-        <img v-if="comment.avatarPath" :src="assetUrl(comment.avatarPath)" :alt="`${comment.firstName}'s avatar`" />
-        <span v-else class="group-comment__avatar" aria-hidden="true">{{ comment.firstName?.charAt(0) }}</span>
-        <div class="group-comment__body">
-          <div class="group-comment__meta">
-            <div>
-              <strong>{{ `${comment.firstName || ''} ${comment.lastName || ''}`.trim() || comment.username }}</strong>
-              <small>@{{ comment.username }} <span aria-hidden="true">&middot;</span> {{ formatDate(comment.createdAt) }}</small>
+      <div v-else-if="comments.length" ref="commentsList" class="group-comments__list">
+        <div v-for="comment in comments" :key="comment.id" class="group-comment">
+          <img v-if="comment.avatarPath" :src="assetUrl(comment.avatarPath)" :alt="`${comment.firstName}'s avatar`" />
+          <span v-else class="group-comment__avatar" aria-hidden="true">{{ comment.firstName?.charAt(0) }}</span>
+          <div class="group-comment__body">
+            <div class="group-comment__meta">
+              <div>
+                <strong>{{ `${comment.firstName || ''} ${comment.lastName || ''}`.trim() || comment.username }}</strong>
+                <small>@{{ comment.username }} <span aria-hidden="true">&middot;</span> {{ formatDate(comment.createdAt) }}</small>
+              </div>
+              <button
+                v-if="comment.isOwner"
+                type="button"
+                :disabled="deletingCommentId !== null"
+                @click="removeComment(comment)"
+              >
+                {{ deletingCommentId === comment.id ? 'Deleting...' : 'Delete' }}
+              </button>
             </div>
-            <button
-              v-if="comment.isOwner"
-              type="button"
-              :disabled="deletingCommentId !== null"
-              @click="removeComment(comment)"
-            >
-              {{ deletingCommentId === comment.id ? 'Deleting...' : 'Delete' }}
-            </button>
+            <p v-if="comment.content">{{ comment.content }}</p>
           </div>
-          <p v-if="comment.content">{{ comment.content }}</p>
         </div>
+        <div ref="commentsSentinel" class="comments-sentinel" aria-hidden="true"></div>
+      </div>
+      <p v-if="commentsLoadingMore" class="comments-state" role="status">Loading more comments...</p>
+      <div v-if="commentsError && comments.length" class="comments-state comments-state--error" role="alert">
+        <span>{{ commentsError }}</span>
+        <button type="button" @click="retryComments">Try again</button>
       </div>
 
       <form class="comment-form" @submit.prevent="submitComment">
@@ -200,7 +279,6 @@ async function removeComment(comment) {
           </button>
         </div>
       </form>
-      <p v-if="commentsError" class="comments-error" role="alert">{{ commentsError }}</p>
     </section>
   </article>
 </template>
@@ -369,6 +447,39 @@ async function removeComment(comment) {
   border-radius: 50%;
   object-fit: cover;
   object-position: center;
+}
+
+.group-comments__list {
+  display: grid;
+  max-height: min(28rem, 55vh);
+  gap: var(--space-2);
+  overflow-y: auto;
+  padding-right: var(--space-2);
+  overscroll-behavior: contain;
+}
+
+.comments-sentinel {
+  width: 100%;
+  height: 1px;
+  pointer-events: none;
+}
+
+.comments-state--error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--color-coral);
+}
+
+.comments-state--error button {
+  min-height: var(--touch-target);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
 }
 
 .group-comment strong,

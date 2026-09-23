@@ -161,8 +161,9 @@ export function createGroupPost(groupID, formData) {
   });
 }
 
-export function getGroupPostComments(groupID, postID) {
-  return groupContentRequest(`/api/groups/${groupID}/posts/${postID}/comments`);
+export function getGroupPostComments(groupID, postID, { limit = 20, offset = 0 } = {}) {
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  return groupContentRequest(`/api/groups/${groupID}/posts/${postID}/comments?${params}`);
 }
 
 export function createGroupPostComment(groupID, postID, content) {

@@ -16,10 +16,11 @@ func TestPostPrivacyFiltersTheFeed(t *testing.T) {
 	insertPostTestUser(t, db, 2, "follower")
 	insertPostTestUser(t, db, 3, "outsider")
 	insertPostTestUser(t, db, 4, "selected")
+	insertPostTestUser(t, db, 5, "pending")
 
 	_, err := db.Exec(`
 		INSERT INTO user_followers (follower_id, target_id, status)
-		VALUES (2, 1, 1), (4, 1, 1)
+		VALUES (2, 1, 1), (4, 1, 1), (5, 1, 0)
 	`)
 	if err != nil {
 		t.Fatal(err)
@@ -43,6 +44,7 @@ func TestPostPrivacyFiltersTheFeed(t *testing.T) {
 	assertFeedContents(t, db, 2, "public post", "followers post")
 	assertFeedContents(t, db, 3, "public post")
 	assertFeedContents(t, db, 4, "public post", "followers post", "selected post")
+	assertFeedContents(t, db, 5, "public post")
 }
 
 func TestSelectedPostRejectsSomeoneWhoIsNotAFollower(t *testing.T) {
@@ -57,6 +59,33 @@ func TestSelectedPostRejectsSomeoneWhoIsNotAFollower(t *testing.T) {
 	})
 	if !errors.Is(err, ErrInvalidPostViewer) {
 		t.Fatalf("expected ErrInvalidPostViewer, got %v", err)
+	}
+}
+
+func TestSelectedPostRejectsPendingFollowRequests(t *testing.T) {
+	db := newPostTestDatabase(t)
+	insertPostTestUser(t, db, 1, "author")
+	insertPostTestUser(t, db, 2, "pending")
+	if _, err := db.Exec(`
+		INSERT INTO user_followers (follower_id, target_id, status)
+		VALUES (2, 1, 0)
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := CreatePost(db, 1, models.CreatePostRequest{
+		Content:             "private post",
+		Privacy:             models.PostPrivacySelected,
+		SelectedFollowerIDs: []int{2},
+	})
+	if !errors.Is(err, ErrInvalidPostViewer) {
+		t.Fatalf("pending follower error = %v, want ErrInvalidPostViewer", err)
+	}
+}
+
+func TestAudienceIDsAreRejectedForNonSelectedVisibility(t *testing.T) {
+	if err := ValidateSelectedIDs(models.PostPrivacyPublic, []int{42}); err == nil {
+		t.Fatal("public posts should not accept a leftover private audience")
 	}
 }
 

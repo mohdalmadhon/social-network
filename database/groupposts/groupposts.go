@@ -98,11 +98,18 @@ func CreateComment(db *sql.DB, postID int64, userID int, content, imagePath stri
 	return getComment(db, postID, commentID)
 }
 
-func ListComments(db *sql.DB, postID int64) ([]models.GroupPostComment, error) {
-	rows, err := db.Query(groupCommentSelect+`
+func ListComments(db *sql.DB, postID int64, pagination ...int) ([]models.GroupPostComment, error) {
+	query := groupCommentSelect + `
 		WHERE gc.post_id = ?
 		ORDER BY gc.created_at ASC, gc.id ASC
-	`, postID)
+	`
+	args := []any{postID}
+	if len(pagination) >= 2 {
+		query += `LIMIT ? OFFSET ?`
+		args = append(args, pagination[0], pagination[1])
+	}
+
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

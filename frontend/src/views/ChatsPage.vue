@@ -435,13 +435,14 @@ function shortTime(value) {
 
 .chat-workspace {
   display: grid;
-  min-height: 42rem;
+  height: clamp(28rem, calc(100vh - 13rem), 42rem);
+  height: clamp(28rem, calc(100dvh - 13rem), 42rem);
   grid-template-columns: minmax(16rem, 21rem) minmax(0, 1fr);
   overflow: hidden;
 }
 
 .chat-sidebar {
-  max-height: 42rem;
+  min-height: 0;
   overflow-y: auto;
   border-right: 1px solid var(--color-border);
   background: var(--color-sidebar);
@@ -577,10 +578,15 @@ function shortTime(value) {
 .private-thread {
   display: flex;
   min-width: 0;
+  min-height: 0;
   flex-direction: column;
 }
 
 .private-thread__header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  flex: 0 0 auto;
   display: flex;
   min-height: 4.75rem;
   align-items: center;
@@ -591,7 +597,15 @@ function shortTime(value) {
 
 .private-thread :deep(.message-thread) {
   flex: 1;
+  min-height: 0;
   max-height: none;
+}
+
+.private-thread :deep(.message-composer) {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  flex: 0 0 auto;
 }
 
 .thread-placeholder {
@@ -616,16 +630,25 @@ function shortTime(value) {
 @media (max-width: 760px) {
   .chat-workspace {
     grid-template-columns: 1fr;
+    grid-template-rows: minmax(8rem, 0.8fr) minmax(16rem, 1.2fr);
+    height: clamp(24rem, calc(100dvh - 19rem), 44rem);
   }
 
   .chat-sidebar {
-    max-height: 24rem;
+    display: grid;
+    grid-template-rows: minmax(0, 0.8fr) minmax(0, 1.2fr);
     border-right: 0;
     border-bottom: 1px solid var(--color-border);
   }
 
   .private-thread {
-    min-height: 34rem;
+    min-height: 0;
+  }
+
+  .conversation-section,
+  .contact-section {
+    min-height: 0;
+    overflow-y: auto;
   }
 }
 

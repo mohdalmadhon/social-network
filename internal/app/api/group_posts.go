@@ -71,15 +71,27 @@ func (app App) GetGroupPostComments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	comments, err := groupposts.ListComments(app.DB, postID)
+	page, err := parsePage(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"status": false, "message": "limit must be between 1 and 50 and offset cannot be negative"})
+		return
+	}
+
+	comments, err := groupposts.ListComments(app.DB, postID, page.Limit+1, page.Offset)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"status": false, "message": "could not load group post comments"})
 		return
 	}
+	comments, hasMore := trimPage(comments, page, true)
 	for i := range comments {
 		comments[i].IsOwner = comments[i].UserID == userID
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"status": true, "comments": comments})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":     true,
+		"comments":   comments,
+		"hasMore":    hasMore,
+		"nextOffset": page.Offset + len(comments),
+	})
 }
 
 func (app App) CreateGroupPostComment(w http.ResponseWriter, r *http.Request) {

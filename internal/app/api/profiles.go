@@ -266,6 +266,18 @@ func (app *App) GetFollowers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	queryID := r.URL.Query().Get("targetid")
+	followerLimit := defaultPageSize
+	if rawLimit := r.URL.Query().Get("count"); rawLimit != "" {
+		requestedLimit, err := strconv.Atoi(rawLimit)
+		if err != nil || requestedLimit < 1 {
+			helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "invalid follower count",
+			})
+			return
+		}
+		followerLimit = min(requestedLimit, maxPageSize)
+	}
 
 	queryOffset := r.URL.Query().Get("offset")
 	offset, err := strconv.Atoi(queryOffset)
@@ -293,7 +305,7 @@ func (app *App) GetFollowers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		followers, err := profiles.GetFollowers(app.DB, targetID, 20, offset)
+		followers, err := profiles.GetFollowers(app.DB, targetID, followerLimit, offset)
 		if err != nil {
 			log.Println(err)
 			helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
@@ -308,7 +320,7 @@ func (app *App) GetFollowers(w http.ResponseWriter, r *http.Request) {
 			"data":   followers,
 		})
 	} else {
-		followers, err := users.GetFollowers(app.DB, userID, 20, offset)
+		followers, err := users.GetFollowers(app.DB, userID, followerLimit, offset)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				helpers.WriteJson(w, http.StatusOK, map[string]any{
