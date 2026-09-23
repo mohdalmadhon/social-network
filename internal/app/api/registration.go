@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 	"net/http"
 	database "social/database/users"
@@ -13,8 +14,10 @@ import (
 )
 
 type App struct {
-	DB       *sql.DB
-	Realtime *realtime.Hub
+	DB            *sql.DB
+	Realtime      *realtime.Hub
+	EmailAddress  string
+	EmailPassword string
 }
 
 func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
@@ -63,6 +66,27 @@ func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	verifyToken := r.FormValue("VerifyToken")
+
+	verified, err := database.HasVerifiedEmail(app.DB, userData.Email, verifyToken, time.Now())
+	if err != nil {
+		log.Println(err)
+
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not check email verification",
+		})
+		return
+	}
+
+	if !verified {
+		helpers.WriteJson(w, http.StatusForbidden, map[string]any{
+			"status":  false,
+			"message": "Please verify your email before registering.",
+		})
+		return
+	}
+
 	file, header, err := r.FormFile("Avatar")
 	if err != nil {
 		if err != http.ErrMissingFile {
@@ -102,8 +126,16 @@ func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 
 	userData.Password = hashedPassword
 
-	if err := database.RegisterUser(app.DB, &userData); err != nil {
+	if err := database.RegisterUser(app.DB, &userData, verifyToken); err != nil {
 		log.Println(err)
+
+		if errors.Is(err, database.ErrEmailNotVerified) {
+			helpers.WriteJson(w, http.StatusForbidden, map[string]any{
+				"status":  false,
+				"message": "Please verify your email before registering.",
+			})
+			return
+		}
 
 		status, message := helpers.NormalizeSQLError(err)
 

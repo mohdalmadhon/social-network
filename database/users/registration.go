@@ -3,14 +3,36 @@ package users
 import (
 	"database/sql"
 	"social/internal/models"
+	"time"
 )
 
-func RegisterUser(db *sql.DB, userData *models.UserRegistration) error {
+func RegisterUser(db *sql.DB, userData *models.UserRegistration, verifyToken string) error {
+	if verifyToken == "" {
+		return ErrEmailNotVerified
+	}
+
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
+
+	consumed, err := tx.Exec(`
+		DELETE FROM email_verifications
+		WHERE email = ? AND token = ? AND verified = 1 AND expires_at > ?
+	`, userData.Email, verifyToken, time.Now().Unix())
+	if err != nil {
+		return err
+	}
+
+	affected, err := consumed.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return ErrEmailNotVerified
+	}
+
 	result, err := tx.Exec(`
 		INSERT INTO user (email, first_name, last_name, password, dob, username)
 		VALUES (?,?,?,?,?,NULLIF(?,''))
@@ -28,4 +50,46 @@ func RegisterUser(db *sql.DB, userData *models.UserRegistration) error {
 		return err
 	}
 	return tx.Commit()
+}
+
+func CheckUserName(db *sql.DB, username string) (bool, error) {
+	var exists int
+
+	err := db.QueryRow(`
+		SELECT 1
+		FROM user
+		WHERE username = ?
+		LIMIT 1
+	`, username).Scan(&exists)
+
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func CheckUserEmail(db *sql.DB, username string) (bool, error) {
+	var exists int
+
+	err := db.QueryRow(`
+		SELECT 1
+		FROM user
+		WHERE email = ?
+		LIMIT 1
+	`, username).Scan(&exists)
+
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }

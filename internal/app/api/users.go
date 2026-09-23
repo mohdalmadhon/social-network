@@ -266,3 +266,51 @@ func (app *App) UpdateUserAbout(w http.ResponseWriter, r *http.Request) {
 		"message": "user updated!",
 	})
 }
+
+func (app *App) CheckRegistration(w http.ResponseWriter, r *http.Request) {
+	type Request struct {
+		Type  string `json:"type"`
+		Input string `json:"input"`
+	}
+
+	var req Request
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid data",
+		})
+		return
+	}
+
+	var exists bool
+	var err error
+
+	switch req.Type {
+	case "name":
+		exists, err = users.CheckUserName(app.DB, req.Input)
+
+	case "email":
+		exists, err = users.CheckUserEmail(app.DB, req.Input)
+
+	default:
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid type",
+		})
+		return
+	}
+
+	if err != nil {
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not check availability",
+		})
+		return
+	}
+
+	helpers.WriteJson(w, http.StatusOK, map[string]any{
+		"status":   true,
+		"avilable": !exists,
+	})
+}

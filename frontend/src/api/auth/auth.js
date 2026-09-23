@@ -2,17 +2,83 @@ import { checkSessionResponse } from "@/helpers/auth/auth";
 import { router } from "@/router/router";
 import { disconnectRealtime } from "@/services/realtime";
 
+function buildError(data, status, fallback) {
+  const error = new Error(data?.message || fallback)
+
+  error.status = status
+  error.attemptsLeft = data?.attemptsLeft
+  error.retryAfter = data?.retryAfter
+
+  return error
+}
+
+export async function checkRegistration(type, input) {
+  const response = await fetch('/api/user/registration', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      type,
+      input,
+    }),
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Could not check availability')
+  }
+
+  return data
+}
+
+export async function sendEmailCode(email) {
+  const response = await fetch('/api/user/send-email-code', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  })
+
+  const data = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    throw buildError(data, response.status, 'Could not send verification code')
+  }
+
+  return data
+}
+
+export async function verifyEmailCode(email, code) {
+  const response = await fetch('/api/user/verify-email-code', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, code }),
+  })
+
+  const data = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    throw buildError(data, response.status, 'Could not verify code')
+  }
+
+  return data
+}
+
 export async function registerUser(userData) {
     const resp = await fetch("/api/user", {
         method: "POST",
         body: userData
     })
 
-    const result = await resp.json()
-
+    const result = await resp.json().catch(() => ({}))
 
     if (!resp.ok) {
-        throw new Error(result.message || `Registration failed: ${resp.status}`)
+        throw buildError(result, resp.status, `Registration failed: ${resp.status}`)
     }
 
     return result
