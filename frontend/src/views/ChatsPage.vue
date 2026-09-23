@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   getPrivateChats,
   getPrivateChatUsers,
@@ -36,6 +37,9 @@ const openingUserId = ref(null)
 const error = ref('')
 
 const MESSAGE_PAGE_SIZE = 20
+
+const route = useRoute()
+const router = useRouter()
 
 let stopMessageListener
 let stopErrorListener
@@ -133,7 +137,15 @@ onMounted(async () => {
     candidates.value = userResult?.users || []
     pendingRealtimeMessages.splice(0).forEach(handleRealtimeMessage)
 
-    if (conversations.value.length) {
+    const queryUser = Array.isArray(route.query.user) ? route.query.user[0] : route.query.user
+    const targetUserId = Number(queryUser)
+
+    if (Number.isSafeInteger(targetUserId) && targetUserId > 0) {
+      await startChat({ id: targetUserId })
+      router.replace({ path: '/chats' })
+    }
+
+    if (!activeChat.value && conversations.value.length) {
       await selectChat(conversations.value[0])
     }
   } catch (err) {

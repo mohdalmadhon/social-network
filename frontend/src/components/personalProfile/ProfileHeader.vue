@@ -75,6 +75,10 @@ function initials() {
             <button v-else class="profile-action" type="button" :disabled="relationshipBusy" @click="changeRelationship('DELETE')">
               {{ relationshipBusy ? 'Updating...' : 'Following' }}
             </button>
+            <RouterLink v-if="!addEdit" class="profile-action" :to="{ path: '/chats', query: { user: route.query.id } }">
+              <IconGlyph name="chat" :size="16" />
+              Message
+            </RouterLink>
           </div>
         </div>
 
@@ -109,7 +113,7 @@ h1 { margin: 0; font-family: var(--font-display); font-size: 2rem; line-height: 
 .privacy-badge { display: inline-flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--color-mint); font-size: .8125rem; font-weight: 600; }
 .privacy-badge--private { color: var(--color-amber-soft); }
 .profile-actions { display: flex; flex: 0 0 auto; gap: var(--space-2); }
-.profile-action { display: inline-flex; min-height: var(--touch-target); align-items: center; justify-content: center; padding: 0 var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-small); background: transparent; color: var(--color-text-soft); cursor: pointer; font-weight: 700; text-decoration: none; }
+.profile-action { display: inline-flex; min-height: var(--touch-target); align-items: center; justify-content: center; gap: var(--space-2); padding: 0 var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-small); background: transparent; color: var(--color-text-soft); cursor: pointer; font-weight: 700; text-decoration: none; }
 .profile-action:hover:not(:disabled) { border-color: var(--color-violet); background: var(--color-input); }
 .profile-action--primary { border: 0; background: var(--gradient-action); color: white; }
 .profile-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--color-border); }
