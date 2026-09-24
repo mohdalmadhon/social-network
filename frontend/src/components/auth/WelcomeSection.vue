@@ -147,7 +147,7 @@ h1 span {
   left: -9rem;
   width: 22rem;
   aspect-ratio: 1;
-  background: rgb(124 92 255 / 15%);
+  background: rgb(var(--rgb-violet) / 15%);
 }
 
 .welcome-orbit--secondary {
@@ -155,7 +155,7 @@ h1 span {
   left: -2rem;
   width: 16rem;
   aspect-ratio: 1;
-  background: rgb(255 107 138 / 14%);
+  background: rgb(var(--rgb-coral) / 14%);
 }
 
 .welcome-orbit--tertiary {
@@ -163,7 +163,7 @@ h1 span {
   bottom: -12rem;
   width: 25rem;
   aspect-ratio: 1;
-  border: 1px solid rgb(76 195 255 / 18%);
+  border: 1px solid rgb(var(--rgb-blue) / 18%);
 }
 
 .welcome-grid {
@@ -172,7 +172,7 @@ h1 span {
   width: 19rem;
   height: 19rem;
   opacity: .28;
-  background-image: linear-gradient(rgb(76 195 255 / 14%) 1px, transparent 1px), linear-gradient(90deg, rgb(76 195 255 / 14%) 1px, transparent 1px);
+  background-image: linear-gradient(rgb(var(--rgb-blue) / 14%) 1px, transparent 1px), linear-gradient(90deg, rgb(var(--rgb-blue) / 14%) 1px, transparent 1px);
   background-size: 2rem 2rem;
   mask-image: linear-gradient(to top left, black, transparent 72%);
 }

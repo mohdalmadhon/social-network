@@ -291,7 +291,7 @@ async function toggleJoinRequest() {
     overflow: hidden;
     padding: var(--space-4);
     background:
-        linear-gradient(135deg, rgb(21 24 46 / 98%), rgb(13 15 30 / 98%)),
+        linear-gradient(135deg, rgb(var(--rgb-surface) / 98%), rgb(var(--rgb-background) / 98%)),
         var(--color-surface);
 }
 
@@ -301,7 +301,7 @@ async function toggleJoinRequest() {
     bottom: -7rem;
     width: 16rem;
     height: 16rem;
-    border: 1px solid rgb(124 92 255 / 22%);
+    border: 1px solid rgb(var(--rgb-violet) / 22%);
     border-radius: 50%;
     content: '';
     pointer-events: none;
@@ -311,19 +311,19 @@ async function toggleJoinRequest() {
     position: relative;
     min-height: 8rem;
     overflow: hidden;
-    border: 1px solid rgb(124 92 255 / 28%);
+    border: 1px solid rgb(var(--rgb-violet) / 28%);
     border-radius: var(--radius-small);
     background:
-        radial-gradient(circle at 18% 26%, rgb(255 107 138 / 82%) 0 0.25rem, transparent 0.3rem),
-        radial-gradient(circle at 78% 68%, rgb(62 230 176 / 75%) 0 0.2rem, transparent 0.25rem),
-        linear-gradient(145deg, rgb(124 92 255 / 22%), rgb(255 107 138 / 10%));
+        radial-gradient(circle at 18% 26%, rgb(var(--rgb-coral) / 82%) 0 0.25rem, transparent 0.3rem),
+        radial-gradient(circle at 78% 68%, rgb(var(--rgb-mint) / 75%) 0 0.2rem, transparent 0.25rem),
+        linear-gradient(145deg, rgb(var(--rgb-violet) / 22%), rgb(var(--rgb-coral) / 10%));
 }
 
 .group-header__art-orbit {
     position: absolute;
     top: 50%;
     left: 50%;
-    border: 1px solid rgb(172 159 255 / 45%);
+    border: 1px solid rgb(var(--rgb-violet-soft) / 45%);
     border-radius: 50%;
     transform: translate(-50%, -50%) rotate(-18deg);
 }
@@ -336,7 +336,7 @@ async function toggleJoinRequest() {
 .group-header__art-orbit--inner {
     width: 7rem;
     height: 3rem;
-    border-color: rgb(62 230 176 / 60%);
+    border-color: rgb(var(--rgb-mint) / 60%);
     transform: translate(-50%, -50%) rotate(35deg);
 }
 
@@ -349,7 +349,7 @@ async function toggleJoinRequest() {
     border: 3px solid var(--color-text);
     border-radius: 50%;
     background: var(--color-coral);
-    box-shadow: 0 0 0 0.45rem rgb(255 107 138 / 15%), 0 0 2rem rgb(255 107 138 / 45%);
+    box-shadow: 0 0 0 0.45rem rgb(var(--rgb-coral) / 15%), 0 0 2rem rgb(var(--rgb-coral) / 45%);
     transform: translate(-50%, -50%);
 }
 
@@ -357,7 +357,7 @@ async function toggleJoinRequest() {
     position: absolute;
     right: var(--space-3);
     bottom: var(--space-3);
-    color: rgb(235 232 255 / 78%);
+    color: var(--color-text-soft);
     font-family: var(--font-meta);
     font-size: 0.625rem;
     letter-spacing: 0.12em;
@@ -392,9 +392,9 @@ async function toggleJoinRequest() {
 .group-header__badge {
     margin-top: 0.25rem;
     padding: 0.35rem 0.55rem;
-    border: 1px solid rgb(62 230 176 / 30%);
+    border: 1px solid rgb(var(--rgb-mint) / 30%);
     border-radius: 999px;
-    background: rgb(62 230 176 / 9%);
+    background: rgb(var(--rgb-mint) / 9%);
     color: var(--color-mint);
     font-family: var(--font-meta);
     font-size: 0.625rem;
@@ -432,7 +432,7 @@ async function toggleJoinRequest() {
     height: 0.45rem;
     border-radius: 50%;
     background: var(--color-mint);
-    box-shadow: 0 0 0 0.25rem rgb(62 230 176 / 12%);
+    box-shadow: 0 0 0 0.25rem rgb(var(--rgb-mint) / 12%);
 }
 
 .group-header__aside {
@@ -477,9 +477,9 @@ async function toggleJoinRequest() {
     gap: var(--space-2);
     margin: 0;
     padding: 0 var(--space-3);
-    border: 1px solid rgb(62 230 176 / 25%);
+    border: 1px solid rgb(var(--rgb-mint) / 25%);
     border-radius: var(--radius-small);
-    background: rgb(62 230 176 / 8%);
+    background: rgb(var(--rgb-mint) / 8%);
     color: var(--color-mint);
     font-size: 0.8125rem;
     font-weight: 600;
@@ -544,7 +544,7 @@ async function toggleJoinRequest() {
     padding: var(--space-2);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-medium);
-    background: rgb(21 24 46 / 72%);
+    background: rgb(var(--rgb-surface) / 72%);
     scrollbar-width: none;
 }
 
@@ -577,8 +577,8 @@ async function toggleJoinRequest() {
 }
 
 .group-section-tab--active {
-    border-color: rgb(124 92 255 / 55%);
-    background: rgb(124 92 255 / 16%);
+    border-color: rgb(var(--rgb-violet) / 55%);
+    background: rgb(var(--rgb-violet) / 16%);
     color: var(--color-violet-soft);
 }
 
@@ -589,9 +589,9 @@ async function toggleJoinRequest() {
     display: grid;
     gap: var(--space-6);
     padding: var(--space-5);
-    border-color: rgb(124 92 255 / 30%);
+    border-color: rgb(var(--rgb-violet) / 30%);
     background:
-        linear-gradient(135deg, rgb(124 92 255 / 11%), transparent 58%),
+        linear-gradient(135deg, rgb(var(--rgb-violet) / 11%), transparent 58%),
         var(--color-surface);
 }
 
@@ -602,9 +602,9 @@ async function toggleJoinRequest() {
 .group-overview__signals { display: grid; gap: var(--space-3); }
 .group-overview__signals > div { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr); align-items: center; gap: var(--space-3); }
 .group-overview__icon { display: grid; width: 2.75rem; height: 2.75rem; place-items: center; border: 1px solid; border-radius: 50%; }
-.group-overview__icon--mint { border-color: rgb(62 230 176 / 35%); background: rgb(62 230 176 / 10%); color: var(--color-mint); }
-.group-overview__icon--violet { border-color: rgb(172 159 255 / 35%); background: rgb(124 92 255 / 12%); color: var(--color-violet-soft); }
-.group-overview__icon--coral { border-color: rgb(255 107 138 / 35%); background: rgb(255 107 138 / 10%); color: var(--color-coral); }
+.group-overview__icon--mint { border-color: rgb(var(--rgb-mint) / 35%); background: rgb(var(--rgb-mint) / 10%); color: var(--color-mint); }
+.group-overview__icon--violet { border-color: rgb(var(--rgb-violet-soft) / 35%); background: rgb(var(--rgb-violet) / 12%); color: var(--color-violet-soft); }
+.group-overview__icon--coral { border-color: rgb(var(--rgb-coral) / 35%); background: rgb(var(--rgb-coral) / 10%); color: var(--color-coral); }
 .group-overview__signals span:last-child { display: grid; gap: 0.2rem; min-width: 0; }
 .group-overview__signals strong { color: var(--color-text); font-size: 0.875rem; }
 .group-overview__signals small { color: var(--color-text-faint); font-size: 0.75rem; line-height: 1.4; }
@@ -613,9 +613,9 @@ async function toggleJoinRequest() {
     display: grid;
     gap: var(--space-5);
     padding: var(--space-5);
-    border-color: rgb(124 92 255 / 30%);
+    border-color: rgb(var(--rgb-violet) / 30%);
     background:
-        linear-gradient(135deg, rgb(124 92 255 / 11%), transparent 58%),
+        linear-gradient(135deg, rgb(var(--rgb-violet) / 11%), transparent 58%),
         var(--color-surface);
 }
 

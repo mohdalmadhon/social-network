@@ -1004,13 +1004,13 @@ async function loggUser(event) {
   padding: .75rem;
   border: 1px dashed var(--color-violet);
   border-radius: var(--radius-small);
-  background: rgb(124 92 255 / 5%);
+  background: rgb(var(--rgb-violet) / 5%);
   color: var(--color-text-soft);
   cursor: pointer;
 }
 
 .upload-zone:hover {
-  background: rgb(124 92 255 / 11%);
+  background: rgb(var(--rgb-violet) / 11%);
 }
 
 .upload-zone__icon {

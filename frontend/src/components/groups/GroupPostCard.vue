@@ -434,7 +434,7 @@ onBeforeUnmount(() => commentsObserver?.disconnect())
   grid-template-columns: 2.25rem minmax(0, 1fr);
   padding: var(--space-3);
   border-radius: var(--radius-small);
-  background: rgb(31 36 64 / 55%);
+  background: rgb(var(--rgb-surface-raised) / 55%);
 }
 
 .group-comment > img,

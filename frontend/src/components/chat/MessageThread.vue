@@ -77,7 +77,7 @@ function messageTime(value) {
 .message-content { display: grid; min-width: 0; gap: var(--space-1); }
 .message-sender { color: var(--color-text-muted); font-size: .75rem; font-weight: 600; }
 .message-content p { max-height: 12rem; margin: 0; padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-medium) var(--radius-medium) var(--radius-medium) var(--radius-small); background: var(--color-surface); color: var(--color-text-soft); line-height: 1.55; overflow-y: auto; overflow-wrap: anywhere; overscroll-behavior: contain; scrollbar-color: var(--color-violet) transparent; scrollbar-width: thin; white-space: pre-wrap; }
-.message-row--own .message-content p { border-color: rgb(72 217 193 / 28%); border-radius: var(--radius-medium) var(--radius-medium) var(--radius-small) var(--radius-medium); background: var(--color-surface-teal); color: var(--color-text); }
+.message-row--own .message-content p { border-color: rgb(var(--rgb-mint) / 28%); border-radius: var(--radius-medium) var(--radius-medium) var(--radius-small) var(--radius-medium); background: var(--color-surface-teal); color: var(--color-text); }
 .message-content time { color: var(--color-text-faint); font-family: var(--font-meta); font-size: .6875rem; }
 .message-row--own time { text-align: right; }
 @media (max-width: 520px) { .message-thread { min-height: 18rem; padding: var(--space-4); } .message-row { max-width: 92%; } }

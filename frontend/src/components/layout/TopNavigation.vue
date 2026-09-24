@@ -207,7 +207,7 @@ const { chatCount } = useChatCount()
   align-items: center;
   min-height: 4rem;
   padding: var(--space-2) var(--space-3);
-  background: rgb(11 13 23 / 92%);
+  background: rgb(var(--rgb-background) / 92%);
   border-bottom: 1px solid var(--color-border);
   backdrop-filter: blur(1rem);
 }
@@ -260,7 +260,7 @@ const { chatCount } = useChatCount()
   padding: var(--space-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-medium);
-  background: rgb(20 24 43 / 98%);
+  background: rgb(var(--rgb-surface) / 98%);
   box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 28%);
 }
 
@@ -328,7 +328,7 @@ const { chatCount } = useChatCount()
 }
 
 .search-suggestion__icon {
-  background: rgb(62 230 176 / 14%);
+  background: rgb(var(--rgb-mint) / 14%);
   color: var(--color-mint);
 }
 
@@ -452,7 +452,7 @@ const { chatCount } = useChatCount()
   padding-inline: 0.25rem;
   place-items: center;
   border-radius: 999px;
-  color: #081018;
+  color: var(--color-on-accent);
   font-size: 0.7rem;
   font-weight: 700;
 }

@@ -21,6 +21,7 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("POST /api/user/registration", app.CheckRegistration)
 	mux.HandleFunc("POST /api/user/send-email-code", app.SendEmailCode)
 	mux.HandleFunc("POST /api/user/verify-email-code", app.VerifyEmail)
+	mux.HandleFunc("DELETE /api/user", app.AuthMiddleware(app.DeleteUser))
 
 	//session
 	mux.HandleFunc("POST /api/session", app.LoggingUser)

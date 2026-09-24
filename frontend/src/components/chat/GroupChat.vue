@@ -129,6 +129,6 @@ function send(content, clear) {
 .group-chat__icon { display: grid; width: 2.5rem; height: 2.5rem; place-items: center; border-radius: 50%; background: var(--color-surface-teal); color: var(--color-mint); }
 .group-chat .orbit-meta { margin: 0; }
 .group-chat h2 { margin: var(--space-1) 0 0; font-family: var(--font-display); font-size: 1.4rem; letter-spacing: 0; }
-.group-chat__error { margin: 0; padding: var(--space-3) var(--space-5); border-top: 1px solid var(--color-border); background: rgb(255 112 112 / 8%); color: var(--color-coral); }
+.group-chat__error { margin: 0; padding: var(--space-3) var(--space-5); border-top: 1px solid var(--color-border); background: rgb(var(--rgb-coral) / 8%); color: var(--color-coral); }
 @media (max-width: 520px) { .group-chat > header { padding: var(--space-4); } }
 </style>

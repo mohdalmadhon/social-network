@@ -6,6 +6,7 @@ import HomeFeedPage from "@/views/HomeFeedPage.vue";
 import ChatsPage from "@/views/ChatsPage.vue";
 import NotificationsPage from "@/views/NotificationsPage.vue";
 import SearchPage from "@/views/SearchPage.vue";
+import SettingsPage from "@/views/SettingsPage.vue";
 
 import { createRouter, createWebHistory } from "vue-router";
 import EditProfile from "@/views/profiles/EditProfile.vue";
@@ -85,6 +86,13 @@ const routes = [
   {
     path: "/search",
     component: SearchPage,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: "/settings",
+    component: SettingsPage,
     meta: {
       requiresAuth: true,
     },

@@ -20,8 +20,8 @@ import IconGlyph from './IconGlyph.vue'
 
 <style scoped>
 .notification-container { position: fixed; top: 1rem; right: 1rem; left: 1rem; z-index: 100; display: grid; gap: .75rem; pointer-events: none; }
-.notification { position: relative; display: grid; grid-template-columns: .25rem 1fr auto; gap: .75rem; align-items: center; max-width: 28rem; margin-left: auto; padding: .9rem 1rem; overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-small); background: rgb(16 25 37 / 96%); box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 28%); color: var(--color-text); pointer-events: auto; backdrop-filter: blur(.75rem); }
-.notification::after { position: absolute; inset: 0; z-index: -1; background: linear-gradient(110deg, rgb(72 217 193 / 10%), transparent 45%); content: ''; }
+.notification { position: relative; display: grid; grid-template-columns: .25rem 1fr auto; gap: .75rem; align-items: center; max-width: 28rem; margin-left: auto; padding: .9rem 1rem; overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-small); background: rgb(var(--rgb-surface) / 96%); box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 28%); color: var(--color-text); pointer-events: auto; backdrop-filter: blur(.75rem); }
+.notification::after { position: absolute; inset: 0; z-index: -1; background: linear-gradient(110deg, rgb(var(--rgb-mint) / 10%), transparent 45%); content: ''; }
 .notification__marker { width: .25rem; min-height: 2.5rem; border-radius: 99rem; background: var(--color-mint); }
 .notification--error .notification__marker { background: var(--color-coral); }
 .notification__copy { min-width: 0; }

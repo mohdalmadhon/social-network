@@ -424,7 +424,7 @@ function shortTime(value) {
   margin: 0;
   padding: var(--space-4);
   border-left: 3px solid var(--color-coral);
-  background: rgb(255 112 112 / 8%);
+  background: rgb(var(--rgb-coral) / 8%);
   color: var(--color-coral);
 }
 

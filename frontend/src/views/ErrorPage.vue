@@ -107,7 +107,7 @@ function goBack() {
   background:
     radial-gradient(
       circle at 50% 40%,
-      rgb(124 92 255 / 10%),
+      rgb(var(--rgb-violet) / 10%),
       transparent 35%
     ),
     var(--color-background);
@@ -123,7 +123,7 @@ function goBack() {
 .orb {
   position: absolute;
   display: block;
-  border: 1px solid rgb(124 92 255 / 12%);
+  border: 1px solid rgb(var(--rgb-violet) / 12%);
   border-radius: 50%;
 }
 
@@ -139,7 +139,7 @@ function goBack() {
   left: -12rem;
   width: 42rem;
   height: 42rem;
-  border-color: rgb(99 230 190 / 8%);
+  border-color: rgb(var(--rgb-mint) / 8%);
 }
 
 .orb--three {
@@ -148,7 +148,7 @@ function goBack() {
   width: 22rem;
   height: 22rem;
   transform: translate(-50%, -50%);
-  border-color: rgb(255 107 125 / 6%);
+  border-color: rgb(var(--rgb-coral) / 6%);
 }
 
 .error-card {
@@ -167,7 +167,7 @@ function goBack() {
     var(--space-10)
   );
 
-  background: rgb(20 23 42 / 88%);
+  background: rgb(var(--rgb-surface) / 88%);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-large);
 
@@ -187,8 +187,8 @@ function goBack() {
   margin-bottom: var(--space-4);
   place-items: center;
   border-radius: 50%;
-  background: rgb(124 92 255 / 10%);
-  border: 1px solid rgb(124 92 255 / 25%);
+  background: rgb(var(--rgb-violet) / 10%);
+  border: 1px solid rgb(var(--rgb-violet) / 25%);
 }
 
 .error-icon span {

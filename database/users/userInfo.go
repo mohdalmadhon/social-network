@@ -227,3 +227,8 @@ func GetUserSimpleData(db *sql.DB, userID int) (models.UserRegistration, error) 
 
 	return user, nil
 }
+
+func DeleteUser(db *sql.DB, userID int) error {
+	_, err := db.Exec(`delete from user WHERE id = ?`, userID)
+	return err
+}

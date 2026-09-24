@@ -42,7 +42,7 @@ const emit = defineEmits(['update:modelValue'])
 }
 
 .search-input:hover {
-    border-color: #434c70;
+    border-color: var(--color-border-hover);
 }
 
 .search-input:focus {

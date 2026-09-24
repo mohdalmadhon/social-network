@@ -461,7 +461,7 @@ onBeforeUnmount(() => {
 .notification-filters button:hover,
 .notification-filter--active {
   border-color: var(--color-violet) !important;
-  background: rgb(124 92 255 / 16%) !important;
+  background: rgb(var(--rgb-violet) / 16%) !important;
   color: var(--color-text) !important;
 }
 
@@ -498,8 +498,8 @@ onBeforeUnmount(() => {
 }
 
 .notification-item--unread {
-  border-color: rgb(255 107 138 / 48%);
-  background: linear-gradient(90deg, rgb(255 107 138 / 9%), var(--color-input));
+  border-color: rgb(var(--rgb-coral) / 48%);
+  background: linear-gradient(90deg, rgb(var(--rgb-coral) / 9%), var(--color-input));
 }
 
 .notification-item__icon {
@@ -508,7 +508,7 @@ onBeforeUnmount(() => {
   height: var(--touch-target);
   place-items: center;
   border-radius: 50%;
-  color: #0b0d17;
+  color: var(--color-on-accent);
   font-weight: 700;
 }
 
@@ -621,12 +621,12 @@ onBeforeUnmount(() => {
 }
 
 .notification-legend__icon--coral {
-  background: rgb(255 107 138 / 16%);
+  background: rgb(var(--rgb-coral) / 16%);
   color: var(--color-coral);
 }
 
 .notification-legend__icon--mint {
-  background: rgb(62 230 176 / 16%);
+  background: rgb(var(--rgb-mint) / 16%);
   color: var(--color-mint);
 }
 

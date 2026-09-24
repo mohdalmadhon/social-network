@@ -314,3 +314,38 @@ func (app *App) CheckRegistration(w http.ResponseWriter, r *http.Request) {
 		"avilable": !exists,
 	})
 }
+
+func (app *App) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+
+	if !ok {
+		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
+			"status":  false,
+			"message": "could not authorize user",
+		})
+		return
+	}
+
+	err := users.DeleteUser(app.DB, userID)
+	if err != nil {
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not delete user",
+		})
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+	})
+
+	helpers.WriteJson(w, http.StatusOK, map[string]any{
+		"status":  true,
+		"message": "user deleted",
+	})
+
+}

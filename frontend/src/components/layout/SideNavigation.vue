@@ -31,6 +31,7 @@ const links = [
   { name: 'groups', label: 'Groups', href: '/groups', icon: 'groups' },
   { name: 'chats', label: 'Chats', href: '/chats', icon: 'chat', badgeType: 'message' },
   { name: 'notifications', label: 'Notifications', href: '/notifications', icon: 'bell', badgeType: 'notification' },
+  { name: 'settings', label: 'Settings', href: '/settings', icon: 'settings' },
 ]
 
 const { unreadCount: notificationUnreadCount } = useNotifications()
@@ -101,9 +102,9 @@ async function logoutHandler() {
   left: 0;
   z-index: 20;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   min-height: 4.25rem;
-  background: rgb(11 13 23 / 96%);
+  background: rgb(var(--rgb-background) / 96%);
   border-top: 1px solid var(--color-border);
   backdrop-filter: blur(1rem);
 }
@@ -116,8 +117,15 @@ async function logoutHandler() {
   gap: 0.125rem;
   min-width: 0;
   color: var(--color-text-faint);
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   text-decoration: none;
+}
+
+.mobile-link > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mobile-link > .icon-glyph {
@@ -157,7 +165,7 @@ async function logoutHandler() {
 
   .navigation-link:hover,
   .navigation-link--active {
-    background: rgb(72 217 193 / 9%);
+    background: rgb(var(--rgb-mint) / 9%);
     color: var(--color-mint);
   }
 
@@ -171,7 +179,7 @@ async function logoutHandler() {
     height: 1.35rem;
     place-items: center;
     border-radius: 999px;
-    color: #081018;
+    color: var(--color-on-accent);
     font-size: 0.75rem;
     font-weight: 700;
   }

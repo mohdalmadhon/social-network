@@ -268,7 +268,7 @@ function voterName(user) {
 .activity { display: grid; gap: var(--space-7); }
 .invite-block { display: grid; gap: var(--space-3); }
 .activity-message { margin: 0; padding: var(--space-3) var(--space-4); border-left: 3px solid var(--color-mint); background: var(--color-surface-teal); color: var(--color-text-soft); }
-.activity-message--error { border-left-color: var(--color-coral); background: rgba(251, 113, 133, .08); color: var(--color-coral); }
+.activity-message--error { border-left-color: var(--color-coral); background: rgb(var(--rgb-coral) / 8%); color: var(--color-coral); }
 .invite-panel, .event-planner, .event-card { padding: var(--space-5); }
 .section-heading { display: flex; align-items: end; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-4); }
 .section-heading--major { padding-top: var(--space-6); border-top: 1px solid var(--color-border); }
