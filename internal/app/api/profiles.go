@@ -255,6 +255,48 @@ func (app *App) CancelRequest(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func (app *App) RemoveFollower(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
+			"status":  false,
+			"message": "could not authorize user",
+		})
+		return
+	}
+
+	followerID, err := strconv.Atoi(r.URL.Query().Get("followerid"))
+	if err != nil || followerID <= 0 || followerID == userID {
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid follower ID",
+		})
+		return
+	}
+
+	if err := profiles.RemoveFollower(app.DB, userID, followerID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			helpers.WriteJson(w, http.StatusNotFound, map[string]any{
+				"status":  false,
+				"message": "follower not found",
+			})
+			return
+		}
+
+		log.Println(err)
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not remove follower",
+		})
+		return
+	}
+
+	helpers.WriteJson(w, http.StatusOK, map[string]any{
+		"status":  true,
+		"message": "follower removed",
+	})
+}
+
 func (app *App) GetFollowers(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {

@@ -1,3 +1,4 @@
+import { reactive } from 'vue';
 
 export const userAbout = {
     Work: '',
@@ -11,7 +12,7 @@ export const userAbout = {
     Twitter: ''
 };
 
-export const profileData = {
+export const profileData = reactive({
     userInfo: {
         id: null,
         firstName: '',
@@ -48,4 +49,4 @@ export const profileData = {
     isFollowing: false,
     show: false,
     isPrivate: 0
-}
+});

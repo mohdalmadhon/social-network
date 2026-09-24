@@ -44,6 +44,7 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	// follow handler
 	mux.HandleFunc("POST /api/profile/follow", app.AuthMiddleware(app.RequestFollow))
 	mux.HandleFunc("DELETE /api/profile/follow", app.AuthMiddleware(app.CancelRequest))
+	mux.HandleFunc("DELETE /api/profile/follower", app.AuthMiddleware(app.RemoveFollower))
 	mux.HandleFunc("GET /api/profile/follow", app.AuthMiddleware(app.GetFollowers))
 	mux.HandleFunc("GET /api/profile/following", app.AuthMiddleware(app.GetFollowing))
 

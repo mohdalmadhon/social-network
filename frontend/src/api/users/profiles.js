@@ -103,6 +103,26 @@ export async function requestFollow(id, method) {
     return result
 }
 
+export async function removeFollower(id) {
+    const resp = await fetch(`/api/profile/follower?followerid=${id}`, {
+        method: "DELETE",
+        credentials: 'include'
+    });
+
+    if (!checkSessionResponse(resp)) {
+        router.replace("/login");
+        return;
+    }
+
+    const result = await resp.json().catch(() => null);
+
+    if (!resp.ok || !result?.status) {
+        throw new Error(result?.message || "could not remove follower")
+    }
+
+    return result
+}
+
 export async function getFollowers(id, count, offset = 0) {
     const resp = await fetch(`/api/profile/follow?targetid=${id}&count=${count}&offset=${offset}`, {
         method: "GET",

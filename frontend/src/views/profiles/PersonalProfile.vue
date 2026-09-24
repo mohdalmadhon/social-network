@@ -196,10 +196,10 @@ function removePost(postID) {
           own-profile />
 
         <FollowersTab v-else-if="activeTab === 'followers'" type="followers" :target-id="profileData.userInfo.id"
-          :follower-list="profileData.followers" />
+          :follower-list="profileData.followers" own-profile />
 
         <FollowersTab v-else-if="activeTab === 'following'" type="following" :target-id="profileData.userInfo.id"
-          :follower-list="profileData.following" />
+          :follower-list="profileData.following" own-profile />
 
         <FollowersTab v-else-if="activeTab === 'friends'" type="friends" :target-id="profileData.userInfo.id"
           :follower-list="profileData.friends" />

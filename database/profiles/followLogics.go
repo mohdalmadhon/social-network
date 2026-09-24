@@ -73,6 +73,31 @@ func DecideFollowRequest(db *sql.DB, targetID, followerID int, accept bool) erro
 	return nil
 }
 
+func RemoveFollower(db *sql.DB, targetID, followerID int) error {
+	if targetID == followerID {
+		return fmt.Errorf("invalid follower")
+	}
+
+	result, err := db.Exec(`
+		DELETE FROM user_followers
+		WHERE target_id = ? AND follower_id = ? AND status = 1
+	`, targetID, followerID)
+	if err != nil {
+		return err
+	}
+
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
 func GetFollowers(db *sql.DB, targetID, count, offset int) (map[int]models.UserRegistration, error) {
 	rows, err := db.Query(`
 		SELECT
