@@ -52,6 +52,7 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("PUT /api/posts/{postID}/like", app.AuthMiddleware(app.LikePost))
 	mux.HandleFunc("DELETE /api/posts/{postID}/like", app.AuthMiddleware(app.LikePost))
 	mux.HandleFunc("/api/posts/{postID}/comments", app.Comments)
+	mux.HandleFunc("DELETE /api/posts", app.AuthMiddleware(app.DeletePost))
 
 	//notifications
 	mux.HandleFunc("GET /api/notifications", app.AuthMiddleware(app.Notifications))

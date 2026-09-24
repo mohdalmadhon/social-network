@@ -15,7 +15,6 @@ import FollowersTab from '@/components/Profile/FollowersTab.vue'
 import PostCard from '@/components/posts/PostCard.vue'
 
 const activeTab = ref('posts')
-
 const loading = ref(true)
 const loadingMore = ref(false)
 const error = ref('')
@@ -42,6 +41,8 @@ async function loadPosts(loadMore = false) {
       limit,
       offset: offset.value
     })
+
+    console.log(result)
 
     const newPosts = selectProfilePosts(
       result?.posts || [],
@@ -74,6 +75,7 @@ async function loadPosts(loadMore = false) {
       loading.value = false
     }
   }
+
 }
 
 function handleScroll() {
@@ -118,6 +120,12 @@ onUnmounted(() => {
   }
 })
 
+function removePost(postID) {
+  posts.value = posts.value.filter(
+    (post) => post.id !== postID,
+  )
+}
+
 </script>
 
 <template>
@@ -126,58 +134,31 @@ onUnmounted(() => {
 
     <main class="profile-page">
 
-      <p
-        v-if="loading"
-        class="profile-state orbit-surface"
-      >
+      <p v-if="loading" class="profile-state orbit-surface">
         Loading profile...
       </p>
 
-      <div
-        v-else-if="error"
-        class="profile-state profile-state--error orbit-surface"
-        role="alert"
-      >
+      <div v-else-if="error" class="profile-state profile-state--error orbit-surface" role="alert">
         <p>{{ error }}</p>
 
-        <button
-          type="button"
-          @click="$router.go(0)"
-        >
+        <button type="button" @click="$router.go(0)">
           Try again
         </button>
       </div>
 
       <template v-else>
 
-        <ProfileHeader
-          :first-name="profileData.userInfo.firstName"
-          :last-name="profileData.userInfo.lastName"
-          :username="profileData.userInfo.userName"
-          :bio="profileData.about.bio"
-          :avatar-path="
-            profileData.userInfo.avatar
-              ? `/uploads/${profileData.userInfo.avatar}`
-              : ''
-          "
-          :num-of-posts="profileData.numOfPosts"
-          :num-of-following="profileData.numOfFollowing"
-          :num-of-followers="profileData.numOfFollowers"
-          :is-private="profileData.userInfo.isPrivate === 1"
-          add-edit
-          @select-tab="activeTab = $event"
-        />
+        <ProfileHeader :first-name="profileData.userInfo.firstName" :last-name="profileData.userInfo.lastName"
+          :username="profileData.userInfo.userName" :bio="profileData.about.bio" :avatar-path="profileData.userInfo.avatar
+            ? `/uploads/${profileData.userInfo.avatar}`
+            : ''
+            " :num-of-posts="profileData.numOfPosts" :num-of-following="profileData.numOfFollowing"
+          :num-of-followers="profileData.numOfFollowers" :is-private="profileData.userInfo.isPrivate === 1" add-edit
+          @select-tab="activeTab = $event" />
 
-        <ProfileTabs
-          v-model="activeTab"
-          type="personal"
-        />
+        <ProfileTabs v-model="activeTab" type="personal" />
 
-        <section
-          v-if="activeTab === 'posts'"
-          class="profile-posts"
-          aria-labelledby="profile-posts-heading"
-        >
+        <section v-if="activeTab === 'posts'" class="profile-posts" aria-labelledby="profile-posts-heading">
 
           <header class="profile-posts__header">
 
@@ -191,69 +172,37 @@ onUnmounted(() => {
 
           </header>
 
-          <div
-            v-if="posts.length"
-            class="profile-posts__grid"
-          >
+          <div v-if="posts.length" class="profile-posts__grid">
 
-            <PostCard
-              v-for="post in posts"
-              :key="post.id"
-              :post="post"
-            />
+            <PostCard v-for="post in posts" :key="post.id" :post="post" @deleted="removePost" />
 
           </div>
 
-          <p
-            v-else
-            class="profile-empty orbit-surface"
-          >
+          <p v-else class="profile-empty orbit-surface">
             No posts yet.
           </p>
 
-          <p
-            v-if="loadingMore"
-            class="profile-loading"
-          >
+          <p v-if="loadingMore" class="profile-loading">
             Loading more posts...
           </p>
 
-          <p
-            v-else-if="!hasMore && posts.length"
-            class="profile-end"
-          >
+          <p v-else-if="!hasMore && posts.length" class="profile-end">
             No more posts.
           </p>
 
         </section>
 
-        <AboutTab
-          v-else-if="activeTab === 'about'"
-          :about="profileData.about"
-          :profile="profileData.userInfo"
-          own-profile
-        />
+        <AboutTab v-else-if="activeTab === 'about'" :about="profileData.about" :profile="profileData.userInfo"
+          own-profile />
 
-        <FollowersTab
-          v-else-if="activeTab === 'followers'"
-          type="followers"
-          :target-id="profileData.userInfo.id"
-          :follower-list="profileData.followers"
-        />
+        <FollowersTab v-else-if="activeTab === 'followers'" type="followers" :target-id="profileData.userInfo.id"
+          :follower-list="profileData.followers" />
 
-        <FollowersTab
-          v-else-if="activeTab === 'following'"
-          type="following"
-          :target-id="profileData.userInfo.id"
-          :follower-list="profileData.following"
-        />
+        <FollowersTab v-else-if="activeTab === 'following'" type="following" :target-id="profileData.userInfo.id"
+          :follower-list="profileData.following" />
 
-        <FollowersTab
-          v-else-if="activeTab === 'friends'"
-          type="friends"
-          :target-id="profileData.userInfo.id"
-          :follower-list="profileData.friends"
-        />
+        <FollowersTab v-else-if="activeTab === 'friends'" type="friends" :target-id="profileData.userInfo.id"
+          :follower-list="profileData.friends" />
 
       </template>
 
@@ -264,7 +213,6 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-
 .profile-page {
   display: grid;
   width: 100%;
@@ -367,5 +315,4 @@ onUnmounted(() => {
   }
 
 }
-
 </style>

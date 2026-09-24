@@ -33,6 +33,7 @@ export function profilePosts(posts, profile) {
       comments: post.commentCount || 0,
       imagePath: post.imagePath || '',
       hasMedia: false,
+      location: post.location,
       mediaDescription: '',
     }))
 }

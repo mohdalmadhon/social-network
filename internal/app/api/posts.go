@@ -242,3 +242,39 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(body)
 }
+
+func (app *App) DeletePost(w http.ResponseWriter, r *http.Request) {
+	userID, err := authenticatedUserID(r)
+	if err != nil {
+		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
+			"status":  false,
+			"message": "authentication required",
+		})
+		return
+	}
+
+	var request struct {
+		PostID int `json:"postID"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil || request.PostID <= 0 {
+		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid post ID",
+		})
+		return
+	}
+
+	if err := posts.DeletePost(app.DB, request.PostID, userID); err != nil {
+		helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not delete post",
+		})
+		return
+	}
+
+	helpers.WriteJson(w, http.StatusOK, map[string]any{
+		"status":  true,
+		"message": "post deleted",
+	})
+}

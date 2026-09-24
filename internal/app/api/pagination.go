@@ -55,7 +55,5 @@ func trimPage[T any](items []T, page pageRequest, newestFirst bool) ([]T, bool) 
 		return items[:page.Limit], true
 	}
 
-	// Chat history is returned oldest-to-newest, so the extra item is the
-	// oldest one and should be discarded before displaying the page.
 	return items[1:], true
 }

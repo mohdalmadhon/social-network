@@ -1,9 +1,9 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import CommentInput from '@/components/comments/CommentInput.vue'
 import CommentPreview from '@/components/comments/CommentPreview.vue'
 import IconGlyph from '@/components/layout/IconGlyph.vue'
-
 import { createComment, getComments } from '@/api/posts/comments.js'
 import { setPostLike } from '@/api/posts/posts.js'
 
@@ -13,6 +13,10 @@ const props = defineProps({
     required: true,
   },
 })
+
+const emit = defineEmits(['deleted'])
+
+const route = useRoute()
 
 const comments = ref([])
 const commentInput = ref(null)
@@ -26,17 +30,24 @@ const commentsList = ref(null)
 const commentsSentinel = ref(null)
 const commentsOffset = ref(0)
 const isSubmittingComment = ref(false)
-
 const isLiked = ref(Boolean(props.post.liked))
 const likeCount = ref(Number(props.post.likes) || 0)
 const isLikePending = ref(false)
 const likeError = ref('')
-
 const showLocationDialog = ref(false)
+
+const showPostMenu = ref(false)
+const showDeleteDialog = ref(false)
+const isDeletingPost = ref(false)
+const deleteError = ref('')
 
 const COMMENTS_PAGE_SIZE = 20
 
 let commentsObserver
+
+const canManagePost = computed(() => {
+  return route.path === '/me' || route.path === '/profile'
+})
 
 const commentCount = computed(() => {
   const postComments = Number(props.post.comments) || 0
@@ -113,6 +124,78 @@ function handleLocationKeydown(event) {
   }
 }
 
+function togglePostMenu() {
+  if (!canManagePost.value || isDeletingPost.value) return
+
+  showPostMenu.value = !showPostMenu.value
+}
+
+function closePostMenu() {
+  showPostMenu.value = false
+}
+
+function openDeleteDialog() {
+  if (!canManagePost.value || isDeletingPost.value) return
+
+  closePostMenu()
+  deleteError.value = ''
+  showDeleteDialog.value = true
+}
+
+function closeDeleteDialog() {
+  if (isDeletingPost.value) return
+
+  showDeleteDialog.value = false
+  deleteError.value = ''
+}
+
+function handleDeleteDialogKeydown(event) {
+  if (event.key === 'Escape') {
+    closeDeleteDialog()
+  }
+}
+
+async function deletePost() {
+  if (!canManagePost.value || isDeletingPost.value) return
+
+  isDeletingPost.value = true
+  deleteError.value = ''
+
+  try {
+    const response = await fetch('/api/posts', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        postID: props.post.id,
+      }),
+    })
+
+    let result = null
+
+    try {
+      result = await response.json()
+    } catch {
+      result = null
+    }
+
+    if (!response.ok || result?.status === false) {
+      throw new Error(
+        result?.message || 'Could not delete the post.',
+      )
+    }
+
+    showDeleteDialog.value = false
+    emit('deleted', props.post.id)
+  } catch (error) {
+    deleteError.value =
+      error.message || 'Could not delete the post.'
+  } finally {
+    isDeletingPost.value = false
+  }
+}
+
 function formatRelativeTime(dateValue) {
   if (!dateValue) return ''
 
@@ -131,7 +214,6 @@ function formatRelativeTime(dateValue) {
   const weeks = Math.floor(difference / 604800000)
 
   if (difference < 0) return 'just now'
-
   if (minutes < 1) return 'just now'
   if (minutes < 60) return `${minutes}m`
   if (hours < 24) return `${hours}h`
@@ -224,7 +306,6 @@ async function loadComments({ append = false } = {}) {
       : requestOffset + nextComments.length
 
     hasMoreComments.value = Boolean(result?.hasMore)
-
     commentsLoaded.value = true
   } catch (error) {
     commentsError.value =
@@ -274,7 +355,6 @@ async function retryComments() {
   })
 
   await nextTick()
-
   observeCommentsEnd()
 }
 
@@ -343,9 +423,7 @@ async function toggleComments() {
 
   if (areCommentsOpen.value) {
     await loadComments()
-
     await nextTick()
-
     observeCommentsEnd()
   } else {
     closeComments()
@@ -458,7 +536,6 @@ onBeforeUnmount(() => {
             <path
               d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z"
             />
-
             <circle
               cx="12"
               cy="9"
@@ -470,6 +547,43 @@ onBeforeUnmount(() => {
             {{ postLocation.label }}
           </span>
         </button>
+
+        <div
+          v-if="canManagePost"
+          class="post-card__menu"
+        >
+          <button
+            type="button"
+            class="post-card__menu-button"
+            :disabled="isDeletingPost"
+            aria-label="Post options"
+            :aria-expanded="showPostMenu"
+            @click="togglePostMenu"
+          >
+            <span aria-hidden="true">•••</span>
+          </button>
+
+          <div
+            v-if="showPostMenu"
+            class="post-card__menu-dropdown"
+          >
+            <button
+              type="button"
+              class="post-card__menu-item post-card__menu-item--danger"
+              :disabled="isDeletingPost"
+              @click="openDeleteDialog"
+            >
+              <IconGlyph
+                name="trash"
+                :size="16"
+              />
+
+              <span>
+                Delete post
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -496,17 +610,17 @@ onBeforeUnmount(() => {
       <span
         class="post-card__sun"
         aria-hidden="true"
-      ></span>
+      />
 
       <span
         class="post-card__mountain post-card__mountain--back"
         aria-hidden="true"
-      ></span>
+      />
 
       <span
         class="post-card__mountain post-card__mountain--front"
         aria-hidden="true"
-      ></span>
+      />
     </div>
 
     <footer class="post-card__actions">
@@ -563,6 +677,14 @@ onBeforeUnmount(() => {
       role="alert"
     >
       {{ likeError }}
+    </p>
+
+    <p
+      v-if="deleteError && !showDeleteDialog"
+      class="post-action-error"
+      role="alert"
+    >
+      {{ deleteError }}
     </p>
 
     <section
@@ -644,7 +766,7 @@ onBeforeUnmount(() => {
           ref="commentsSentinel"
           class="comments-sentinel"
           aria-hidden="true"
-        ></div>
+        />
       </div>
 
       <p
@@ -686,6 +808,7 @@ onBeforeUnmount(() => {
           postLocation
         "
         class="location-map-dialog"
+        tabindex="-1"
         @keydown="handleLocationKeydown"
       >
         <button
@@ -693,7 +816,7 @@ onBeforeUnmount(() => {
           class="location-map-dialog__backdrop"
           aria-label="Close map"
           @click="closeLocationDialog"
-        ></button>
+        />
 
         <section
           class="location-map-dialog__panel"
@@ -731,7 +854,7 @@ onBeforeUnmount(() => {
               title="Google Maps location"
               loading="lazy"
               referrerpolicy="no-referrer-when-downgrade"
-            ></iframe>
+            />
           </div>
 
           <footer class="location-map-dialog__footer">
@@ -760,6 +883,74 @@ onBeforeUnmount(() => {
               Open in Google Maps
             </a>
           </footer>
+        </section>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="showDeleteDialog"
+        class="delete-post-dialog"
+        @click.self="closeDeleteDialog"
+        @keydown="handleDeleteDialogKeydown"
+      >
+        <button
+          type="button"
+          class="delete-post-dialog__backdrop"
+          aria-label="Close delete confirmation"
+          @click="closeDeleteDialog"
+        />
+
+        <section
+          class="delete-post-dialog__panel"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-post-title"
+          aria-describedby="delete-post-description"
+        >
+          <div class="delete-post-dialog__icon">
+            <IconGlyph
+              name="trash"
+              :size="21"
+            />
+          </div>
+
+          <h2 id="delete-post-title">
+            Delete post?
+          </h2>
+
+          <p id="delete-post-description">
+            Are you sure you want to delete this post?
+            This action cannot be undone.
+          </p>
+
+          <p
+            v-if="deleteError"
+            class="delete-post-dialog__error"
+            role="alert"
+          >
+            {{ deleteError }}
+          </p>
+
+          <div class="delete-post-dialog__actions">
+            <button
+              type="button"
+              class="delete-post-dialog__cancel"
+              :disabled="isDeletingPost"
+              @click="closeDeleteDialog"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              class="delete-post-dialog__confirm"
+              :disabled="isDeletingPost"
+              @click="deletePost"
+            >
+              {{ isDeletingPost ? 'Deleting...' : 'Delete post' }}
+            </button>
+          </div>
         </section>
       </div>
     </Teleport>
@@ -909,6 +1100,85 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.post-card__menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.post-card__menu-button {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.post-card__menu-button:hover,
+.post-card__menu-button:focus-visible {
+  border-color: var(--color-border);
+  background: var(--color-input);
+  color: var(--color-text);
+}
+
+.post-card__menu-button:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+.post-card__menu-dropdown {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  min-width: 10rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-soft);
+}
+
+.post-card__menu-item {
+  display: flex;
+  width: 100%;
+  min-height: 2.6rem;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.75rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 0.78rem;
+  text-align: left;
+}
+
+.post-card__menu-item:hover,
+.post-card__menu-item:focus-visible {
+  background: var(--color-input);
+}
+
+.post-card__menu-item--danger {
+  color: var(--color-coral);
+}
+
+.post-card__menu-item:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 .post-card__content {
@@ -1337,6 +1607,132 @@ onBeforeUnmount(() => {
   stroke-linejoin: round;
 }
 
+.delete-post-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.delete-post-dialog__backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: rgb(0 0 0 / 68%);
+  backdrop-filter: blur(5px);
+}
+
+.delete-post-dialog__panel {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 25rem);
+  padding: 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface-raised);
+  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 45%);
+  text-align: center;
+  animation: delete-dialog-in 160ms ease-out;
+}
+
+.delete-post-dialog__icon {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 1rem;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(
+    in srgb,
+    var(--color-coral) 12%,
+    var(--color-input)
+  );
+  color: var(--color-coral);
+}
+
+.delete-post-dialog__panel h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 1.1rem;
+  font-weight: 650;
+}
+
+.delete-post-dialog__panel p {
+  margin: 0.65rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.delete-post-dialog__error {
+  color: var(--color-coral) !important;
+}
+
+.delete-post-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.35rem;
+}
+
+.delete-post-dialog__cancel,
+.delete-post-dialog__confirm {
+  min-height: 2.6rem;
+  padding: 0 1rem;
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 650;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    opacity 160ms ease;
+}
+
+.delete-post-dialog__cancel {
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+}
+
+.delete-post-dialog__cancel:hover {
+  background: var(--color-input);
+}
+
+.delete-post-dialog__confirm {
+  border: 1px solid var(--color-coral);
+  background: var(--color-coral);
+  color: white;
+}
+
+.delete-post-dialog__confirm:hover {
+  opacity: 0.9;
+}
+
+.delete-post-dialog__cancel:disabled,
+.delete-post-dialog__confirm:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+@keyframes delete-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (max-width: 48rem) {
   .post-card__author-area {
     gap: 0.35rem;
@@ -1368,6 +1764,15 @@ onBeforeUnmount(() => {
     height: 0.7rem;
   }
 
+  .post-card__menu-button {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .post-card__menu-dropdown {
+    right: 0;
+  }
+
   .location-map-dialog {
     align-items: flex-end;
     padding: 0;
@@ -1389,6 +1794,26 @@ onBeforeUnmount(() => {
   }
 
   .location-map-dialog__open {
+    width: 100%;
+  }
+
+  .delete-post-dialog {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .delete-post-dialog__panel {
+    width: 100%;
+    border-radius: 1rem 1rem 0 0;
+    padding: 1.35rem;
+  }
+
+  .delete-post-dialog__actions {
+    flex-direction: column-reverse;
+  }
+
+  .delete-post-dialog__cancel,
+  .delete-post-dialog__confirm {
     width: 100%;
   }
 }
