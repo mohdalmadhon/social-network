@@ -50,8 +50,9 @@ func (app App) createPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	request := models.CreatePostRequest{
-		Content: r.FormValue("content"),
-		Privacy: r.FormValue("privacy"),
+		Content:  r.FormValue("content"),
+		Privacy:  r.FormValue("privacy"),
+		Location: strings.TrimSpace(r.FormValue("location")),
 	}
 	selectedIDs := r.FormValue("selectedFollowerIds")
 	if selectedIDs != "" {
@@ -122,6 +123,13 @@ func (app App) createPost(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "post content must contain 1 to 500 characters",
+		})
+		return
+	}
+	if !posts.IsValidLocation(request.Location) {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid location",
 		})
 		return
 	}

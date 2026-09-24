@@ -1,19 +1,28 @@
+```vue
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { createPost } from '@/api/posts/posts.js'
 import { getFollowers } from '@/api/users/profiles.js'
 import { normalizePostAudience } from '@/helpers/postAudience.js'
 import IconGlyph from '@/components/layout/IconGlyph.vue'
+import LocationDialog from './LocationDialog.vue'
 
 const emit = defineEmits(['post-created'])
-const props = defineProps(["avatar"]);
+
+const props = defineProps({
+  avatar: {
+    type: String,
+    default: ''
+  }
+})
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
+
 const content = ref('')
-// This is the visibility chosen for the new post. The API still receives it
-// as `privacy`, but the UI name makes its purpose easier to understand.
 const postVisibility = ref('public')
 const feeling = ref('')
+const location = ref('')
+const showLocationDialog = ref(false)
 const selectedFile = ref(null)
 const selectedFollowerIds = ref([])
 const followers = ref([])
@@ -23,21 +32,14 @@ const followersError = ref('')
 const isLoadingFollowers = ref(false)
 const previewUrl = ref('')
 const fileInput = ref(null)
-const showFeelings = ref(false)
 const message = ref('')
 const messageType = ref('success')
 const isPosting = ref(false)
 
-const feelings = ['Happy', 'Excited', 'Grateful', 'Thoughtful']
-
-const canPost = computed(() => {
-  const hasContent = content.value.trim() !== '' || selectedFile.value !== null
-  const hasSelectedFollowers = postVisibility.value !== 'selected' || selectedFollowerIds.value.length > 0
-  return hasContent && hasSelectedFollowers && !isLoadingFollowers.value
-})
-
 async function loadFollowers({ append = false } = {}) {
-  if (isLoadingFollowers.value) return
+  if (isLoadingFollowers.value) {
+    return
+  }
 
   isLoadingFollowers.value = true
   followersError.value = ''
@@ -45,18 +47,24 @@ async function loadFollowers({ append = false } = {}) {
   try {
     const offset = append ? followersOffset.value : 0
     const result = await getFollowers('', 20, offset)
+
     if (!result?.status) {
-      throw new Error(result?.message || 'Could not load your followers.')
+      throw new Error(
+        result?.message || 'Could not load your followers.'
+      )
     }
+
     const nextFollowers = normalizePostAudience(result?.data)
 
     followers.value = append
       ? [...followers.value, ...nextFollowers]
       : nextFollowers
+
     followersOffset.value = offset + nextFollowers.length
     hasMoreFollowers.value = nextFollowers.length === 20
   } catch (error) {
-    followersError.value = error.message || 'Could not load your followers.'
+    followersError.value =
+      error.message || 'Could not load your followers.'
   } finally {
     isLoadingFollowers.value = false
   }
@@ -85,15 +93,18 @@ function selectFile(event) {
   selectedFile.value = file
   message.value = ''
   messageType.value = 'success'
-  previewUrl.value = file ? URL.createObjectURL(file) : ''
+  previewUrl.value = file
+    ? URL.createObjectURL(file)
+    : ''
 }
 
 function openFilePicker() {
-  fileInput.value.click()
+  fileInput.value?.click()
 }
 
 function removeFile() {
   selectedFile.value = null
+
   if (previewUrl.value) {
     URL.revokeObjectURL(previewUrl.value)
     previewUrl.value = ''
@@ -104,23 +115,62 @@ function removeFile() {
   }
 }
 
-function selectFeeling(value) {
-  feeling.value = value
-  showFeelings.value = false
+function handleLocationSelected(value) {
+  location.value = value
+  showLocationDialog.value = false
+  message.value = ''
 }
 
+function removeLocation() {
+  location.value = ''
+}
+
+const locationLabel = computed(() => {
+  if (!location.value) {
+    return ''
+  }
+
+  return location.value.split(':')[0].trim()
+})
+
+const canPost = computed(() => {
+  const hasContent =
+    content.value.trim() !== '' ||
+    selectedFile.value !== null
+
+  const hasSelectedFollowers =
+    postVisibility.value !== 'selected' ||
+    selectedFollowerIds.value.length > 0
+
+  return (
+    hasContent &&
+    hasSelectedFollowers &&
+    !isLoadingFollowers.value &&
+    !isPosting.value
+  )
+})
+
 async function preparePost() {
-  if (!canPost.value) return
+  if (!canPost.value) {
+    return
+  }
 
   const formData = new FormData()
+
   formData.append('content', content.value)
   formData.append('privacy', postVisibility.value)
-  // Only send a private audience for the selected-followers option. This keeps
-  // old checkbox choices from making a later public post fail validation.
-  const selectedAudience = postVisibility.value === 'selected'
-    ? selectedFollowerIds.value
-    : []
-  formData.append('selectedFollowerIds', JSON.stringify(selectedAudience))
+
+  const selectedAudience =
+    postVisibility.value === 'selected'
+      ? selectedFollowerIds.value
+      : []
+
+  formData.append(
+    'selectedFollowerIds',
+    JSON.stringify(selectedAudience)
+  )
+
+  formData.append('location', location.value)
 
   if (selectedFile.value) {
     formData.append('image', selectedFile.value)
@@ -133,19 +183,27 @@ async function preparePost() {
     const result = await createPost(formData)
 
     if (!result?.status) {
-      throw new Error(result?.message || 'Could not create post')
+      throw new Error(
+        result?.message || 'Could not create post'
+      )
     }
 
     content.value = ''
     feeling.value = ''
+    location.value = ''
     postVisibility.value = 'public'
     selectedFollowerIds.value = []
+
     removeFile()
+
     emit('post-created', result.post)
+
     message.value = 'Post published successfully.'
     messageType.value = 'success'
   } catch (error) {
-    message.value = error.message || 'Could not create post'
+    message.value =
+      error.message || 'Could not create post'
+
     messageType.value = 'error'
   } finally {
     isPosting.value = false
@@ -158,103 +216,328 @@ watch(postVisibility, (value) => {
     return
   }
 
-  if (followers.value.length === 0 && !followersError.value) {
+  if (
+    followers.value.length === 0 &&
+    !followersError.value
+  ) {
     loadFollowers()
   }
 })
 </script>
 
 <template>
-  <form class="post-composer orbit-surface" @submit.prevent="preparePost">
+  <form
+    class="post-composer orbit-surface"
+    @submit.prevent="preparePost"
+  >
     <div class="post-composer__input-row">
       <div class="post-composer__avatar">
-        <img v-if="avatar" :src="avatar" alt="Profile avatar" />
-        <IconGlyph v-else name="profile" :size="18" />
+        <img
+          v-if="props.avatar"
+          :src="props.avatar"
+          alt="Profile avatar"
+        />
+
+        <IconGlyph
+          v-else
+          name="profile"
+          :size="18"
+        />
       </div>
 
-      <label class="visually-hidden" for="post-content">Post content</label>
-      <textarea id="post-content" v-model="content" maxlength="500" placeholder="What's happening in your orbit?"
-        rows="2" @input="message = ''"></textarea>
+      <label
+        class="visually-hidden"
+        for="post-content"
+      >
+        Post content
+      </label>
+
+      <textarea
+        id="post-content"
+        v-model="content"
+        maxlength="500"
+        placeholder="What's happening in your orbit?"
+        rows="2"
+        @input="message = ''"
+      />
     </div>
 
-    <div v-if="selectedFile" class="selected-file">
+    <div
+      v-if="selectedFile"
+      class="selected-file"
+    >
       <span>{{ selectedFile.name }}</span>
-      <button type="button" aria-label="Remove selected file" @click="removeFile">
-        <IconGlyph name="close" :size="16" />
+
+      <button
+        type="button"
+        aria-label="Remove selected file"
+        @click="removeFile"
+      >
+        <IconGlyph
+          name="close"
+          :size="16"
+        />
       </button>
     </div>
 
-    <div v-if="previewUrl" class="selected-preview">
-      <img :src="previewUrl" alt="Preview of the selected media" />
+    <div
+      v-if="previewUrl"
+      class="selected-preview"
+    >
+      <img
+        :src="previewUrl"
+        alt="Preview of the selected media"
+      />
+    </div>
+
+    <div
+      v-if="locationLabel"
+      class="selected-location"
+    >
+      <div class="selected-location__icon">
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z" />
+          <circle
+            cx="12"
+            cy="9"
+            r="2.25"
+          />
+        </svg>
+      </div>
+
+      <div class="selected-location__content">
+        <span>Location</span>
+        <strong>{{ locationLabel }}</strong>
+      </div>
+
+      <button
+        type="button"
+        aria-label="Remove location"
+        @click="removeLocation"
+      >
+        <IconGlyph
+          name="close"
+          :size="16"
+        />
+      </button>
     </div>
 
     <div class="post-composer__toolbar">
       <div class="post-composer__tools">
-        <button class="composer-action composer-action--media" type="button" @click="openFilePicker">
-          <IconGlyph name="image" :size="17" />
+        <button
+          class="composer-action composer-action--media"
+          type="button"
+          @click="openFilePicker"
+        >
+          <IconGlyph
+            name="image"
+            :size="17"
+          />
+
           <span>Photo / GIF</span>
         </button>
-        <input ref="fileInput" class="file-input" type="file" accept="image/jpeg,image/png,image/gif"
-          @change="selectFile" />
 
+        <input
+          ref="fileInput"
+          class="file-input"
+          type="file"
+          accept="image/jpeg,image/png,image/gif"
+          @change="selectFile"
+        />
+
+        <button
+          class="composer-action composer-action--location"
+          type="button"
+          @click="showLocationDialog = true"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z" />
+            <circle
+              cx="12"
+              cy="9"
+              r="2.25"
+            />
+          </svg>
+
+          <span>
+            {{ location ? 'Change location' : 'Location' }}
+          </span>
+        </button>
       </div>
 
       <div class="post-composer__actions">
         <label class="privacy-control">
-          <IconGlyph name="globe" :size="16" />
-          <span class="visually-hidden">Post visibility</span>
-          <select v-model="postVisibility" aria-label="Post visibility">
-            <option value="public">Public</option>
-            <option value="followers">Followers only</option>
-            <option value="selected">Selected followers</option>
+          <IconGlyph
+            name="globe"
+            :size="16"
+          />
+
+          <span class="visually-hidden">
+            Post visibility
+          </span>
+
+          <select
+            v-model="postVisibility"
+            aria-label="Post visibility"
+          >
+            <option value="public">
+              Public
+            </option>
+
+            <option value="followers">
+              Followers only
+            </option>
+
+            <option value="selected">
+              Selected followers
+            </option>
           </select>
         </label>
 
-        <p class="privacy-description" aria-live="polite">
-          <template v-if="postVisibility === 'public'">Anyone on Orbit can see this post.</template>
-          <template v-else-if="postVisibility === 'followers'">People who follow you can see this post.</template>
-          <template v-else>Only the followers you choose can see this post.</template>
+        <p
+          class="privacy-description"
+          aria-live="polite"
+        >
+          <template v-if="postVisibility === 'public'">
+            Anyone on Orbit can see this post.
+          </template>
+
+          <template v-else-if="postVisibility === 'followers'">
+            People who follow you can see this post.
+          </template>
+
+          <template v-else>
+            Only the followers you choose can see this post.
+          </template>
         </p>
 
-        <div v-if="postVisibility === 'selected'" class="selected-followers">
-          <p class="selected-followers__label">Choose approved followers</p>
-          <p v-if="isLoadingFollowers && followers.length === 0" class="selected-followers__state">Loading your followers...</p>
-          <div v-else-if="followersError && followers.length === 0" class="selected-followers__state selected-followers__state--error">
+        <div
+          v-if="postVisibility === 'selected'"
+          class="selected-followers"
+        >
+          <p class="selected-followers__label">
+            Choose approved followers
+          </p>
+
+          <p
+            v-if="isLoadingFollowers && followers.length === 0"
+            class="selected-followers__state"
+          >
+            Loading your followers...
+          </p>
+
+          <div
+            v-else-if="
+              followersError &&
+              followers.length === 0
+            "
+            class="selected-followers__state selected-followers__state--error"
+          >
             {{ followersError }}
-            <button class="load-followers-button" type="button" :disabled="isLoadingFollowers" @click="loadFollowers()">
+
+            <button
+              class="load-followers-button"
+              type="button"
+              :disabled="isLoadingFollowers"
+              @click="loadFollowers()"
+            >
               Try again
             </button>
           </div>
-          <p v-else-if="followers.length === 0" class="selected-followers__state">You have no approved followers yet.
+
+          <p
+            v-else-if="followers.length === 0"
+            class="selected-followers__state"
+          >
+            You have no approved followers yet.
           </p>
-          <div v-else class="selected-followers__list">
-            <p v-if="followersError" class="selected-followers__state selected-followers__state--error">
+
+          <div
+            v-else
+            class="selected-followers__list"
+          >
+            <p
+              v-if="followersError"
+              class="selected-followers__state selected-followers__state--error"
+            >
               {{ followersError }}
-              <button class="load-followers-button" type="button" :disabled="isLoadingFollowers" @click="loadMoreFollowers">
+
+              <button
+                class="load-followers-button"
+                type="button"
+                :disabled="isLoadingFollowers"
+                @click="loadFollowers"
+              >
                 Try again
               </button>
             </p>
-            <label v-for="person in followers" :key="person.id" class="selected-follower">
-              <input v-model="selectedFollowerIds" type="checkbox" :value="person.id" />
-              <span>{{ person.name }}</span>
+
+            <label
+              v-for="person in followers"
+              :key="person.id"
+              class="selected-follower"
+            >
+              <input
+                v-model="selectedFollowerIds"
+                type="checkbox"
+                :value="person.id"
+              />
+
+              <span>
+                {{ person.name }}
+              </span>
             </label>
-            <button v-if="hasMoreFollowers" class="load-followers-button" type="button"
-              :disabled="isLoadingFollowers" @click="loadMoreFollowers">
-              {{ isLoadingFollowers ? 'Loading…' : 'Show more followers' }}
+
+            <button
+              v-if="hasMoreFollowers"
+              class="load-followers-button"
+              type="button"
+              :disabled="isLoadingFollowers"
+              @click="loadMoreFollowers"
+            >
+              {{
+                isLoadingFollowers
+                  ? 'Loading...'
+                  : 'Show more followers'
+              }}
             </button>
           </div>
         </div>
 
-        <button class="post-button" type="submit" :disabled="!canPost || isPosting">
-          {{ isPosting ? 'Posting…' : 'Post' }}
+        <button
+          class="post-button"
+          type="submit"
+          :disabled="!canPost"
+        >
+          {{ isPosting ? 'Posting...' : 'Post' }}
         </button>
       </div>
     </div>
 
-    <p v-if="message" class="post-composer__message"
-      :class="{ 'post-composer__message--error': messageType === 'error' }" role="status">
+    <p
+      v-if="message"
+      class="post-composer__message"
+      :class="{
+        'post-composer__message--error':
+          messageType === 'error'
+      }"
+      role="status"
+    >
       {{ message }}
     </p>
+
+    <LocationDialog
+      v-if="showLocationDialog"
+      :model-value="location"
+      @update:model-value="handleLocationSelected"
+      @close="showLocationDialog = false"
+    />
   </form>
 </template>
 
@@ -281,15 +564,15 @@ watch(postVisibility, (value) => {
 }
 
 .post-composer__avatar {
-  width: 2.75rem;
-  height: 2.75rem;
-  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
   overflow: hidden;
-  border-radius: 50%;
   border: 2px solid var(--color-border);
+  border-radius: 50%;
   background: var(--gradient-action);
   color: white;
   box-shadow: var(--shadow-soft);
@@ -333,6 +616,24 @@ textarea::placeholder {
   font-size: 0.875rem;
 }
 
+.selected-file span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected-file button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
 .selected-preview {
   margin: var(--space-3) 0 0 calc(var(--touch-target) + var(--space-3));
   overflow: hidden;
@@ -348,20 +649,98 @@ textarea::placeholder {
   object-fit: contain;
 }
 
-.selected-file span {
+.selected-location {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: var(--space-3) 0 0 calc(var(--touch-target) + var(--space-3));
+  padding: 0.7rem 0.8rem;
+  border: 1px solid color-mix(
+    in srgb,
+    var(--color-violet) 30%,
+    var(--color-border)
+  );
+  border-radius: 0.8rem;
+  background: color-mix(
+    in srgb,
+    var(--color-violet) 7%,
+    var(--color-input)
+  );
+}
+
+.selected-location__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  flex-shrink: 0;
+  border-radius: 0.65rem;
+  background: color-mix(
+    in srgb,
+    var(--color-violet) 14%,
+    var(--color-input)
+  );
+  color: var(--color-violet-soft);
+}
+
+.selected-location__icon svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.selected-location__content {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.selected-location__content span {
+  color: var(--color-text-faint);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.selected-location__content strong {
   overflow: hidden;
+  color: var(--color-text);
+  font-size: 0.82rem;
+  font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.selected-file button {
-  min-width: var(--touch-target);
-  min-height: var(--touch-target);
+.selected-location > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  padding: 0;
   border: 0;
+  border-radius: 0.55rem;
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--color-text-faint);
   cursor: pointer;
-  font-size: 1.4rem;
+}
+
+.selected-location > button:hover {
+  background: color-mix(
+    in srgb,
+    var(--color-coral) 12%,
+    transparent
+  );
+  color: var(--color-coral);
 }
 
 .post-composer__toolbar {
@@ -428,6 +807,29 @@ textarea::placeholder {
   color: var(--color-text-muted);
 }
 
+.composer-action--location {
+  color: var(--color-violet-soft);
+}
+
+.composer-action--location:hover {
+  background: color-mix(
+    in srgb,
+    var(--color-violet) 9%,
+    var(--color-input)
+  );
+  color: var(--color-violet-soft);
+}
+
+.composer-action--location svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .file-input {
   position: absolute;
   width: 1px;
@@ -435,45 +837,6 @@ textarea::placeholder {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
-}
-
-.composer-action--feeling>span:first-child {
-  color: var(--color-amber);
-  font-size: 1.4rem;
-}
-
-.feeling-picker {
-  position: relative;
-}
-
-.feeling-menu {
-  position: absolute;
-  top: calc(100% + var(--space-2));
-  left: 0;
-  z-index: 5;
-  display: grid;
-  min-width: 10rem;
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-small);
-  background: var(--color-surface-raised);
-  box-shadow: var(--shadow-raised);
-}
-
-.feeling-menu button {
-  min-height: var(--touch-target);
-  padding-inline: var(--space-3);
-  border: 0;
-  border-radius: var(--radius-small);
-  background: transparent;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  text-align: left;
-}
-
-.feeling-menu button:hover {
-  background: var(--color-input);
-  color: var(--color-text);
 }
 
 .privacy-control {
@@ -510,8 +873,8 @@ textarea::placeholder {
 }
 
 .selected-followers {
-  flex: 1 1 100%;
   display: grid;
+  flex: 1 1 100%;
   gap: var(--space-2);
   padding: var(--space-3);
   border: 1px solid var(--color-border);
@@ -614,4 +977,11 @@ textarea::placeholder {
     order: -1;
   }
 }
+
+@media (max-width: 36rem) {
+  .selected-location {
+    margin-left: 0;
+  }
+}
 </style>
+```

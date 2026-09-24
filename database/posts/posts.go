@@ -5,7 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"social/internal/models"
+	"strconv"
+	"strings"
 )
+
+const maxLocationLength = 200
 
 var (
 	ErrSelectedFollowersRequired = errors.New("select at least one follower")
@@ -42,9 +46,9 @@ func CreatePost(db *sql.DB, userID int, request models.CreatePostRequest) (model
 	}
 
 	result, err := tx.Exec(`
-	INSERT INTO posts (type, title, content, image_path, user_id, group_id, privacy)
-	VALUES ('post', '', ?, ?, ?, NULL, ?)
-	`, request.Content, request.ImagePath, userID, request.Privacy)
+	INSERT INTO posts (type, title, content, image_path, user_id, group_id, privacy, location)
+	VALUES ('post', '', ?, ?, ?, NULL, ?, ?)
+	`, request.Content, request.ImagePath, userID, request.Privacy, nullableText(request.Location))
 	if err != nil {
 		return models.Post{}, err
 	}
@@ -85,6 +89,7 @@ func GetPostByID(db *sql.DB, postID int64) (models.Post, error) {
 			posts.content,
 			posts.image_path,
 			posts.privacy,
+			COALESCE(posts.location, ''),
 			posts.created_at,
 			posts.like_count,
 			posts.comment_count
@@ -100,6 +105,7 @@ func GetPostByID(db *sql.DB, postID int64) (models.Post, error) {
 		&post.Content,
 		&post.ImagePath,
 		&post.Privacy,
+		&post.Location,
 		&post.CreatedAt,
 		&post.LikeCount,
 		&post.CommentCount,
@@ -118,6 +124,7 @@ func ListFeedPosts(db *sql.DB, viewerID int, pagination ...int) ([]models.Post, 
 			posts.content,
 			posts.image_path,
 			posts.privacy,
+			COALESCE(posts.location, ''),
 			posts.created_at,
 			posts.like_count,
 			EXISTS (
@@ -180,6 +187,7 @@ func ListFeedPosts(db *sql.DB, viewerID int, pagination ...int) ([]models.Post, 
 			&post.Content,
 			&post.ImagePath,
 			&post.Privacy,
+			&post.Location,
 			&post.CreatedAt,
 			&post.LikeCount,
 			&post.Liked,
@@ -230,4 +238,37 @@ func ValidateSelectedIDs(privacy string, ids []int) error {
 		return fmt.Errorf("selected followers are only allowed for selected privacy")
 	}
 	return nil
+}
+
+func nullableText(value string) any {
+	if value == "" {
+		return nil
+	}
+	return value
+}
+
+func IsValidLocation(value string) bool {
+	if value == "" {
+		return true
+	}
+	if len([]rune(value)) > maxLocationLength {
+		return false
+	}
+
+	parts := strings.Split(value, ":")
+	if len(parts) != 3 || strings.TrimSpace(parts[0]) == "" {
+		return false
+	}
+
+	lat, err := strconv.ParseFloat(parts[1], 64)
+	if err != nil || !(lat >= -90 && lat <= 90) {
+		return false
+	}
+
+	lon, err := strconv.ParseFloat(parts[2], 64)
+	if err != nil || !(lon >= -180 && lon <= 180) {
+		return false
+	}
+
+	return true
 }
