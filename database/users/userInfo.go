@@ -2,6 +2,7 @@ package users
 
 import (
 	"database/sql"
+	"errors"
 
 	"social/internal/models"
 )
@@ -232,3 +233,19 @@ func DeleteUser(db *sql.DB, userID int) error {
 	_, err := db.Exec(`delete from user WHERE id = ?`, userID)
 	return err
 }
+
+func DeleteUserAvatar(db *sql.DB, userID int) (string, error) {
+	var path string
+	if err := db.QueryRow(`
+		SELECT avatar_path FROM profile WHERE user_id = ?
+	`, userID).Scan(&path); err != nil {
+		return "",err
+	}
+
+	if path == "avatars/default.png" {
+		return "", errors.New("user does not have an avatar")
+	}
+
+	_, err := db.Exec(`update profile set avatar_path = 'avatars/default.png' WHERE user_id = ?`, userID)
+	return path,err
+} 

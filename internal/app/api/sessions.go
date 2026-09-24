@@ -12,6 +12,30 @@ import (
 	"time"
 )
 
+/*
+Handler used to log a user into their account.
+
+Method:
+    POST
+
+-> Data provided must match the json format provided in models.UserLogger
+
+-> The identifier can be the user's username or email.
+
+-> The password provided will be compared with the hashed password stored in the database.
+
+-> in case of error there will be a respond written back and can me checked by
+ - status boolean
+ - message string
+
+-> in case of success a respond will be written back
+ - status must be true
+ - message: success message
+
+-> a authentication token will be created and stored in a HTTP-only cookie
+ - cookie name: token
+ - cookie expires after 30 days
+*/
 func (app *App) LoggingUser(w http.ResponseWriter, r *http.Request) {
 	var logger models.UserLogger
 
@@ -85,6 +109,7 @@ func (app *App) LoggingUser(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// this function should be deleted, it is used but wrongly
 func (app *App) AuthorizeSession(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -95,6 +120,29 @@ func (app *App) AuthorizeSession(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+/*
+Handler used to authorize the current user's session.
+
+Method:
+    GET
+
+-> no data should be provided
+
+-> this handler should only be called after the authentication middleware
+   has verified the user's session.
+
+-> in case of error there will be a respond written back and can me checked by
+ - status boolean
+ - message string
+
+-> in case of success a respond will be written back
+ - status must be true
+ - message: valid session
+
+-> This handler should not be used directly for authentication.
+   The authentication middleware should be responsible for validating
+   the session.
+*/
 func (app *App) DeleteSession(w http.ResponseWriter, r *http.Request) {
 	if cookie, err := r.Cookie("token"); err == nil {
 		if payload, verifyErr := tokens.VerifyToken(cookie.Value); verifyErr == nil && app.Realtime != nil {

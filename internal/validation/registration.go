@@ -8,6 +8,14 @@ import (
 	"time"
 )
 
+/*
+this function used to validate user data when registration [except the avatar] and it also normalize the data
+by calling NormalizeRegisterData function.
+
+@params userData *UserRegistration
+
+@returns error -> nil if success
+*/
 func ValidateRegisterData(userData *models.UserRegistration) error {
 	NormalizeRegisterData(userData)
 
@@ -41,7 +49,17 @@ func ValidateRegisterData(userData *models.UserRegistration) error {
 	return nil
 }
 
-// take the data and normilize it for the database and the validation as removing trail and leading spaces and capitalize or lowerize the chracters
+/*
+take the data and normilize it for the database and the validation as removing trail and leading spaces and capitalize or lowerize the chracters
+
+Parameters:
+
+	userData *models.UserRegistration
+
+Returns:
+
+	void
+*/
 func NormalizeRegisterData(userData *models.UserRegistration) {
 	// trim spaces
 	userData.FirstName = strings.Trim(userData.FirstName, " ")
@@ -64,10 +82,21 @@ func NormalizeRegisterData(userData *models.UserRegistration) {
 	if userData.Email != "" {
 		userData.Email = strings.ToLower(userData.Email)
 	}
-	
 
 }
 
+/*
+This function is used to validate names (first and last name).
+
+Parameters:
+
+	name string
+
+Returns:
+
+	error
+		-> nil if sucess
+*/
 func validateNames(name *string) error {
 	if len(*name) < 2 || len(*name) > 15 {
 		return errors.New("Error: first/last name must be between 3 and 15 characters")
@@ -85,6 +114,18 @@ func validateNames(name *string) error {
 	return nil
 }
 
+/*
+this function is used to validate username by checking forbidden characters and length
+
+Paramters:
+
+	username *string
+
+Returns:
+
+	error
+		-> nil if sucess
+*/
 func validateUserName(username *string) error {
 	if len(*username) == 0 {
 		return nil
@@ -105,6 +146,18 @@ func validateUserName(username *string) error {
 	return nil
 }
 
+/*
+function used to validate email by comparing it to the REGEX and checking the length
+
+Parameters:
+
+	email *string
+
+Returns:
+
+	error
+		-> nil if sucess
+*/
 func validateEmail(email *string) error {
 	if len(*email) < 5 || len(*email) > 75 {
 		return errors.New("Error: email length must be between 5 and 75 characters")
@@ -122,6 +175,19 @@ func validateEmail(email *string) error {
 	return nil
 }
 
+/*
+function to check date of birth. Age calculated should be less than or equal to 120 and more than or equal to 12
+Also the date provided cannot by more than the current date
+
+Parameters:
+
+	dob *time.Time
+
+Returns:
+
+	error
+		-> nil if sucess
+*/
 func validateDOB(dob *time.Time) error {
 	now := time.Now()
 
@@ -143,6 +209,18 @@ func validateDOB(dob *time.Time) error {
 	return nil
 }
 
+/*
+this function check the plain password provided by the user by checking the length and that it has numberatic valuea and selected special characters
+
+Parameters:
+
+	pass string
+
+Returns:
+
+	error
+		-> nil if success
+*/
 func validatePassword(pass string) error {
 	if len(pass) < 8 {
 		return errors.New("invalid password: password must be at least 8 characters long")
@@ -191,6 +269,17 @@ func validatePassword(pass string) error {
 	return nil
 }
 
+/*
+this function is only being used during registration and it only checks the length of the about (bio) provided
+
+Parameters:
+
+	about *string
+
+Returns:
+	error
+		-> nil if success
+*/
 func validateAbout(about *string) error {
 	if len(*about) == 0 {
 		return nil

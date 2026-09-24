@@ -5,6 +5,16 @@ import (
 	"social/internal/models"
 )
 
+/*
+this function is used to validate the updated info. Most of the time you will get same data with small changes as the database use PUT
+
+Parameters:
+	userData *models.UserRegistration
+
+Returns:
+	error
+		-> nil if success
+*/
 func ValidateUpdateInfo(userData *models.UserRegistration) error {
 
 	NormalizeRegisterData(userData)

@@ -12,6 +12,40 @@ import (
 	"strconv"
 )
 
+/*
+Handler used to get another user's profile data.
+
+Method:
+    GET
+
+-> data should be provided using
+ - query parameter: id
+
+-> the id should be the user ID of the profile that needs to be viewed
+
+-> if the profile is public OR the current user is an accepted follower
+ - the full profile data will be provided
+ - showProfile will be true
+
+-> if the profile is private and the current user is not following
+ - limited profile data will be provided
+ - showProfile will be false
+
+-> followStatus shows the current follow status
+ - 1 = following
+ - 0 = follow request sent
+ - -1 = not following
+
+-> in case of error there will be a respond written back and can me checked by
+ - status boolean
+ - message string
+
+-> in case of success a respond will be written back
+ - status must be true
+ - showProfile boolean
+ - followStatus integer
+ - data : profile data
+*/
 func (app *App) GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {
@@ -138,6 +172,35 @@ func (app *App) GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+/*
+Handler used to send a follow request to another user.
+
+Method:
+    POST
+
+-> data should be provided using
+ - query parameter: targetid
+
+-> if the target user has a private profile
+ - a follow request will be created
+ - followStatus will be 0
+
+-> if the target user has a public profile
+ - the follow will be created directly
+ - followStatus will be 1
+
+-> if the target user has a private profile
+ - a follow request notification will also be sent
+
+-> in case of error there will be a respond written back and can me checked by
+ - status boolean
+ - message string
+
+-> in case of success a respond will be written back
+ - status must be true
+ - followStatus integer
+ - message : request sent
+*/
 func (app *App) RequestFollow(w http.ResponseWriter, r *http.Request) {
 	followerID, ok := r.Context().Value("userID").(int)
 	if !ok {
@@ -219,6 +282,26 @@ func (app *App) RequestFollow(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+/*
+Handler used to cancel a follow request.
+
+Method:
+    DELETE
+
+-> data should be provided using
+ - query parameter: targetid
+
+-> the targetid should be the user ID of the user whose follow request will be removed
+
+-> in case of error there will be a respond written back and can me checked by
+ - status boolean
+ - message string
+
+-> in case of success a respond will be written back
+ - status must be true
+ - followStatus will be -1
+ - message : request removed
+*/
 func (app *App) CancelRequest(w http.ResponseWriter, r *http.Request) {
 	followerID, ok := r.Context().Value("userID").(int)
 	if !ok {
@@ -255,6 +338,25 @@ func (app *App) CancelRequest(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+/*
+Handler used to remove a follower from the current user's followers.
+
+Method:
+    DELETE
+
+-> data should be provided using
+ - query parameter: followerid
+
+-> the followerid should be the user ID of the follower that needs to be removed
+
+-> in case of error there will be a respond written back and can me checked by
+ - status boolean
+ - message string
+
+-> in case of success a respond will be written back
+ - status must be true
+ - message : follower removed
+*/
 func (app *App) RemoveFollower(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {
@@ -297,6 +399,37 @@ func (app *App) RemoveFollower(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+/*
+Handler used to get the followers of a user.
+
+Method:
+    GET
+
+-> data can be provided using
+ - query parameter: targetid (optional)
+ - query parameter: count (optional)
+ - query parameter: offset
+
+-> if targetid is provided
+ - the followers of that user will be returned
+
+-> if targetid is not provided
+ - the followers of the current logged in user will be returned
+
+-> count is used to control how many followers are returned
+ - default value is used if count is not provided
+ - the maximum value is limited by maxPageSize
+
+-> offset is used for pagination
+
+-> in case of error there will be a respond written back and can me checked by
+ - status boolean
+ - message string
+
+-> in case of success a respond will be written back
+ - status must be true
+ - data : list of followers
+*/
 func (app *App) GetFollowers(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {
@@ -388,6 +521,34 @@ func (app *App) GetFollowers(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+/*
+Handler used to get the users that a user is following.
+
+Method:
+    GET
+
+-> data can be provided using
+ - query parameter: targetid (optional)
+ - query parameter: offset
+
+-> if targetid is provided
+ - the following users of that user will be returned
+
+-> if targetid is not provided
+ - the following users of the current logged in user will be returned
+
+-> offset is used for pagination
+
+-> the result is limited to 20 users per request
+
+-> in case of error there will be a respond written back and can me checked by
+ - status boolean
+ - message string
+
+-> in case of success a respond will be written back
+ - status must be true
+ - data : list of following users
+*/
 func (app *App) GetFollowing(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {

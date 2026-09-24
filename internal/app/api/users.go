@@ -11,6 +11,21 @@ import (
 	"social/internal/validation"
 )
 
+/*
+Handler used to get current session user data. no data should be provided
+
+Method:
+
+	GET
+
+-> in case of error there will be a respond written back and can me checked by
+  - status boolean
+  - message string
+
+-> in case of success a respond will be written back
+  - status must be true to get the data
+  - data : data provided
+*/
 func (app *App) GetUserData(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {
@@ -82,6 +97,24 @@ func (app *App) GetUserData(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+/*
+Handler used to update user personal information AND the about (BIO). every time the data provided should be all the data. updated or not
+This Handler also validate the data before inserting.
+
+METHOD:
+
+	PATCH
+
+-> Data provided must match the json format provided in models.UserRegistraion
+
+-> in case of error there will be a respond written back and can me checked by
+  - status boolean
+  - message string
+
+-> in case of success a respond will be written back
+  - status must be true to get the data
+  - message: success message
+*/
 func (app *App) UpdateUserInfo(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {
@@ -141,6 +174,24 @@ func (app *App) UpdateUserInfo(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+/*
+Handler used to Update or DELETE current user avatars. It uses PATCH method because even if the avatar is deleted it will be just updated to the default avatars.
+
+METHOD:
+
+	PATCH
+
+-> TO DELETE: provide parameter named delete and give it value true
+-> TO UPDATE: provide the multiheader
+
+-> in case of error there will be a respond written back and can me checked by
+  - status boolean
+  - message string
+
+-> in case of success a respond will be written back
+  - status must be true to get the data
+  - message: success message
+*/
 func (app *App) UpdateUserAvatar(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 
@@ -152,6 +203,30 @@ func (app *App) UpdateUserAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	delete := r.URL.Query().Get("delete")
+	if delete == "true" {
+		path, err := users.DeleteUserAvatar(app.DB, userID)
+		if err != nil {
+			helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+				"status":  false,
+				"message": "could not delete avatar",
+			})
+			return
+		}
+
+		if err := helpers.DeleteAvatar(path); err != nil {
+			helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+				"status":  false,
+				"message": "could not delete user avatar",
+			})
+			return
+		}
+		helpers.WriteJson(w, http.StatusOK, map[string]any{
+			"status":  true,
+			"message": "avatar deleted",
+		})
+		return
+	}
 	file, header, err := r.FormFile("avatar")
 	if err != nil {
 		helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
@@ -207,6 +282,20 @@ func (app *App) UpdateUserAvatar(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+/*
+Handler used to get the current user's About/BIO information. no data should be provided
+
+Method:
+    GET
+
+-> in case of error there will be a respond written back and can me checked by
+ - status boolean
+ - message string
+
+-> in case of success a respond will be written back
+ - status must be true to get the data
+ - data: user about data
+*/
 func (app *App) GetUserAbout(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {
@@ -232,6 +321,22 @@ func (app *App) GetUserAbout(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+/*
+Handler used to update the current user's About/BIO information.
+
+Method:
+    PATCH
+
+-> Data provided must match the json format provided in models.UserAbout
+
+-> in case of error there will be a respond written back and can me checked by
+ - status boolean
+ - message string
+
+-> in case of success a respond will be written back
+ - status must be true
+ - message: success message
+*/
 func (app *App) UpdateUserAbout(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {
@@ -267,6 +372,28 @@ func (app *App) UpdateUserAbout(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+/*
+Handler used to check if a username or email is already registered.
+
+Method:
+    POST
+
+-> Data provided must match the following JSON format:
+ - type string -> "name" or "email"
+ - input string -> username or email to check
+
+-> type must be:
+ - "name" to check username availability
+ - "email" to check email availability
+
+-> in case of error there will be a respond written back and can me checked by
+ - status boolean
+ - message string
+
+-> in case of success a respond will be written back
+ - status must be true
+ - avilable boolean -> true if the username/email is available
+*/
 func (app *App) CheckRegistration(w http.ResponseWriter, r *http.Request) {
 	type Request struct {
 		Type  string `json:"type"`
@@ -315,6 +442,26 @@ func (app *App) CheckRegistration(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+/*
+Handler used to permanently delete the current user's account.
+
+Method:
+    DELETE
+
+-> no data should be provided
+
+-> the current user's account will be deleted
+
+-> the user's token cookie will also be removed after successful deletion
+
+-> in case of error there will be a respond written back and can me checked by
+ - status boolean
+ - message string
+
+-> in case of success a respond will be written back
+ - status must be true
+ - message: success message
+*/
 func (app *App) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 

@@ -20,6 +20,41 @@ type App struct {
 	EmailPassword string
 }
 
+/*
+Handler used to register a new user.
+
+Method:
+    POST
+
+-> data should be provided using
+ - multipart/form-data
+
+-> required form data
+ - FirstName string
+ - LastName string
+ - UserName string
+ - Email string
+ - Password string
+ - About string
+ - dob string (format: YYYY-MM-DD)
+ - VerifyToken string
+ - Avatar file (optional)
+
+-> the handler will
+ - validate the registration data
+ - check if the email was verified using the VerifyToken
+ - save the avatar if provided
+ - hash the password
+ - register the user in the database
+
+-> in case of error there will be a respond written back and can me checked by
+ - status boolean (false)
+ - message string
+
+-> in case of success a respond will be written back
+ - status boolean (true)
+ - message string
+*/
 func (app *App) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(10 << 20)
 

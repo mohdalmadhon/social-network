@@ -61,7 +61,7 @@ async function deleteAvatar() {
   error.value = ''
   deleting.value = true
   try {
-    const response = await fetch('/api/profile/avatar', { method: 'DELETE', credentials: 'include' })
+    const response = await fetch('/api/profile/avatar?delete=true', { method: 'PATCH', credentials: 'include' })
     const result = await response.json()
     if (!checkSessionResponse(response)) {
       router.replace('/login')
@@ -72,7 +72,7 @@ async function deleteAvatar() {
       URL.revokeObjectURL(objectUrl)
       objectUrl = ''
     }
-    preview.value = ''
+    preview.value = '/uploads/avatars/default.png'
     emit('change', null)
     addNotification(result.message || 'Avatar deleted successfully', 'success')
   } catch (err) {
@@ -99,7 +99,7 @@ onUnmounted(() => {
           <IconGlyph name="upload" :size="16" />
           {{ uploading ? 'Uploading...' : 'Change avatar' }}
         </button>
-        <button v-if="preview" type="button" class="avatar-delete" :disabled="uploading || deleting"
+        <button v-if="preview && preview != '/uploads/avatars/default.png' " type="button" class="avatar-delete" :disabled="uploading || deleting"
           @click="deleteAvatar">
           <IconGlyph name="trash" :size="16" />
           {{ deleting ? 'Deleting...' : 'Delete avatar' }}
