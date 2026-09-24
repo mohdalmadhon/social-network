@@ -10,6 +10,7 @@ type Comment struct {
 	AvatarPath string    `json:"avatarPath"`
 	Content    string    `json:"content"`
 	ImagePath  string    `json:"-"`
+	Own        bool      `json:"own"`
 	CreatedAt  time.Time `json:"createdAt"`
 }
 

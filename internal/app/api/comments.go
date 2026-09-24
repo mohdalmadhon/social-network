@@ -5,9 +5,15 @@ import (
 	"errors"
 	"net/http"
 	"social/database/comments"
+	"social/database/posts"
 	"social/internal/models"
 	"strconv"
 	"strings"
+)
+
+var (
+	ErrPostNotVisible  = errors.New("post not visible")
+	ErrCommentNotFound = errors.New("comment not found")
 )
 
 const maxCommentBodySize = 4 << 10
@@ -71,6 +77,9 @@ func (app App) listComments(w http.ResponseWriter, r *http.Request, userID int, 
 		return
 	}
 	result, hasMore := trimPage(result, page, true)
+	for i := range result {
+		result[i].Own = result[i].UserID == userID
+	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status":     true,
@@ -125,8 +134,60 @@ func (app App) createComment(w http.ResponseWriter, r *http.Request, userID int,
 		return
 	}
 
+	comment.Own = true
+
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"status":  true,
 		"comment": comment,
+	})
+}
+
+func (app App) DeleteComment(w http.ResponseWriter, r *http.Request) {
+	userID, err := authenticatedUserID(r)
+	if err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]any{
+			"status":  false,
+			"message": "authentication required",
+		})
+		return
+	}
+
+	postID, err := strconv.ParseInt(r.PathValue("postID"), 10, 64)
+	if err != nil || postID <= 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid post id",
+		})
+		return
+	}
+
+	commentID, err := strconv.ParseInt(r.PathValue("commentID"), 10, 64)
+	if err != nil || commentID <= 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"status":  false,
+			"message": "invalid comment id",
+		})
+		return
+	}
+
+	err = posts.DeleteComment(app.DB, userID, postID, commentID)
+	if errors.Is(err, posts.ErrCommentNotFound) {
+		writeJSON(w, http.StatusNotFound, map[string]any{
+			"status":  false,
+			"message": "comment not found",
+		})
+		return
+	}
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"status":  false,
+			"message": "could not delete comment",
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":  true,
+		"message": "comment deleted",
 	})
 }

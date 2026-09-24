@@ -2,21 +2,29 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout.vue'
+
 import FeedSidebar from '@/components/posts/FeedSidebar.vue'
+
 import PostCard from '@/components/posts/PostCard.vue'
+
 import PostComposer from '@/components/posts/PostComposer.vue'
 
 import { getPosts } from '@/api/posts/posts.js'
+
 import { addNotification } from '@/data/notifications'
+
 import { getUserData } from '@/api/users/personalProfile'
 
 const posts = ref([])
 
 const isLoading = ref(true)
+
 const isLoadingMore = ref(false)
+
 const hasMorePosts = ref(false)
 
 const feedError = ref('')
+
 const feedSentinel = ref(null)
 
 const FEED_PAGE_SIZE = 20
@@ -43,8 +51,6 @@ async function getData() {
     }
 
     user.value = { ...result.data }
-
-    console.log(user.value)
   } catch (err) {
     addNotification(err?.message || err || 'could not get data')
   }
@@ -87,34 +93,20 @@ function toCardPost(post, index = 0) {
   return {
     id: post.id,
     authorId: post.userId,
-
     author: post.author || 'Orbit member',
-
     avatarColor:
       avatarColors[index % avatarColors.length],
-
     avatarPath: post.avatarPath || '',
-
     time: formatPostTime(post.createdAt),
-
     privacy: privacyLabel(post.privacy),
-
     content: post.content || '',
-
     likes: post.likeCount || 0,
-
     liked: Boolean(post.liked),
-
     comments: post.commentCount || 0,
-
     imagePath: post.imagePath || '',
-
     location: post.location || '',
-
     locationLabel: formatLocation(post.location),
-
     hasMedia: false,
-
     mediaDescription: '',
   }
 }
@@ -142,12 +134,13 @@ async function loadPosts({ append = false } = {}) {
     })
 
     const nextPosts = (result?.posts || []).map(
-      (post, index) => toCardPost(
-        post,
-        append
-          ? posts.value.length + index
-          : index
-      )
+      (post, index) =>
+        toCardPost(
+          post,
+          append
+            ? posts.value.length + index
+            : index
+        )
     )
 
     posts.value = append
@@ -195,8 +188,6 @@ function observeFeedEnd() {
       }
     },
     {
-      // Start loading before the user reaches
-      // the end of the feed.
       rootMargin: '0px 0px 320px',
     }
   )
@@ -207,7 +198,6 @@ function observeFeedEnd() {
 onMounted(async () => {
   await loadPosts()
   await getData()
-
   observeFeedEnd()
 })
 
@@ -303,12 +293,14 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: flex-start;
   gap: var(--space-5);
+  min-width: 0;
 }
 
 .home-feed {
   display: grid;
   width: 100%;
   max-width: 48rem;
+  min-width: 0;
   gap: var(--space-4);
 }
 
@@ -326,13 +318,10 @@ onBeforeUnmount(() => {
 .feed-state button {
   margin-top: var(--space-3);
   padding: var(--space-2) var(--space-4);
-
   border: 0;
   border-radius: 999px;
-
   background: var(--gradient-action);
   color: white;
-
   cursor: pointer;
   font-weight: 700;
 }
@@ -346,12 +335,9 @@ onBeforeUnmount(() => {
 .feed-load-state {
   display: flex;
   justify-content: center;
-
   margin: 0;
   padding: var(--space-3) 0 var(--space-4);
-
   color: var(--color-text-muted);
-
   font-size: 0.8125rem;
   text-align: center;
 }

@@ -38,3 +38,9 @@ export async function createComment(postId, comment) {
     body: JSON.stringify({ content: comment.content }),
   })
 }
+
+export async function deleteComment(postId, commentId) {
+  return requestComments(`/api/posts/${postId}/comments/${commentId}`, {
+    method: 'DELETE',
+  })
+}

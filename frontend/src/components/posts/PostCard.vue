@@ -1,10 +1,17 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 import { useRoute } from 'vue-router'
+
 import CommentInput from '@/components/comments/CommentInput.vue'
 import CommentPreview from '@/components/comments/CommentPreview.vue'
 import IconGlyph from '@/components/layout/IconGlyph.vue'
-import { createComment, getComments } from '@/api/posts/comments.js'
+
+import {
+  createComment,
+  deleteComment,
+  getComments,
+} from '@/api/posts/comments.js'
+
 import { setPostLike } from '@/api/posts/posts.js'
 
 const props = defineProps({
@@ -30,10 +37,16 @@ const commentsList = ref(null)
 const commentsSentinel = ref(null)
 const commentsOffset = ref(0)
 const isSubmittingComment = ref(false)
+
+const deletingCommentIds = ref([])
+const deletedCommentCount = ref(0)
+const commentDeleteError = ref('')
+
 const isLiked = ref(Boolean(props.post.liked))
 const likeCount = ref(Number(props.post.likes) || 0)
 const isLikePending = ref(false)
 const likeError = ref('')
+
 const showLocationDialog = ref(false)
 
 const showPostMenu = ref(false)
@@ -51,10 +64,14 @@ const canManagePost = computed(() => {
 
 const commentCount = computed(() => {
   const postComments = Number(props.post.comments) || 0
-  return Math.max(postComments, comments.value.length)
+
+  return Math.max(
+    postComments,
+    comments.value.length + deletedCommentCount.value,
+  ) - deletedCommentCount.value
 })
 
-const imageUrl = (imagePath) => {
+function imageUrl(imagePath) {
   if (!imagePath) return ''
 
   return imagePath.startsWith('/')
@@ -138,6 +155,7 @@ function openDeleteDialog() {
   if (!canManagePost.value || isDeletingPost.value) return
 
   closePostMenu()
+
   deleteError.value = ''
   showDeleteDialog.value = true
 }
@@ -187,6 +205,7 @@ async function deletePost() {
     }
 
     showDeleteDialog.value = false
+
     emit('deleted', props.post.id)
   } catch (error) {
     deleteError.value =
@@ -214,6 +233,7 @@ function formatRelativeTime(dateValue) {
   const weeks = Math.floor(difference / 604800000)
 
   if (difference < 0) return 'just now'
+
   if (minutes < 1) return 'just now'
   if (minutes < 60) return `${minutes}m`
   if (hours < 24) return `${hours}h`
@@ -355,6 +375,7 @@ async function retryComments() {
   })
 
   await nextTick()
+
   observeCommentsEnd()
 }
 
@@ -390,6 +411,51 @@ async function addComment(comment) {
   }
 }
 
+async function removeComment(commentId) {
+  if (
+    deletingCommentIds.value.includes(commentId)
+  ) {
+    return
+  }
+
+  deletingCommentIds.value.push(commentId)
+  commentDeleteError.value = ''
+
+  try {
+    const result = await deleteComment(
+      props.post.id,
+      commentId,
+    )
+
+    if (!result) return
+
+    if (!result.status) {
+      throw new Error(
+        result.message || 'Could not delete comment',
+      )
+    }
+
+    comments.value = comments.value.filter(
+      (comment) => comment.id !== commentId,
+    )
+
+    deletedCommentCount.value += 1
+
+    commentsOffset.value = Math.max(
+      0,
+      commentsOffset.value - 1,
+    )
+  } catch (error) {
+    commentDeleteError.value =
+      error.message || 'Could not delete comment.'
+  } finally {
+    deletingCommentIds.value =
+      deletingCommentIds.value.filter(
+        (id) => id !== commentId,
+      )
+  }
+}
+
 async function toggleLike() {
   if (isLikePending.value) return
 
@@ -409,7 +475,8 @@ async function toggleLike() {
     }
 
     isLiked.value = Boolean(result.liked)
-    likeCount.value = Number(result.likeCount) || 0
+    likeCount.value =
+      Number(result.likeCount) || 0
   } catch (error) {
     likeError.value =
       error.message || 'Could not update the like.'
@@ -419,11 +486,14 @@ async function toggleLike() {
 }
 
 async function toggleComments() {
-  areCommentsOpen.value = !areCommentsOpen.value
+  areCommentsOpen.value =
+    !areCommentsOpen.value
 
   if (areCommentsOpen.value) {
     await loadComments()
+
     await nextTick()
+
     observeCommentsEnd()
   } else {
     closeComments()
@@ -536,6 +606,7 @@ onBeforeUnmount(() => {
             <path
               d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z"
             />
+
             <circle
               cx="12"
               cy="9"
@@ -760,6 +831,8 @@ onBeforeUnmount(() => {
           v-for="comment in comments"
           :key="comment.id"
           :comment="comment"
+          :deleting="deletingCommentIds.includes(comment.id)"
+          @delete="removeComment(comment.id)"
         />
 
         <div
@@ -775,6 +848,14 @@ onBeforeUnmount(() => {
         role="status"
       >
         Loading more comments...
+      </p>
+
+      <p
+        v-if="commentDeleteError"
+        class="comments-state comments-state--error"
+        role="alert"
+      >
+        {{ commentDeleteError }}
       </p>
 
       <div
@@ -891,13 +972,14 @@ onBeforeUnmount(() => {
       <div
         v-if="showDeleteDialog"
         class="delete-post-dialog"
-        @click.self="closeDeleteDialog"
+        tabindex="-1"
         @keydown="handleDeleteDialogKeydown"
       >
         <button
           type="button"
           class="delete-post-dialog__backdrop"
           aria-label="Close delete confirmation"
+          :disabled="isDeletingPost"
           @click="closeDeleteDialog"
         />
 
@@ -948,7 +1030,11 @@ onBeforeUnmount(() => {
               :disabled="isDeletingPost"
               @click="deletePost"
             >
-              {{ isDeletingPost ? 'Deleting...' : 'Delete post' }}
+              {{
+                isDeletingPost
+                  ? 'Deleting...'
+                  : 'Delete post'
+              }}
             </button>
           </div>
         </section>

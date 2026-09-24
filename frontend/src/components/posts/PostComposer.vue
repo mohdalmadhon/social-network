@@ -543,7 +543,6 @@ watch(postVisibility, (value) => {
 
 <style scoped>
 .post-composer {
-  position: sticky;
   top: 4rem;
   z-index: 15;
   align-self: start;

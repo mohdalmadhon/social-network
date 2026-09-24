@@ -6,6 +6,7 @@ import {
   deleteGroupPostComment,
   getGroupPostComments,
 } from '@/api/groups/Groups.js'
+import CommentMenu from '@/components/comments/CommentMenu.vue'
 import IconGlyph from '@/components/layout/IconGlyph.vue'
 
 const props = defineProps({
@@ -165,7 +166,7 @@ async function removePost() {
 }
 
 async function removeComment(comment) {
-  if (deletingCommentId.value !== null || !window.confirm('Delete this comment?')) return
+  if (deletingCommentId.value !== null) return
 
   deletingCommentId.value = comment.id
   commentsError.value = ''
@@ -241,7 +242,12 @@ onBeforeUnmount(() => commentsObserver?.disconnect())
       <p v-else-if="commentsLoaded && comments.length === 0" class="comments-state">No comments yet.</p>
 
       <div v-else-if="comments.length" ref="commentsList" class="group-comments__list">
-        <div v-for="comment in comments" :key="comment.id" class="group-comment">
+        <div
+          v-for="comment in comments"
+          :key="comment.id"
+          class="group-comment"
+          :class="{ 'group-comment--deleting': deletingCommentId === comment.id }"
+        >
           <img v-if="comment.avatarPath" :src="assetUrl(comment.avatarPath)" :alt="`${comment.firstName}'s avatar`" />
           <span v-else class="group-comment__avatar" aria-hidden="true">{{ comment.firstName?.charAt(0) }}</span>
           <div class="group-comment__body">
@@ -250,14 +256,11 @@ onBeforeUnmount(() => commentsObserver?.disconnect())
                 <strong>{{ `${comment.firstName || ''} ${comment.lastName || ''}`.trim() || comment.username }}</strong>
                 <small>@{{ comment.username }} <span aria-hidden="true">&middot;</span> {{ formatDate(comment.createdAt) }}</small>
               </div>
-              <button
+              <CommentMenu
                 v-if="comment.isOwner"
-                type="button"
                 :disabled="deletingCommentId !== null"
-                @click="removeComment(comment)"
-              >
-                {{ deletingCommentId === comment.id ? 'Deleting...' : 'Delete' }}
-              </button>
+                @remove="removeComment(comment)"
+              />
             </div>
             <p v-if="comment.content">{{ comment.content }}</p>
           </div>
@@ -350,8 +353,7 @@ onBeforeUnmount(() => commentsObserver?.disconnect())
   line-height: 1.35;
 }
 
-.delete-post-button,
-.group-comment__meta button {
+.delete-post-button {
   min-height: var(--touch-target);
   padding: 0 var(--space-3);
   border: 1px solid var(--color-coral);
@@ -364,14 +366,12 @@ onBeforeUnmount(() => commentsObserver?.disconnect())
   font-weight: 600;
 }
 
-.delete-post-button:hover:not(:disabled),
-.group-comment__meta button:hover:not(:disabled) {
+.delete-post-button:hover:not(:disabled) {
   background: var(--color-coral);
   color: var(--color-background);
 }
 
-.delete-post-button:disabled,
-.group-comment__meta button:disabled {
+.delete-post-button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
@@ -485,6 +485,10 @@ onBeforeUnmount(() => commentsObserver?.disconnect())
 .group-comment strong,
 .group-comment small {
   display: block;
+}
+
+.group-comment--deleting {
+  opacity: 0.6;
 }
 
 .group-comment__body {

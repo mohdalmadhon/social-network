@@ -1,10 +1,18 @@
 <script setup>
+import CommentMenu from '@/components/comments/CommentMenu.vue'
+
 defineProps({
   comment: {
     type: Object,
     required: true,
   },
+  deleting: {
+    type: Boolean,
+    default: false,
+  },
 })
+
+const emit = defineEmits(['delete'])
 
 function imageUrl(imagePath) {
   if (!imagePath) return ''
@@ -17,13 +25,17 @@ function initials(author) {
 </script>
 
 <template>
-  <div class="comment-preview">
+  <div class="comment-preview" :class="{ 'comment-preview--deleting': deleting }">
     <div class="comment-preview__avatar" :style="{ background: comment.avatarColor }" aria-hidden="true">
       <img v-if="comment.avatarPath" :src="imageUrl(comment.avatarPath)" alt="" />
       <span v-else>{{ initials(comment.author) }}</span>
     </div>
     <div class="comment-preview__body">
-      <strong>{{ comment.author }}</strong>
+      <div class="comment-preview__header">
+        <strong>{{ comment.author }}</strong>
+
+        <CommentMenu v-if="comment.own" :disabled="deleting" @remove="emit('delete')" />
+      </div>
       <p>{{ comment.content }}</p>
     </div>
   </div>
@@ -70,6 +82,17 @@ function initials(author) {
 .comment-preview strong,
 .comment-preview p {
   margin: 0;
+}
+
+.comment-preview__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.comment-preview--deleting {
+  opacity: 0.6;
 }
 
 .comment-preview strong {
