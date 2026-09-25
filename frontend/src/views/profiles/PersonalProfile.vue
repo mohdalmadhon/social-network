@@ -5,7 +5,6 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { getUserData } from '@/api/users/personalProfile'
 import { getPosts } from '@/api/posts/posts.js'
 import { profileData } from '@/data/usersData'
-import { profilePosts as selectProfilePosts } from '@/helpers/profilePosts.js'
 
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout.vue'
 import ProfileHeader from '@/components/personalProfile/ProfileHeader.vue'
@@ -44,10 +43,7 @@ async function loadPosts(loadMore = false) {
 
     console.log(result)
 
-    const newPosts = selectProfilePosts(
-      result?.posts || [],
-      profileData.userInfo
-    )
+    let newPosts = result.posts;
 
     if (loadMore) {
       posts.value.push(...newPosts)

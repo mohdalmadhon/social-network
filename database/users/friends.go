@@ -327,3 +327,36 @@ func GetFollowing(db *sql.DB, userID, limit, offset int) ([]models.UserRegistrat
 
 	return following, nil
 }
+
+/*
+function to check if a user (follower) follows another user (target)
+NOTE: it returns false in case of error or no follower
+
+Parameters:
+	db *sql.DB, followerID, targetID int
+
+Returns:
+	bool
+		-> false in case of no follow or FAIL
+	error
+		-> nil if success
+*/
+func IsFollower(db *sql.DB, followerID, targteID int) (bool, error) {
+	var isFollower int
+
+	err := db.QueryRow(`
+		SELECT 1
+		FROM user_followers
+		WHERE follower_id = ? AND target_id = ?
+	`, followerID, targteID).Scan(&isFollower)
+
+	if err != nil {
+		return false, err
+	}
+
+	if isFollower == 1 {
+		return true, nil
+	}
+
+	return false, nil
+}

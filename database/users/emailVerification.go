@@ -31,6 +31,7 @@ func SaveEmailCode(db *sql.DB, email, code string, now time.Time) (time.Duration
 	if err != nil {
 		return 0, err
 	}
+	
 	if taken {
 		return 0, ErrEmailTaken
 	}

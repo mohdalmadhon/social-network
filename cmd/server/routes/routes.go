@@ -14,6 +14,7 @@ func StartServer(db *sql.DB) *http.ServeMux {
 		EmailPassword: "lmvm ugpc xvlo food",
 		EmailAddress:  "almadhoonlinux@gmail.com"}
 
+	// users
 	mux.HandleFunc("GET /api/user", app.AuthMiddleware(app.GetUserData))
 	mux.HandleFunc("POST /api/user", app.RegisterUser)
 	mux.HandleFunc("PATCH /api/user", app.AuthMiddleware(app.UpdateUserInfo))
@@ -21,46 +22,55 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("POST /api/user/send-email-code", app.SendEmailCode)
 	mux.HandleFunc("POST /api/user/verify-email-code", app.VerifyEmail)
 	mux.HandleFunc("DELETE /api/user", app.AuthMiddleware(app.DeleteUser))
-
+	
+	// sessions
 	mux.HandleFunc("POST /api/session", app.LoggingUser)
 	mux.HandleFunc("GET /api/session", app.AuthMiddleware(app.AuthorizeSession))
 	mux.HandleFunc("DELETE /api/session", app.DeleteSession)
-
+	
+	// profile
 	mux.HandleFunc("PATCH /api/profile/avatar", app.AuthMiddleware(app.UpdateUserAvatar))
 	mux.HandleFunc("GET /api/profile/about", app.AuthMiddleware(app.GetUserAbout))
 	mux.HandleFunc("PATCH /api/profile/about", app.AuthMiddleware(app.UpdateUserAbout))
 	mux.HandleFunc("GET /api/profile", app.AuthMiddleware(app.GetUserProfile))
 	mux.HandleFunc("GET /api/friends/", app.AuthMiddleware(app.GetFriends))
-
+	
+	// searches
 	mux.HandleFunc("GET /api/search", app.AuthMiddleware(app.Search))
 	mux.HandleFunc("GET /api/profile/follows/search", app.AuthMiddleware(app.SearchFollows))
 	mux.HandleFunc("GET /api/profile/following/search", app.AuthMiddleware(app.SearchFollowing))
 	mux.HandleFunc("GET /api/location/search", app.SearchLocation)
-
+	
+	// follows
 	mux.HandleFunc("POST /api/profile/follow", app.AuthMiddleware(app.RequestFollow))
 	mux.HandleFunc("DELETE /api/profile/follow", app.AuthMiddleware(app.CancelRequest))
 	mux.HandleFunc("DELETE /api/profile/follower", app.AuthMiddleware(app.RemoveFollower))
 	mux.HandleFunc("GET /api/profile/follow", app.AuthMiddleware(app.GetFollowers))
 	mux.HandleFunc("GET /api/profile/following", app.AuthMiddleware(app.GetFollowing))
-
-	mux.HandleFunc("/api/posts", app.Posts)
+	
+	// posts
+	mux.HandleFunc("POST /api/posts", app.AuthMiddleware(app.CreatePost))
+	mux.HandleFunc("GET /api/posts", app.AuthMiddleware(app.ListPosts))
 	mux.HandleFunc("PUT /api/posts/{postID}/like", app.AuthMiddleware(app.LikePost))
 	mux.HandleFunc("DELETE /api/posts/{postID}/like", app.AuthMiddleware(app.LikePost))
 	mux.HandleFunc("/api/posts/{postID}/comments", app.Comments)
 	mux.HandleFunc("DELETE /api/posts/{postID}/comments/{commentID}", app.AuthMiddleware(app.DeleteComment))
 	mux.HandleFunc("DELETE /api/posts", app.AuthMiddleware(app.DeletePost))
-
+	
+	// notifications
 	mux.HandleFunc("GET /api/notifications", app.AuthMiddleware(app.Notifications))
 	mux.HandleFunc("PATCH /api/notifications/read-all", app.AuthMiddleware(app.MarkAllNotificationsRead))
 	mux.HandleFunc("PATCH /api/notifications/{notificationID}/action", app.AuthMiddleware(app.ApplyNotificationAction))
 	mux.HandleFunc("PATCH /api/notifications/{notificationID}/read", app.AuthMiddleware(app.MarkNotificationRead))
-
+	
+	// chats
 	mux.HandleFunc("GET /api/chats", app.AuthMiddleware(app.PrivateChats))
 	mux.HandleFunc("GET /api/chats/private-users", app.AuthMiddleware(app.PrivateChatUsers))
 	mux.HandleFunc("POST /api/chats/private", app.AuthMiddleware(app.OpenPrivateChat))
 	mux.HandleFunc("GET /api/chats/{chatID}/messages", app.AuthMiddleware(app.PrivateChatMessages))
 	mux.HandleFunc("GET /api/groups/{id}/chat/messages", app.AuthMiddleware(app.GroupChatMessages))
-
+	
+	// group chats
 	mux.HandleFunc("PATCH /api/events/{eventID}/rsvp", app.AuthMiddleware(app.EventRSVP))
 	mux.HandleFunc("DELETE /api/groups/{id}/events/{eventID}/rsvp", app.AuthMiddleware(app.RemoveEventRSVP))
 	mux.HandleFunc("DELETE /api/groups/{id}/events/{eventID}", app.AuthMiddleware(app.DeleteEvent))

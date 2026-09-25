@@ -226,85 +226,39 @@ watch(postVisibility, (value) => {
 </script>
 
 <template>
-  <form
-    class="post-composer orbit-surface"
-    @submit.prevent="preparePost"
-  >
+  <form class="post-composer orbit-surface" @submit.prevent="preparePost">
     <div class="post-composer__input-row">
       <div class="post-composer__avatar">
-        <img
-          v-if="props.avatar"
-          :src="props.avatar"
-          alt="Profile avatar"
-        />
+        <img v-if="props.avatar" :src="props.avatar" alt="Profile avatar" />
 
-        <IconGlyph
-          v-else
-          name="profile"
-          :size="18"
-        />
+        <IconGlyph v-else name="profile" :size="18" />
       </div>
 
-      <label
-        class="visually-hidden"
-        for="post-content"
-      >
+      <label class="visually-hidden" for="post-content">
         Post content
       </label>
 
-      <textarea
-        id="post-content"
-        v-model="content"
-        maxlength="500"
-        placeholder="What's happening in your orbit?"
-        rows="2"
-        @input="message = ''"
-      />
+      <textarea id="post-content" v-model="content" maxlength="500" placeholder="What's happening in your orbit?"
+        rows="2" @input="message = ''" />
     </div>
 
-    <div
-      v-if="selectedFile"
-      class="selected-file"
-    >
+    <div v-if="selectedFile" class="selected-file">
       <span>{{ selectedFile.name }}</span>
 
-      <button
-        type="button"
-        aria-label="Remove selected file"
-        @click="removeFile"
-      >
-        <IconGlyph
-          name="close"
-          :size="16"
-        />
+      <button type="button" aria-label="Remove selected file" @click="removeFile">
+        <IconGlyph name="close" :size="16" />
       </button>
     </div>
 
-    <div
-      v-if="previewUrl"
-      class="selected-preview"
-    >
-      <img
-        :src="previewUrl"
-        alt="Preview of the selected media"
-      />
+    <div v-if="previewUrl" class="selected-preview">
+      <img :src="previewUrl" alt="Preview of the selected media" />
     </div>
 
-    <div
-      v-if="locationLabel"
-      class="selected-location"
-    >
+    <div v-if="locationLabel" class="selected-location">
       <div class="selected-location__icon">
-        <svg
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z" />
-          <circle
-            cx="12"
-            cy="9"
-            r="2.25"
-          />
+          <circle cx="12" cy="9" r="2.25" />
         </svg>
       </div>
 
@@ -313,56 +267,26 @@ watch(postVisibility, (value) => {
         <strong>{{ locationLabel }}</strong>
       </div>
 
-      <button
-        type="button"
-        aria-label="Remove location"
-        @click="removeLocation"
-      >
-        <IconGlyph
-          name="close"
-          :size="16"
-        />
+      <button type="button" aria-label="Remove location" @click="removeLocation">
+        <IconGlyph name="close" :size="16" />
       </button>
     </div>
 
     <div class="post-composer__toolbar">
       <div class="post-composer__tools">
-        <button
-          class="composer-action composer-action--media"
-          type="button"
-          @click="openFilePicker"
-        >
-          <IconGlyph
-            name="image"
-            :size="17"
-          />
+        <button class="composer-action composer-action--media" type="button" @click="openFilePicker">
+          <IconGlyph name="image" :size="17" />
 
           <span>Photo / GIF</span>
         </button>
 
-        <input
-          ref="fileInput"
-          class="file-input"
-          type="file"
-          accept="image/jpeg,image/png,image/gif"
-          @change="selectFile"
-        />
+        <input ref="fileInput" class="file-input" type="file" accept="image/jpeg,image/png,image/gif"
+          @change="selectFile" />
 
-        <button
-          class="composer-action composer-action--location"
-          type="button"
-          @click="showLocationDialog = true"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
+        <button class="composer-action composer-action--location" type="button" @click="showLocationDialog = true">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z" />
-            <circle
-              cx="12"
-              cy="9"
-              r="2.25"
-            />
+            <circle cx="12" cy="9" r="2.25" />
           </svg>
 
           <span>
@@ -373,19 +297,13 @@ watch(postVisibility, (value) => {
 
       <div class="post-composer__actions">
         <label class="privacy-control">
-          <IconGlyph
-            name="globe"
-            :size="16"
-          />
+          <IconGlyph name="globe" :size="16" />
 
           <span class="visually-hidden">
             Post visibility
           </span>
 
-          <select
-            v-model="postVisibility"
-            aria-label="Post visibility"
-          >
+          <select v-model="postVisibility" aria-label="Post visibility">
             <option value="public">
               Public
             </option>
@@ -400,10 +318,7 @@ watch(postVisibility, (value) => {
           </select>
         </label>
 
-        <p
-          class="privacy-description"
-          aria-live="polite"
-        >
+        <p class="privacy-description" aria-live="polite">
           <template v-if="postVisibility === 'public'">
             Anyone on Orbit can see this post.
           </template>
@@ -417,90 +332,49 @@ watch(postVisibility, (value) => {
           </template>
         </p>
 
-        <div
-          v-if="postVisibility === 'selected'"
-          class="selected-followers"
-        >
+        <div v-if="postVisibility === 'selected'" class="selected-followers">
           <p class="selected-followers__label">
             Choose approved followers
           </p>
 
-          <p
-            v-if="isLoadingFollowers && followers.length === 0"
-            class="selected-followers__state"
-          >
+          <p v-if="isLoadingFollowers && followers.length === 0" class="selected-followers__state">
             Loading your followers...
           </p>
 
-          <div
-            v-else-if="
-              followersError &&
-              followers.length === 0
-            "
-            class="selected-followers__state selected-followers__state--error"
-          >
+          <div v-else-if="
+            followersError &&
+            followers.length === 0
+          " class="selected-followers__state selected-followers__state--error">
             {{ followersError }}
 
-            <button
-              class="load-followers-button"
-              type="button"
-              :disabled="isLoadingFollowers"
-              @click="loadFollowers()"
-            >
+            <button class="load-followers-button" type="button" :disabled="isLoadingFollowers" @click="loadFollowers()">
               Try again
             </button>
           </div>
 
-          <p
-            v-else-if="followers.length === 0"
-            class="selected-followers__state"
-          >
+          <p v-else-if="followers.length === 0" class="selected-followers__state">
             You have no approved followers yet.
           </p>
 
-          <div
-            v-else
-            class="selected-followers__list"
-          >
-            <p
-              v-if="followersError"
-              class="selected-followers__state selected-followers__state--error"
-            >
+          <div v-else class="selected-followers__list">
+            <p v-if="followersError" class="selected-followers__state selected-followers__state--error">
               {{ followersError }}
 
-              <button
-                class="load-followers-button"
-                type="button"
-                :disabled="isLoadingFollowers"
-                @click="loadFollowers"
-              >
+              <button class="load-followers-button" type="button" :disabled="isLoadingFollowers" @click="loadFollowers">
                 Try again
               </button>
             </p>
 
-            <label
-              v-for="person in followers"
-              :key="person.id"
-              class="selected-follower"
-            >
-              <input
-                v-model="selectedFollowerIds"
-                type="checkbox"
-                :value="person.id"
-              />
+            <label v-for="person in followers" :key="person.id" class="selected-follower">
+              <input v-model="selectedFollowerIds" type="checkbox" :value="person.id" />
 
               <span>
                 {{ person.name }}
               </span>
             </label>
 
-            <button
-              v-if="hasMoreFollowers"
-              class="load-followers-button"
-              type="button"
-              :disabled="isLoadingFollowers"
-              @click="loadMoreFollowers"
-            >
+            <button v-if="hasMoreFollowers" class="load-followers-button" type="button" :disabled="isLoadingFollowers"
+              @click="loadMoreFollowers">
               {{
                 isLoadingFollowers
                   ? 'Loading...'
@@ -510,34 +384,21 @@ watch(postVisibility, (value) => {
           </div>
         </div>
 
-        <button
-          class="post-button"
-          type="submit"
-          :disabled="!canPost"
-        >
+        <button class="post-button" type="submit" :disabled="!canPost">
           {{ isPosting ? 'Posting...' : 'Post' }}
         </button>
       </div>
     </div>
 
-    <p
-      v-if="message"
-      class="post-composer__message"
-      :class="{
-        'post-composer__message--error':
-          messageType === 'error'
-      }"
-      role="status"
-    >
+    <p v-if="message" class="post-composer__message" :class="{
+      'post-composer__message--error':
+        messageType === 'error'
+    }" role="status">
       {{ message }}
     </p>
 
-    <LocationDialog
-      v-if="showLocationDialog"
-      :model-value="location"
-      @update:model-value="handleLocationSelected"
-      @close="showLocationDialog = false"
-    />
+    <LocationDialog v-if="showLocationDialog" :model-value="location" @update:model-value="handleLocationSelected"
+      @close="showLocationDialog = false" />
   </form>
 </template>
 
@@ -654,17 +515,13 @@ textarea::placeholder {
   gap: 0.75rem;
   margin: var(--space-3) 0 0 calc(var(--touch-target) + var(--space-3));
   padding: 0.7rem 0.8rem;
-  border: 1px solid color-mix(
-    in srgb,
-    var(--color-violet) 30%,
-    var(--color-border)
-  );
+  border: 1px solid color-mix(in srgb,
+      var(--color-violet) 30%,
+      var(--color-border));
   border-radius: 0.8rem;
-  background: color-mix(
-    in srgb,
-    var(--color-violet) 7%,
-    var(--color-input)
-  );
+  background: color-mix(in srgb,
+      var(--color-violet) 7%,
+      var(--color-input));
 }
 
 .selected-location__icon {
@@ -675,11 +532,9 @@ textarea::placeholder {
   height: 2.2rem;
   flex-shrink: 0;
   border-radius: 0.65rem;
-  background: color-mix(
-    in srgb,
-    var(--color-violet) 14%,
-    var(--color-input)
-  );
+  background: color-mix(in srgb,
+      var(--color-violet) 14%,
+      var(--color-input));
   color: var(--color-violet-soft);
 }
 
@@ -718,7 +573,7 @@ textarea::placeholder {
   white-space: nowrap;
 }
 
-.selected-location > button {
+.selected-location>button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -733,12 +588,10 @@ textarea::placeholder {
   cursor: pointer;
 }
 
-.selected-location > button:hover {
-  background: color-mix(
-    in srgb,
-    var(--color-coral) 12%,
-    transparent
-  );
+.selected-location>button:hover {
+  background: color-mix(in srgb,
+      var(--color-coral) 12%,
+      transparent);
   color: var(--color-coral);
 }
 
@@ -811,11 +664,9 @@ textarea::placeholder {
 }
 
 .composer-action--location:hover {
-  background: color-mix(
-    in srgb,
-    var(--color-violet) 9%,
-    var(--color-input)
-  );
+  background: color-mix(in srgb,
+      var(--color-violet) 9%,
+      var(--color-input));
   color: var(--color-violet-soft);
 }
 

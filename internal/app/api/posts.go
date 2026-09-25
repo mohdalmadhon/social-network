@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"io"
@@ -9,28 +10,14 @@ import (
 	"social/internal/app/tokens"
 	"social/internal/helpers"
 	"social/internal/models"
+	"strconv"
 	"strings"
 )
 
 const maxPostBodySize = 6 << 20
 const maxPostImageSize = 5 * 1024 * 1024
 
-func (app *App) Posts(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		app.listPosts(w, r)
-	case http.MethodPost:
-		app.createPost(w, r)
-	default:
-		w.Header().Set("Allow", "GET, POST")
-		writeJSON(w, http.StatusMethodNotAllowed, map[string]any{
-			"status":  false,
-			"message": "method not allowed",
-		})
-	}
-}
-
-func (app App) createPost(w http.ResponseWriter, r *http.Request) {
+func (app App) CreatePost(w http.ResponseWriter, r *http.Request) {
 	userID, err := authenticatedUserID(r)
 	if err != nil {
 		writeJSON(w, http.StatusUnauthorized, map[string]any{
@@ -183,12 +170,12 @@ func (app App) createPost(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (app App) listPosts(w http.ResponseWriter, r *http.Request) {
-	userID, err := authenticatedUserID(r)
-	if err != nil {
-		writeJSON(w, http.StatusUnauthorized, map[string]any{
+func (app App) ListPosts(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		helpers.WriteJson(w, http.StatusUnauthorized, map[string]any{
 			"status":  false,
-			"message": "authentication required",
+			"message": "could not authorize user",
 		})
 		return
 	}
@@ -198,6 +185,47 @@ func (app App) listPosts(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{
 			"status":  false,
 			"message": "limit must be between 1 and 50 and offset cannot be negative",
+		})
+		return
+	}
+
+	queryUserID := r.URL.Query().Get("userID")
+	if queryUserID != "" {
+		requestUserID, err := strconv.Atoi(queryUserID)
+		if err != nil {
+			helpers.WriteJson(w, http.StatusBadRequest, map[string]any{
+				"status":  false,
+				"message": "invalid userID",
+			})
+			return
+		}
+
+		userPosts, err := posts.GetUserPosts(app.DB, requestUserID, page.Limit, page.Offset)
+		if err != nil && err != sql.ErrNoRows {
+			helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+				"status":  false,
+				"message": "could not get posts",
+			})
+			return
+		}
+		
+		var filteredPosts []models.Post
+		if requestUserID != userID {
+			filteredPosts, err = posts.FilterPosts(app.DB, &userPosts, userID)
+			if err != nil {
+				helpers.WriteJson(w, http.StatusInternalServerError, map[string]any{
+					"status":  false,
+					"message": "could not get posts",
+				})
+				return
+			}
+		} else {
+			filteredPosts = userPosts
+		}
+
+		helpers.WriteJson(w, http.StatusOK, map[string]any{
+			"status": true,
+			"data":   filteredPosts,
 		})
 		return
 	}

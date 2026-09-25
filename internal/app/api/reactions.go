@@ -16,7 +16,7 @@ func (app App) LikePost(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
+	
 	postID, err := strconv.ParseInt(r.PathValue("postID"), 10, 64)
 	if err != nil || postID <= 0 {
 		writeJSON(w, http.StatusBadRequest, map[string]any{

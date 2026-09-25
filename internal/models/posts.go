@@ -27,6 +27,7 @@ type Post struct {
 	Location     string    `json:"location"`
 	CreatedAt    time.Time `json:"createdAt"`
 	LikeCount    int       `json:"likeCount"`
+	DisLikeCount int       `json:"dislikeCount"`
 	Liked        bool      `json:"liked"`
 	CommentCount int       `json:"commentCount"`
 }
