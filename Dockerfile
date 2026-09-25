@@ -29,12 +29,8 @@ COPY --from=builder /go/bin/migrate /usr/local/bin/migrate
 
 COPY internal/migrations ./internal/migrations
 
-COPY entrypoint.sh ./entrypoint.sh
-RUN chmod +x ./entrypoint.sh
-
-
 RUN mkdir -p ./db ./uploads/avatars ./uploads/posts ./uploads/groups/avatars
 
 EXPOSE 4000
 
-ENTRYPOINT ["./entrypoint.sh"]
+CMD ["./server"]
