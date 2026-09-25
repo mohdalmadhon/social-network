@@ -39,7 +39,7 @@ async function loadProfile(idValue) {
 
   try {
     const profileResult = await getProfileData(id, 10)
-
+    console.log(profileData)
     if (!profileResult) return
 
     if (profileResult.showProfile) {
@@ -104,6 +104,7 @@ watch(() => route.query.id, loadProfile, { immediate: true })
           :num-of-followers="profileData.numOfFollowers"
           :is-following="profileData.isFollowing"
           :is-private="profileData.userInfo.isPrivate === 1"
+          :dob="profileData.userInfo.dob"
           @relationship-change="relationshipChanged"
           @select-tab="activeTab = $event"
         />

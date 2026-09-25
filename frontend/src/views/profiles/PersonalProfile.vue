@@ -150,7 +150,7 @@ function removePost(postID) {
             : ''
             " :num-of-posts="profileData.numOfPosts" :num-of-following="profileData.numOfFollowing"
           :num-of-followers="profileData.numOfFollowers" :is-private="profileData.userInfo.isPrivate === 1" add-edit
-          @select-tab="activeTab = $event" />
+          @select-tab="activeTab = $event" :dob="profileData.userInfo.dob" />
 
         <ProfileTabs v-model="activeTab" type="personal" />
 

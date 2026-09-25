@@ -8,6 +8,7 @@ import (
 	"social/database/users"
 	"social/internal/app/tokens"
 )
+
 /*
 A middle ware so simply takes a handler and returns a handler
 
@@ -15,9 +16,11 @@ In this handler we check if the user is authoniticated by checking the cookies w
 and Deconde and check the user ID. then write the user ID in the request Context for the callback to use it.
 
 Paramters:
+
 	handler http.HandleFunc
 
 Returns:
+
 	http.HandleFunc
 */
 func (app *App) AuthMiddleware(handler http.HandlerFunc) http.HandlerFunc {
