@@ -9,10 +9,10 @@ import (
 
 var ErrPostNotVisible = errors.New("post is not available")
 
-func CreateComment(db *sql.DB, userID int, postID int64, content string) (models.Comment, error) {
+func CreateComment(db *sql.DB, userID int, postID int64, content, imagePath string) (models.Comment, error) {
 	content = strings.TrimSpace(content)
-	if content == "" || len([]rune(content)) > 200 {
-		return models.Comment{}, errors.New("comment text must contain 1 to 200 characters")
+	if (content == "" && imagePath == "") || len([]rune(content)) > 200 {
+		return models.Comment{}, errors.New("comment must contain 1 to 200 characters of text, an image, or both")
 	}
 
 	canView, err := CanViewPost(db, userID, postID)
@@ -25,8 +25,8 @@ func CreateComment(db *sql.DB, userID int, postID int64, content string) (models
 
 	result, err := db.Exec(`
 		INSERT INTO comments (user_id, post_id, content, image_path)
-		VALUES (?, ?, ?, '')
-	`, userID, postID, content)
+		VALUES (?, ?, ?, ?)
+	`, userID, postID, content, imagePath)
 	if err != nil {
 		return models.Comment{}, err
 	}

@@ -26,6 +26,12 @@ func (app App) ServeUpload(w http.ResponseWriter, r *http.Request) {
 				http.NotFound(w, r)
 				return
 			}
+		case "comments":
+			allowed, err := app.canViewCommentUpload(userID, name)
+			if err != nil || !allowed {
+				http.NotFound(w, r)
+				return
+			}
 		default:
 			http.NotFound(w, r)
 			return
@@ -57,4 +63,13 @@ func (app App) canViewPostUpload(userID int, imagePath string) (bool, error) {
 		)
 	`, imagePath, userID).Scan(&allowed)
 	return allowed, err
+}
+
+func (app App) canViewCommentUpload(userID int, imagePath string) (bool, error) {
+	var postID int64
+	err := app.DB.QueryRow(`SELECT post_id FROM comments WHERE image_path = ?`, imagePath).Scan(&postID)
+	if err != nil {
+		return false, err
+	}
+	return comments.CanViewPost(app.DB, userID, postID)
 }

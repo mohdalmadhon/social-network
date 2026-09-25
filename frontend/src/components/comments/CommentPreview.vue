@@ -36,7 +36,14 @@ function initials(author) {
 
         <CommentMenu v-if="comment.own" :disabled="deleting" @remove="emit('delete')" />
       </div>
-      <p>{{ comment.content }}</p>
+      <p v-if="comment.content">{{ comment.content }}</p>
+      <img
+        v-if="comment.imagePath"
+        class="comment-preview__image"
+        :src="imageUrl(comment.imagePath)"
+        alt=""
+        loading="lazy"
+      />
     </div>
   </div>
 </template>
@@ -106,6 +113,16 @@ function initials(author) {
   font-size: 0.875rem;
   line-height: 1.45;
   overflow-wrap: anywhere;
+}
+
+.comment-preview__image {
+  display: block;
+  max-width: 12rem;
+  max-height: 12rem;
+  margin-top: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  object-fit: cover;
 }
 
 </style>
