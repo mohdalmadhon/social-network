@@ -2,10 +2,23 @@ package users
 
 import (
 	"database/sql"
-
 	"social/internal/models"
 )
 
+/*
+GetFriends retrieves users who mutually follow each other.
+
+Parameters:
+	db *sql.DB, userID int, offset int
+
+Returns:
+	map[int]models.UserRegistration
+	-> Map containing friend IDs and their basic profile information
+
+	error
+	-> nil if successful
+	-> Error if the database query fails
+*/
 func GetFriends(db *sql.DB, userID, offset int) (map[int]models.UserRegistration, error) {
 	friends := make(map[int]models.UserRegistration)
 
@@ -35,6 +48,7 @@ func GetFriends(db *sql.DB, userID, offset int) (map[int]models.UserRegistration
 	if err != nil {
 		return friends, err
 	}
+
 	defer rows.Close()
 
 	for rows.Next() {
@@ -77,6 +91,21 @@ func GetFriends(db *sql.DB, userID, offset int) (map[int]models.UserRegistration
 	return friends, nil
 }
 
+/*
+SearchFriends searches for mutual friends whose first or last name
+matches the provided search text.
+
+Parameters:
+	db *sql.DB, userID int, search string
+
+Returns:
+	map[int]models.UserRegistration
+	-> Map containing matching friend IDs and their basic profile information
+
+	error
+	-> nil if successful
+	-> Error if the database query fails
+*/
 func SearchFriends(db *sql.DB, userID int, search string) (map[int]models.UserRegistration, error) {
 	friends := make(map[int]models.UserRegistration)
 
@@ -110,6 +139,7 @@ func SearchFriends(db *sql.DB, userID int, search string) (map[int]models.UserRe
 	if err != nil {
 		return friends, err
 	}
+
 	defer rows.Close()
 
 	for rows.Next() {
@@ -152,6 +182,20 @@ func SearchFriends(db *sql.DB, userID int, search string) (map[int]models.UserRe
 	return friends, nil
 }
 
+/*
+GetFollowers retrieves users who follow the specified user.
+
+Parameters:
+	db *sql.DB, userID int, limit int, offset int
+
+Returns:
+	[]models.UserRegistration
+	-> List containing follower information
+
+	error
+	-> nil if successful
+	-> Error if the database query fails
+*/
 func GetFollowers(db *sql.DB, userID, limit, offset int) ([]models.UserRegistration, error) {
 	var followers []models.UserRegistration
 
@@ -169,6 +213,7 @@ func GetFollowers(db *sql.DB, userID, limit, offset int) ([]models.UserRegistrat
 	if err != nil {
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	for rows.Next() {
@@ -210,6 +255,20 @@ func GetFollowers(db *sql.DB, userID, limit, offset int) ([]models.UserRegistrat
 	return followers, nil
 }
 
+/*
+GetFollowing retrieves users that the specified user follows.
+
+Parameters:
+	db *sql.DB, userID int, limit int, offset int
+
+Returns:
+	[]models.UserRegistration
+	-> List containing following user information
+
+	error
+	-> nil if successful
+	-> Error if the database query fails
+*/
 func GetFollowing(db *sql.DB, userID, limit, offset int) ([]models.UserRegistration, error) {
 	var following []models.UserRegistration
 
@@ -227,6 +286,7 @@ func GetFollowing(db *sql.DB, userID, limit, offset int) ([]models.UserRegistrat
 	if err != nil {
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	for rows.Next() {

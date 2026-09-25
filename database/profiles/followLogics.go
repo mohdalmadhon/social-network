@@ -6,6 +6,18 @@ import (
 	"social/internal/models"
 )
 
+/*
+SendFollowRequest creates, removes, or maintains a follow relationship
+between two users.
+
+Parameters:
+	db *sql.DB, targetID int, followerID int, requestCode int
+
+Returns:
+	error
+	-> nil if the follow request is successfully created or removed
+	-> Error if the users are invalid or the database operation fails
+*/
 func SendFollowRequest(db *sql.DB, targetID, followerID, requestCode int) error {
 	if targetID == followerID {
 		return fmt.Errorf("user cannot follow themselves")
@@ -49,30 +61,63 @@ func SendFollowRequest(db *sql.DB, targetID, followerID, requestCode int) error 
 		return err
 	}
 
-	// Repeating Follow must not downgrade an accepted relationship or duplicate a request.
+	/*
+	Repeating a follow request does not downgrade an accepted
+	relationship or create a duplicate request.
+	*/
 	return nil
 }
 
-// Only the recipient can decide a request that is still pending.
+/*
+DecideFollowRequest accepts or rejects a pending follow request.
+
+Parameters:
+	db *sql.DB, targetID int, followerID int, accept bool
+
+Returns:
+	error
+	-> nil if the pending request is accepted or rejected
+	-> sql.ErrNoRows if no pending request exists
+	-> Error if the database operation fails
+*/
 func DecideFollowRequest(db *sql.DB, targetID, followerID int, accept bool) error {
 	query := `DELETE FROM user_followers WHERE target_id = ? AND follower_id = ? AND status = 0`
+
 	if accept {
 		query = `UPDATE user_followers SET status = 1 WHERE target_id = ? AND follower_id = ? AND status = 0`
 	}
+
 	result, err := db.Exec(query, targetID, followerID)
+
 	if err != nil {
 		return err
 	}
+
 	count, err := result.RowsAffected()
+
 	if err != nil {
 		return err
 	}
+
 	if count == 0 {
 		return sql.ErrNoRows
 	}
+
 	return nil
 }
 
+/*
+RemoveFollower removes an accepted follower relationship.
+
+Parameters:
+	db *sql.DB, targetID int, followerID int
+
+Returns:
+	error
+	-> nil if the follower is successfully removed
+	-> sql.ErrNoRows if the accepted relationship does not exist
+	-> Error if the users are invalid or the database operation fails
+*/
 func RemoveFollower(db *sql.DB, targetID, followerID int) error {
 	if targetID == followerID {
 		return fmt.Errorf("invalid follower")
@@ -82,11 +127,13 @@ func RemoveFollower(db *sql.DB, targetID, followerID int) error {
 		DELETE FROM user_followers
 		WHERE target_id = ? AND follower_id = ? AND status = 1
 	`, targetID, followerID)
+
 	if err != nil {
 		return err
 	}
 
 	count, err := result.RowsAffected()
+
 	if err != nil {
 		return err
 	}
@@ -98,6 +145,20 @@ func RemoveFollower(db *sql.DB, targetID, followerID int) error {
 	return nil
 }
 
+/*
+GetFollowers retrieves the accepted followers of a user.
+
+Parameters:
+	db *sql.DB, targetID int, count int, offset int
+
+Returns:
+	map[int]models.UserRegistration
+	-> Map containing follower IDs and their basic profile information
+
+	error
+	-> nil if successful
+	-> Error if the database query fails
+*/
 func GetFollowers(db *sql.DB, targetID, count, offset int) (map[int]models.UserRegistration, error) {
 	rows, err := db.Query(`
 		SELECT
@@ -119,6 +180,7 @@ func GetFollowers(db *sql.DB, targetID, count, offset int) (map[int]models.UserR
 	if err != nil {
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	followers := make(map[int]models.UserRegistration)
@@ -136,6 +198,7 @@ func GetFollowers(db *sql.DB, targetID, count, offset int) (map[int]models.UserR
 			&lastName,
 			&avatar,
 		)
+
 		if err != nil {
 			return nil, err
 		}
@@ -168,6 +231,20 @@ func GetFollowers(db *sql.DB, targetID, count, offset int) (map[int]models.UserR
 	return followers, nil
 }
 
+/*
+GetFollowing retrieves the accepted users that a user follows.
+
+Parameters:
+	db *sql.DB, followerID int, count int, offset int
+
+Returns:
+	map[int]models.UserRegistration
+	-> Map containing following user IDs and their basic profile information
+
+	error
+	-> nil if successful
+	-> Error if the database query fails
+*/
 func GetFollowing(db *sql.DB, followerID, count, offset int) (map[int]models.UserRegistration, error) {
 	rows, err := db.Query(`
 		SELECT
@@ -187,6 +264,7 @@ func GetFollowing(db *sql.DB, followerID, count, offset int) (map[int]models.Use
 	if err != nil {
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	following := make(map[int]models.UserRegistration)
@@ -204,6 +282,7 @@ func GetFollowing(db *sql.DB, followerID, count, offset int) (map[int]models.Use
 			&lastName,
 			&avatar,
 		)
+
 		if err != nil {
 			return nil, err
 		}
@@ -236,31 +315,46 @@ func GetFollowing(db *sql.DB, followerID, count, offset int) (map[int]models.Use
 	return following, nil
 }
 
+/*
+SearchFollows searches for users that the specified user follows.
+
+Parameters:
+	db *sql.DB, userID int, searchValue string
+
+Returns:
+	[]models.UserRegistration
+	-> List of matching users that the user follows
+
+	error
+	-> nil if successful
+	-> Error if the database query fails
+*/
 func SearchFollows(db *sql.DB, userID int, searchValue string) ([]models.UserRegistration, error) {
 	searchPattern := "%" + searchValue + "%"
 
 	rows, err := db.Query(`
-        SELECT u.id, u.first_name, u.last_name, p.avatar_path
-        FROM user u
-        LEFT JOIN profile p
-            ON p.user_id = u.id
-        WHERE EXISTS (
-            SELECT 1
-            FROM user_followers uf
-            WHERE uf.target_id = u.id
-            AND uf.follower_id = ?
-            AND uf.status = 1
-        )
-        AND (
-            u.first_name LIKE ?
-            OR u.last_name LIKE ?
-        )
-        LIMIT 100
-    `, userID, searchPattern, searchPattern)
+		SELECT u.id, u.first_name, u.last_name, p.avatar_path
+		FROM user u
+		LEFT JOIN profile p
+			ON p.user_id = u.id
+		WHERE EXISTS (
+			SELECT 1
+			FROM user_followers uf
+			WHERE uf.target_id = u.id
+			AND uf.follower_id = ?
+			AND uf.status = 1
+		)
+		AND (
+			u.first_name LIKE ?
+			OR u.last_name LIKE ?
+		)
+		LIMIT 100
+	`, userID, searchPattern, searchPattern)
 
 	if err != nil {
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	follows := make([]models.UserRegistration, 0)
@@ -289,31 +383,46 @@ func SearchFollows(db *sql.DB, userID int, searchValue string) ([]models.UserReg
 	return follows, nil
 }
 
+/*
+SearchFollowing searches for users who follow the specified user.
+
+Parameters:
+	db *sql.DB, userID int, searchValue string
+
+Returns:
+	[]models.UserRegistration
+	-> List of matching users who follow the specified user
+
+	error
+	-> nil if successful
+	-> Error if the database query fails
+*/
 func SearchFollowing(db *sql.DB, userID int, searchValue string) ([]models.UserRegistration, error) {
 	searchPattern := "%" + searchValue + "%"
 
 	rows, err := db.Query(`
-        SELECT u.id, u.first_name, u.last_name, p.avatar_path
-        FROM user u
-        LEFT JOIN profile p
-            ON p.user_id = u.id
-        WHERE EXISTS (
-            SELECT 1
-            FROM user_followers uf
-            WHERE uf.follower_id = u.id
-            AND uf.target_id = ?
-            AND uf.status = 1
-        )
-        AND (
-            u.first_name LIKE ?
-            OR u.last_name LIKE ?
-        )
-        LIMIT 100
-    `, userID, searchPattern, searchPattern)
+		SELECT u.id, u.first_name, u.last_name, p.avatar_path
+		FROM user u
+		LEFT JOIN profile p
+			ON p.user_id = u.id
+		WHERE EXISTS (
+			SELECT 1
+			FROM user_followers uf
+			WHERE uf.follower_id = u.id
+			AND uf.target_id = ?
+			AND uf.status = 1
+		)
+		AND (
+			u.first_name LIKE ?
+			OR u.last_name LIKE ?
+		)
+		LIMIT 100
+	`, userID, searchPattern, searchPattern)
 
 	if err != nil {
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	following := make([]models.UserRegistration, 0)

@@ -3,10 +3,23 @@ package users
 import (
 	"database/sql"
 	"errors"
-
+	"social/internal/helpers"
 	"social/internal/models"
 )
 
+/*
+GetUserID retrieves a user's ID using their username or email as the identifier.
+
+Parameters:
+
+	db *sql.DB, identifier string
+
+Returns:
+
+	int
+		-> User ID if successful
+		-> -1 if the user cannot be found or a database error occurs
+*/
 func GetUserID(db *sql.DB, identifier string) int {
 	var id int
 
@@ -23,9 +36,25 @@ func GetUserID(db *sql.DB, identifier string) int {
 	return id
 }
 
+/*
+GetUserData retrieves detailed information about a user, including their
+personal information and profile statistics.
+
+Parameters:
+
+	db *sql.DB, userID int
+
+Returns:
+
+	models.UserData
+		-> Struct containing the user's personal and profile information
+
+	error
+		-> nil if successful
+		-> Error if the user or profile cannot be retrieved
+*/
 func GetUserData(db *sql.DB, userID int) (models.UserData, error) {
 	var userData models.UserData
-
 	var firstName sql.NullString
 	var lastName sql.NullString
 	var email sql.NullString
@@ -137,6 +166,19 @@ func GetUserData(db *sql.DB, userID int) (models.UserData, error) {
 	return userData, nil
 }
 
+/*
+UpdateUserInfo updates a user's personal information and profile settings.
+
+Parameters:
+
+	db *sql.DB, userID int, userData *models.UserRegistration
+
+Returns:
+
+	error
+	-> nil if successful
+	-> Error if the user or profile cannot be updated
+*/
 func UpdateUserInfo(db *sql.DB, userID int, userData *models.UserRegistration) error {
 	_, err := db.Exec(`
 		UPDATE user
@@ -157,6 +199,19 @@ func UpdateUserInfo(db *sql.DB, userID int, userData *models.UserRegistration) e
 	return err
 }
 
+/*
+UpdateUserAvatar updates the avatar path for a user.
+
+Parameters:
+
+	db *sql.DB, userID int, avatar_path string
+
+Returns:
+
+	error
+	-> nil if successful
+	-> Error if the avatar path cannot be updated
+*/
 func UpdateUserAvatar(db *sql.DB, userID int, avatar_path string) error {
 	_, err := db.Exec(`
 		UPDATE profile
@@ -167,6 +222,19 @@ func UpdateUserAvatar(db *sql.DB, userID int, avatar_path string) error {
 	return err
 }
 
+/*
+UserExists checks whether a user with the specified ID exists.
+
+Parameters:
+
+	db *sql.DB, userID int
+
+Returns:
+
+	error
+	-> nil if the user exists
+	-> Error if the user does not exist or the database query fails
+*/
 func UserExists(db *sql.DB, userID int) error {
 	var id int
 
@@ -176,9 +244,25 @@ func UserExists(db *sql.DB, userID int) error {
 	).Scan(&id)
 }
 
+/*
+GetUserSimpleData retrieves basic user information, including their
+ID, first name, last name, and avatar.
+
+Parameters:
+
+	db *sql.DB, userID int
+
+Returns:
+
+	models.UserRegistration
+	-> Struct containing the user's basic information
+
+	error
+	-> nil if successful
+	-> Error if the user or profile cannot be retrieved
+*/
 func GetUserSimpleData(db *sql.DB, userID int) (models.UserRegistration, error) {
 	var user models.UserRegistration
-
 	var firstName sql.NullString
 	var lastName sql.NullString
 
@@ -229,23 +313,73 @@ func GetUserSimpleData(db *sql.DB, userID int) (models.UserRegistration, error) 
 	return user, nil
 }
 
+/*
+DeleteUser permanently deletes a user from the database. also delete the avatar if its not the default.
+
+Parameters:
+
+	db *sql.DB, userID int
+
+Returns:
+
+	error
+	-> nil if successful
+	-> Error if the user cannot be deleted
+*/
 func DeleteUser(db *sql.DB, userID int) error {
-	_, err := db.Exec(`delete from user WHERE id = ?`, userID)
+	var avatar string
+	if err := db.QueryRow(`select avatar_path from profile where user_id = ?`, userID).Scan(&avatar); err != nil {
+		return err
+	}
+
+	if avatar != "avatars/default.png" {
+		if err := helpers.DeleteAvatar(avatar); err != nil {
+			return err
+		}
+	}
+
+	_, err := db.Exec(`DELETE FROM user WHERE id = ?`, userID)
+
 	return err
 }
 
+/*
+DeleteUserAvatar replaces the user's current avatar with the default avatar.
+
+Parameters:
+
+	db *sql.DB, userID int
+
+Returns:
+
+	string
+	-> Path of the previous avatar
+
+	error
+	-> nil if successful
+	-> Error if the avatar cannot be retrieved or updated
+	-> Error if the user is already using the default avatar
+*/
 func DeleteUserAvatar(db *sql.DB, userID int) (string, error) {
 	var path string
+
 	if err := db.QueryRow(`
-		SELECT avatar_path FROM profile WHERE user_id = ?
+		SELECT avatar_path
+		FROM profile
+		WHERE user_id = ?
 	`, userID).Scan(&path); err != nil {
-		return "",err
+		return "", err
 	}
 
 	if path == "avatars/default.png" {
 		return "", errors.New("user does not have an avatar")
 	}
 
-	_, err := db.Exec(`update profile set avatar_path = 'avatars/default.png' WHERE user_id = ?`, userID)
-	return path,err
-} 
+	_, err := db.Exec(`
+		UPDATE profile
+		SET avatar_path = 'avatars/default.png'
+		WHERE user_id = ?
+	`, userID)
+
+	return path, err
+}
