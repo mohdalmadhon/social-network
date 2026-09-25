@@ -1,3 +1,4 @@
+import { addNotification } from '@/data/notifications'
 import { readonly, ref } from 'vue'
 
 const status = ref('disconnected')
@@ -6,6 +7,7 @@ let socket = null
 let reconnectTimer = null
 let reconnectAttempt = 0
 let reconnectEnabled = false
+let lastMessageNotification = 0
 
 function realtimeURL() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -53,6 +55,22 @@ export function connectRealtime() {
     try {
       const event = JSON.parse(rawEvent.data)
       if (!event?.type) return
+      console.log(event)
+      const lastMessageNotifications = new Map()
+
+      if (
+        event.type === 'notification' &&
+        event.notification.category === 'messages'
+      ) {
+        const relatedID = event.notification.relatedID
+        const now = Date.now()
+        const lastNotification = lastMessageNotifications.get(relatedID) || 0
+
+        if (now - lastNotification >= 30000) {
+          lastMessageNotifications.set(relatedID, now)
+          addNotification(event.notification.message)
+        }
+      }
       dispatch(event.type, event)
     } catch {
       dispatch('error', {
