@@ -25,7 +25,20 @@ var (
 	ErrCodeMismatch     = errors.New("incorrect verification code")
 	ErrEmailNotVerified = errors.New("email is not verified")
 )
+/*
+SaveEmailCode saves or updates the email verification code in the database.
+It also enforces the code request cooldown and returns the remaining wait time
+if the user requests a new code too soon.
 
+Parameters:
+	db *sql.DB, email, code string, now time.Time 
+
+Returns:
+	time.Duration
+		-> cooldown
+	error
+		-> nil if success
+*/
 func SaveEmailCode(db *sql.DB, email, code string, now time.Time) (time.Duration, error) {
 	taken, err := CheckUserEmail(db, email)
 	if err != nil {
@@ -69,6 +82,7 @@ func SaveEmailCode(db *sql.DB, email, code string, now time.Time) (time.Duration
 	if err != nil {
 		return 0, err
 	}
+
 	if affected > 0 {
 		return 0, nil
 	}

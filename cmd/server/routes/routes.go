@@ -13,7 +13,7 @@ func StartServer(db *sql.DB) *http.ServeMux {
 	app := api.App{DB: db, Realtime: realtime.NewHub(),
 		EmailPassword: "lmvm ugpc xvlo food",
 		EmailAddress:  "almadhoonlinux@gmail.com"}
-
+	
 	// users
 	mux.HandleFunc("GET /api/user", app.AuthMiddleware(app.GetUserData))
 	mux.HandleFunc("POST /api/user", app.RegisterUser)

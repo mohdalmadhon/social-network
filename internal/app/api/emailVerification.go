@@ -20,6 +20,13 @@ import (
 
 var sixDigitCode = regexp.MustCompile(`^[0-9]{6}$`)
 
+/*
+function used to generate OTP for email verification
+
+Parameters:
+	string -> email
+	error -> nil if success
+*/
 func generateEmailCode() (string, error) {
 	n, err := rand.Int(rand.Reader, big.NewInt(900000))
 	if err != nil {
@@ -29,6 +36,20 @@ func generateEmailCode() (string, error) {
 	return fmt.Sprintf("%06d", n.Int64()+100000), nil
 }
 
+/*
+triesLabel returns a formatted string describing the number of verification
+attempts, using the singular form for one attempt and the plural form for
+multiple attempts.
+
+Parameters:
+	n int
+		-> number of attempt
+	
+Returns:
+	string
+		-> formatted text
+
+*/
 func triesLabel(n int) string {
 	if n == 1 {
 		return "1 try"
@@ -36,7 +57,14 @@ func triesLabel(n int) string {
 
 	return fmt.Sprintf("%d tries", n)
 }
-
+/*
+SendEmailCode handles requests to generate and send an email verification code.
+It validates the requested email, generates a verification code, saves it in
+the database, enforces the code request cooldown, and sends the code to the
+provided email address. It also returns an error response if the email is
+already registered, the request is made during the cooldown period, or the
+code cannot be generated, saved, or sent.
+*/
 func (app *App) SendEmailCode(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Email string `json:"email"`
@@ -117,6 +145,14 @@ func (app *App) SendEmailCode(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+/*
+VerifyEmail handles requests to verify an email address using the provided
+6-digit verification code. It validates the email and code, checks the code
+against the stored verification record, and returns a verification token
+when the code is correct. It also handles incorrect, expired, missing, and
+excessive verification attempts and returns the remaining attempts when
+applicable.
+*/
 func (app *App) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Email string `json:"email"`
@@ -199,6 +235,18 @@ func (app *App) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+/*
+function used to send email verification code to a specefic email.
+It use SMT Protocol to send the email by providing a username (email). passoword (please do not steal it)
+and a host which in this case gmail.
+
+Parameters:
+	to -> email address
+	code -> verification code
+
+Returns:
+	error -> nil if success
+*/
 func (app *App) SendVerificationEmail(to string, code string) error {
 	auth := smtp.PlainAuth(
 		"",
